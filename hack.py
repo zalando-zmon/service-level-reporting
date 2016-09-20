@@ -1,23 +1,26 @@
 #!/usr/bin/env python3
 
 import click
+import fnmatch
 import psycopg2
 import requests
+import yaml
 import zign.api
 
 
-@click.command()
-@click.option('--kairosdb-url')
-@click.option('--check-id', type=int)
-@click.option('--sli-name')
-@click.option('--start', type=int, default=5)
-@click.option('--time-unit', default='minutes')
-@click.option('--key', '-k', multiple=True)
-@click.option('--exclude-key', '-x', multiple=True)
-@click.option('--aggregation')
-@click.option('--dsn')
-@click.option('--weight-pattern', default='rate')
-def cli(kairosdb_url, check_id, sli_name, start, time_unit, key, exclude_key, aggregation, dsn, weight_pattern):
+def key_matches(key, key_patterns):
+    for pat in key_patterns:
+        if fnmatch.fnmatch(key, pat):
+            return True
+    return False
+
+
+def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit, dsn):
+    check_id = sli_def['check_id']
+    keys = sli_def['keys']
+    exclude_keys = sli_def.get('exclude_keys', [])
+    aggregation_type = sli_def['aggregation']['type']
+
     kairosdb_metric_name = 'zmon.check.{}'.format(check_id)
 
     token = zign.api.get_token('zmon', ['uid'])
@@ -33,7 +36,7 @@ def cli(kairosdb_url, check_id, sli_name, start, time_unit, key, exclude_key, ag
             },
             'metrics': [{
                 'name': kairosdb_metric_name,
-                'tags': {'key': key},
+                'tags': {'key': keys + sli_def['aggregation'].get('weight_keys', [])},
                 'group_by': [{'name': 'tag', 'tags': ['entity', 'key']}]
             }]
         }
@@ -47,10 +50,7 @@ def cli(kairosdb_url, check_id, sli_name, start, time_unit, key, exclude_key, ag
     for result in data['queries'][0]['results']:
         group = result['group_by'][0]['group']
         key = group['key']
-        exclude = False
-        for excl in exclude_key:
-            if excl in key:
-                exclude = True
+        exclude = key_matches(key, exclude_keys)
         if not exclude:
             for ts, value in result['values']:
                 # truncate to full minutes
@@ -60,15 +60,14 @@ def cli(kairosdb_url, check_id, sli_name, start, time_unit, key, exclude_key, ag
                 g = group['entity'], '.'.join(key.split('.')[:-1])
                 if g not in res[minute]:
                     res[minute][g] = {}
-                if aggregation == 'weighted' and weight_pattern in key.lower():
+                if aggregation_type == 'weighted' and key_matches(key, sli_def['aggregation']['weight_keys']):
                     res[minute][g]['weight'] = value
                 else:
                     res[minute][g]['value'] = value
 
-    print(res)
     res2 = {}
     for minute, values in res.items():
-        if aggregation == 'weighted':
+        if aggregation_type == 'weighted':
             total_weight = 0
             total_value = 0
             for g, entry in values.items():
@@ -76,12 +75,13 @@ def cli(kairosdb_url, check_id, sli_name, start, time_unit, key, exclude_key, ag
                     total_weight += entry['weight']
                     total_value += entry['value'] * entry['weight']
             res2[minute] = total_value / total_weight
-        elif aggregation == 'sum':
+        elif aggregation_type == 'sum':
             total_value = 0
             for g, entry in values.items():
                 total_value += entry['value']
             res2[minute] = total_value
 
+    print(sli_name)
     print(res2)
 
     if dsn:
@@ -90,6 +90,20 @@ def cli(kairosdb_url, check_id, sli_name, start, time_unit, key, exclude_key, ag
         for minute, val in res2.items():
             cur.execute('INSERT INTO foo (sli_name, sli_value) VALUES (%s, %s)', (sli_name, val))
         conn.commit()
+
+
+@click.command()
+@click.argument('sli_definition', type=click.File('rb'))
+@click.option('--kairosdb-url')
+@click.option('--start', type=int, default=5)
+@click.option('--time-unit', default='minutes')
+@click.option('--dsn')
+def cli(sli_definition, kairosdb_url, dsn, start, time_unit):
+    sli_definition = yaml.safe_load(sli_definition)
+
+    for product_name, product_def in sli_definition.items():
+        for sli_name, sli_def in product_def.items():
+            process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit, dsn)
 
 
 

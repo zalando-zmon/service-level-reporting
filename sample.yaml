@@ -1,0 +1,29 @@
+myproduct:
+    latency.p95:
+        check_id: 123
+        keys:
+            - myapp.foo.*.p95
+            - myapp.bar.*.p95
+        aggregation:
+            type: weighted
+            weight_keys:
+                - myapp.foo.*.m1_rate
+                - myapp.bar.*.m1_rate
+    latency.p99:
+        check_id: 123
+        keys:
+            - myapp.foo.*.p99
+            - myapp.bar.*.p99
+        aggregation:
+            type: weighted
+            weight_keys:
+                - myapp.foo.*.m1_rate
+                - myapp.bar.*.m1_rate
+    errors:
+        check_id: 123
+        keys:
+            - myapp.foo.*errors.m1_rate
+            - myapp.bar.*errors.m1_rate
+        aggregation:
+            type: sum
+
