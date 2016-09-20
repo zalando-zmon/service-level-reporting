@@ -80,7 +80,10 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit,
                 if 'weight' in entry and 'value' in entry:
                     total_weight += entry['weight']
                     total_value += entry['value'] * entry['weight']
-            res2[minute] = total_value / total_weight
+            if total_weight != 0:
+                res2[minute] = total_value / total_weight
+            else:
+                res2[minute] = 0
         elif aggregation_type == 'average':
             total_value = 0
             for g, entry in values.items():
@@ -99,8 +102,13 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit,
     if dsn:
         conn = psycopg2.connect(dsn)
         cur = conn.cursor()
+        cur.execute('SELECT p_id FROM zsm_data.product WHERE p_name = %s', (product_name, ))
+        row = cur.fetchone()
+        if not row:
+            raise Exception('Product {} not found'.format(product_name))
+        product_id, = row
         for minute, val in res2.items():
-            cur.execute('INSERT INTO foo (sli_name, sli_value) VALUES (%s, %s)', (sli_name, val))
+            cur.execute('INSERT INTO zsm_data.service_level_indicator (sli_product_id, sli_name, sli_timestamp, sli_value) VALUES (%s, %s, TIMESTAMP \'epoch\' + %s * INTERVAL \'1 second\', %s) ON CONFLICT ON CONSTRAINT service_level_indicator_pkey DO UPDATE SET sli_value = EXCLUDED.sli_value', (product_id, sli_name, minute, val))
         conn.commit()
 
 
