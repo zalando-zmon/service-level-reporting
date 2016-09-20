@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 
 import click
+import datetime
 import fnmatch
 import psycopg2
 import requests
 import yaml
 import zign.api
+
+from clickclick import Action
 
 
 def key_matches(key, key_patterns):
@@ -81,8 +84,9 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit,
                 total_value += entry['value']
             res2[minute] = total_value
 
-    print(sli_name)
-    print(res2)
+    for minute, value in sorted(res2.items()):
+        dt = datetime.datetime.fromtimestamp(minute)
+        print('{:%H:%M} {:0.2f}'.format(dt, value))
 
     if dsn:
         conn = psycopg2.connect(dsn)
@@ -103,8 +107,8 @@ def cli(sli_definition, kairosdb_url, dsn, start, time_unit):
 
     for product_name, product_def in sli_definition.items():
         for sli_name, sli_def in product_def.items():
-            process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit, dsn)
-
+            with Action('Calculating SLI {} for product {}..'.format(sli_name, product_name)):
+                process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit, dsn)
 
 
 if __name__ == '__main__':
