@@ -32,6 +32,9 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit,
     session = requests.Session()
     session.headers.update(headers)
 
+    tags = {'key': keys + sli_def['aggregation'].get('weight_keys', [])}
+    if sli_def.get('tags'):
+        tags.update(sli_def['tags'])
     q = {
             'start_relative': {
                 'value': start,
@@ -39,7 +42,7 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit,
             },
             'metrics': [{
                 'name': kairosdb_metric_name,
-                'tags': {'key': keys + sli_def['aggregation'].get('weight_keys', [])},
+                'tags': tags,
                 'group_by': [{'name': 'tag', 'tags': ['entity', 'key']}]
             }]
         }
@@ -78,6 +81,11 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit,
                     total_weight += entry['weight']
                     total_value += entry['value'] * entry['weight']
             res2[minute] = total_value / total_weight
+        elif aggregation_type == 'average':
+            total_value = 0
+            for g, entry in values.items():
+                total_value += entry['value']
+            res2[minute] = total_value / len(values)
         elif aggregation_type == 'sum':
             total_value = 0
             for g, entry in values.items():
