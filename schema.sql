@@ -1,21 +1,19 @@
-create database zmon_slo_metrics;
+CREATE SCHEMA IF NOT EXISTS zsm_data;
 
-create schema if not exists zsm_data;
-
-create table if not exists zsm_data.product_group (
-    pg_id serial primary key,
+CREATE TABLE IF NOT EXISTS zsm_data.product_group (
+    pg_id serial PRIMARY KEY,
     pg_name text not null,
     pg_department text
 );
 
-create table if not exists zsm_data.product (
-    p_id serial primary key,
+CREATE TABLE IF NOT EXISTS zsm_data.product (
+    p_id serial PRIMARY KEY,
     p_product_group_id int references zsm_data.product_group(pg_id),
     p_name text not null,
     p_delivery_team text
 );
 
-create table if not exists zsm_data.service_level_objective (
+CREATE TABLE IF NOT EXISTS zsm_data.service_level_objective (
     slo_product_id int references zsm_data.product(p_id),
     slo_service_level_indicator text not null,
     slo_target_unit text,
@@ -23,13 +21,10 @@ create table if not exists zsm_data.service_level_objective (
     slo_target_to real
 );
 
-create table if not exists zsm_data.service_level_indicator (
+CREATE TABLE IF NOT EXISTS zsm_data.service_level_indicator (
     sli_product_id int references zsm_data.product(p_id),
     sli_name text,
     sli_timestamp timestamp,
     sli_value real,
-    primary key (sli_product_id, sli_name, sli_timestamp)
+    PRIMARY KEY (sli_product_id, sli_name, sli_timestamp)
 );
-
-
-
