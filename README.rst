@@ -2,6 +2,8 @@
 ZMON SRE SLO Metrics
 ====================
 
+**WORK IN PROGRESS**
+
 Calculate SLI/SLO metrics using ZMON's KairosDB timeseries database.
 
 Idea:
