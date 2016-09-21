@@ -16,6 +16,7 @@ paths:
       tags: [System]
       operationId: app.get_health
       summary: Return health
+      security: []
       responses:
         200:
           description: Health is OK
