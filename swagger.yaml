@@ -1,0 +1,65 @@
+swagger: '2.0'
+info:
+  title: ZMON SLO Metrics
+  version: "0.1"
+consumes:
+  - application/json
+produces:
+  - application/json
+security:
+  # enable OAuth protection for all REST endpoints
+  # (only active if the HTTP_TOKENINFO_URL environment variable is set)
+  - oauth2: [uid]
+paths:
+  /health:
+    get:
+      tags: [System]
+      operationId: app.get_health
+      summary: Return health
+      responses:
+        200:
+          description: Health is OK
+  /service-level-indicators/{product}/{name}:
+    get:
+      tags: [SLO]
+      operationId: app.get_service_level_indicators
+      parameters:
+        - name: product
+          in: path
+          type: string
+          required: true
+        - name: name
+          in: path
+          type: string
+          required: true
+      responses:
+        200:
+          description: Return SLIs
+  /service-level-indicators/update:
+    post:
+      tags: [SLO]
+      operationId: app.post_update
+      summary: Update
+      parameters:
+        - name: body
+          in: body
+          schema:
+            type: object
+            required:
+              - definitions
+            properties:
+              definitions:
+                type: object
+            additionalProperties: true
+
+      responses:
+        200:
+          description: Update successful
+
+securityDefinitions:
+  oauth2:
+    type: oauth2
+    flow: implicit
+    authorizationUrl: https://example.com/oauth2/dialog
+    scopes:
+      uid: Unique identifier of the user accessing the service.

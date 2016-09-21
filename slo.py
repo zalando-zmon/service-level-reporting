@@ -112,6 +112,13 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit,
         conn.commit()
 
 
+def update(sli_definition, kairosdb_url, dsn, start, time_unit):
+    for product_name, product_def in sli_definition.items():
+        for sli_name, sli_def in product_def.items():
+            with Action('Calculating SLI {} for product {}..'.format(sli_name, product_name)):
+                process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit, dsn)
+
+
 @click.command()
 @click.argument('sli_definition', type=click.File('rb'))
 @click.option('--kairosdb-url')
@@ -121,10 +128,7 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit,
 def cli(sli_definition, kairosdb_url, dsn, start, time_unit):
     sli_definition = yaml.safe_load(sli_definition)
 
-    for product_name, product_def in sli_definition.items():
-        for sli_name, sli_def in product_def.items():
-            with Action('Calculating SLI {} for product {}..'.format(sli_name, product_name)):
-                process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit, dsn)
+    update(sli_definition, kairosdb_url, dsn, start, time_unit)
 
 
 if __name__ == '__main__':

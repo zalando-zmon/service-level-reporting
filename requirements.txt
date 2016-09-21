@@ -1,2 +1,6 @@
 clickclick
 psycopg2
+psycogreen
+gevent
+connexion
+stups-zign
