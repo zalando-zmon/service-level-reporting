@@ -66,6 +66,22 @@ paths:
       responses:
         200:
           description: Update successful
+  /service-level-objectives/{product}/reports/{report_type}:
+    get:
+      tags: [SLO]
+      operationId: app.get_service_level_objective_report
+      parameters:
+        - name: product
+          in: path
+          type: string
+          required: true
+        - name: report_type
+          in: path
+          type: string
+          required: true
+      responses:
+        200:
+          description: Update successful
 
 securityDefinitions:
   oauth2:

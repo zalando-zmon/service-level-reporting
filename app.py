@@ -6,6 +6,7 @@ gevent.monkey.patch_all()
 import psycogreen.gevent
 psycogreen.gevent.patch_psycopg()
 
+import collections
 import connexion
 import logging
 import os
@@ -49,6 +50,25 @@ def post_update(product, name, body):
         pool.putconn(conn)
     count = slo.process_sli(product, name, definition, kairosdb_url, body.get('start', 5), 'minutes', database_uri)
     return {'count': count}
+
+
+def get_service_level_objective_report(product, report_type):
+    conn = pool.getconn()
+    res = collections.defaultdict(dict)
+    try:
+        cur = conn.cursor()
+        cur.execute('''SELECT date_trunc(\'day\', sli_timestamp) AS day, sli_name AS name, MIN(sli_value) AS min, AVG(sli_value), MAX(sli_value), COUNT(sli_value),
+                (SELECT SUM(CASE b WHEN true THEN 0 ELSE 1 END) FROM UNNEST(array_agg(sli_value BETWEEN COALESCE(slo_target_from, \'-Infinity\') AND COALESCE(slo_target_to, \'Infinity\'))) AS dt(b)) AS agg
+                FROM zsm_data.service_level_indicator
+                JOIN zsm_data.service_level_objective ON slo_product_id = sli_product_id AND slo_service_level_indicator = sli_name
+                WHERE sli_timestamp >= \'now\'::timestamp - interval \'7 days\'
+                GROUP BY date_trunc(\'day\', sli_timestamp), sli_name''')
+        rows = cur.fetchall()
+        for row in rows:
+            res[row.day.isoformat()][row.name] = {'min': row.min, 'avg': row.avg, 'max': row.max, 'count': row.count, 'breaches': row.agg}
+    finally:
+        pool.putconn(conn)
+    return res
 
 
 logging.basicConfig(level=logging.INFO)
