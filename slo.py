@@ -114,6 +114,8 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit,
             cur.execute('INSERT INTO zsm_data.service_level_indicator (sli_product_id, sli_name, sli_timestamp, sli_value) VALUES (%s, %s, TIMESTAMP \'epoch\' + %s * INTERVAL \'1 second\', %s) ON CONFLICT ON CONSTRAINT service_level_indicator_pkey DO UPDATE SET sli_value = EXCLUDED.sli_value', (product_id, sli_name, minute, val))
         conn.commit()
 
+    return len(res2)
+
 
 def update(sli_definition, kairosdb_url, dsn, start, time_unit):
     for product_name, product_def in sli_definition.items():

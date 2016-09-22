@@ -47,8 +47,8 @@ def post_update(product, name, body):
 
     finally:
         pool.putconn(conn)
-    slo.update({product: {name: definition}}, kairosdb_url, database_uri, body.get('start', 5), 'minutes')
-    return ''
+    count = slo.process_sli(product, name, definition, kairosdb_url, body.get('start', 5), 'minutes', database_uri)
+    return {'count': count}
 
 
 logging.basicConfig(level=logging.INFO)
