@@ -32,9 +32,20 @@ def get_service_level_indicators(product, name):
         pool.putconn(conn)
 
 
-def post_update(body):
+def post_update(product, name, body):
     kairosdb_url = os.getenv('KAIROSDB_URL')
-    slo.update(body.get('definitions'), kairosdb_url, database_uri, body.get('start', 5), 'minutes')
+    conn = pool.getconn()
+    try:
+        cur = conn.cursor()
+        cur.execute('SELECT ds_definition FROM zsm_data.data_source WHERE ds_product_id = (SELECT p_id FROM zsm_data.product WHERE p_name = %s) AND ds_sli_name = %s', (product, name))
+        row = cur.fetchone()
+        if not row:
+            return 'Not found', 404
+        definition, = row
+
+    finally:
+        pool.putconn(conn)
+    slo.update({product: {name: definition}}, kairosdb_url, database_uri, body.get('start', 5), 'minutes')
     return ''
 
 logging.basicConfig(level=logging.INFO)

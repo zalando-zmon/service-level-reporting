@@ -28,3 +28,10 @@ CREATE TABLE IF NOT EXISTS zsm_data.service_level_indicator (
     sli_value real,
     PRIMARY KEY (sli_product_id, sli_name, sli_timestamp)
 );
+
+CREATE TABLE IF NOT EXISTS zsm_data.data_source (
+    ds_product_id integer REFERENCES zsm_data.product(p_id),
+    ds_sli_name text,
+    ds_definition jsonb,
+    PRIMARY KEY (ds_product_id, ds_sli_name)
+);

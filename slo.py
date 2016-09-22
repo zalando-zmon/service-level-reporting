@@ -3,12 +3,13 @@
 import click
 import datetime
 import fnmatch
+import logging
 import psycopg2
 import requests
 import yaml
 import zign.api
 
-from clickclick import Action
+logger = logging.getLogger('slo')
 
 
 def key_matches(key, key_patterns):
@@ -19,6 +20,7 @@ def key_matches(key, key_patterns):
 
 
 def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit, dsn):
+    logger.info('Calculating SLI for %s/%s..', product_name, sli_name)
     check_id = sli_def['check_id']
     keys = sli_def['keys']
     exclude_keys = sli_def.get('exclude_keys', [])
@@ -107,6 +109,7 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit,
         if not row:
             raise Exception('Product {} not found'.format(product_name))
         product_id, = row
+        logger.info('Inserting %s SLI values..', len(res2))
         for minute, val in res2.items():
             cur.execute('INSERT INTO zsm_data.service_level_indicator (sli_product_id, sli_name, sli_timestamp, sli_value) VALUES (%s, %s, TIMESTAMP \'epoch\' + %s * INTERVAL \'1 second\', %s) ON CONFLICT ON CONSTRAINT service_level_indicator_pkey DO UPDATE SET sli_value = EXCLUDED.sli_value', (product_id, sli_name, minute, val))
         conn.commit()
@@ -115,8 +118,7 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit,
 def update(sli_definition, kairosdb_url, dsn, start, time_unit):
     for product_name, product_def in sli_definition.items():
         for sli_name, sli_def in product_def.items():
-            with Action('Calculating SLI {} for product {}..'.format(sli_name, product_name)):
-                process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit, dsn)
+            process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit, dsn)
 
 
 @click.command()

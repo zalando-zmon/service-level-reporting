@@ -36,21 +36,31 @@ paths:
       responses:
         200:
           description: Return SLIs
-  /service-level-indicators/update:
+  /service-level-indicators/{product}/{name}/update:
     post:
       tags: [SLO]
       operationId: app.post_update
       summary: Update
       parameters:
+        - name: product
+          in: path
+          type: string
+          required: true
+        - name: name
+          in: path
+          type: string
+          required: true
         - name: body
           in: body
           schema:
             type: object
-            required:
-              - definitions
             properties:
-              definitions:
-                type: object
+              start:
+                type: integer
+                default: 5
+              time_unit:
+                type: string
+                default: minutes
             additionalProperties: true
 
       responses:
