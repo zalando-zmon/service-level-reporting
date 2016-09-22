@@ -99,7 +99,7 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit,
 
     for minute, value in sorted(res2.items()):
         dt = datetime.datetime.fromtimestamp(minute)
-        print('{:%H:%M} {:0.2f}'.format(dt, value))
+        logger.debug('{:%H:%M} {:0.2f}'.format(dt, value))
 
     if dsn:
         conn = psycopg2.connect(dsn)

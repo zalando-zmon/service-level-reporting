@@ -19,8 +19,10 @@ database_uri = os.getenv('DATABASE_URI')
 # NOTE: we can safely use SimpleConnectionPool instead of ThreadedConnectionPool as we use gevent greenlets
 pool = psycopg2.pool.SimpleConnectionPool(1, 10, database_uri, cursor_factory=NamedTupleCursor)
 
+
 def get_health():
     return 'OK'
+
 
 def get_service_level_indicators(product, name):
     conn = pool.getconn()
@@ -47,6 +49,7 @@ def post_update(product, name, body):
         pool.putconn(conn)
     slo.update({product: {name: definition}}, kairosdb_url, database_uri, body.get('start', 5), 'minutes')
     return ''
+
 
 logging.basicConfig(level=logging.INFO)
 app = connexion.App(__name__)
