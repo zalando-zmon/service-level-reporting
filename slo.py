@@ -104,7 +104,7 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit,
     if dsn:
         conn = psycopg2.connect(dsn)
         cur = conn.cursor()
-        cur.execute('SELECT p_id FROM zsm_data.product WHERE p_name = %s', (product_name, ))
+        cur.execute('SELECT p_id FROM zsm_data.product WHERE p_slug = %s', (product_name, ))
         row = cur.fetchone()
         if not row:
             raise Exception('Product {} not found'.format(product_name))
