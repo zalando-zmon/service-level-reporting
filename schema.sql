@@ -3,6 +3,7 @@ CREATE SCHEMA IF NOT EXISTS zsm_data;
 CREATE TABLE IF NOT EXISTS zsm_data.product_group (
     pg_id serial PRIMARY KEY,
     pg_name text not null,
+    pg_slug text not null UNIQUE,
     pg_department text
 );
 
@@ -10,15 +11,23 @@ CREATE TABLE IF NOT EXISTS zsm_data.product (
     p_id serial PRIMARY KEY,
     p_product_group_id int references zsm_data.product_group(pg_id),
     p_name text not null,
+    p_slug text not null UNIQUE,
     p_delivery_team text
 );
 
 CREATE TABLE IF NOT EXISTS zsm_data.service_level_objective (
-    slo_product_id int references zsm_data.product(p_id),
-    slo_service_level_indicator text not null,
-    slo_target_unit text,
-    slo_target_from real,
-    slo_target_to real
+    slo_id serial PRIMARY KEY,
+    slo_title text not null,
+    slo_product_id int references zsm_data.product(p_id)
+);
+
+CREATE TABLE IF NOT EXISTS zsm_data.service_level_indicator_target (
+    slit_slo_id int references zsm_data.service_level_objective(slo_id),
+    slit_sli_name text not null,
+    slit_unit text,
+    slit_from real,
+    slit_to real,
+    PRIMARY KEY (slit_slo_id, slit_sli_name)
 );
 
 CREATE TABLE IF NOT EXISTS zsm_data.service_level_indicator (
