@@ -25,11 +25,15 @@ def get_health():
     return 'OK'
 
 
-def get_service_level_indicators(product, name):
+def get_service_level_indicators(product, name, time_from, time_to):
+    # TODO: allow filtering by time_from/time_to
     conn = pool.getconn()
     try:
         cur = conn.cursor()
-        cur.execute('SELECT sli_timestamp, sli_value from zsm_data.service_level_indicator WHERE sli_product_id = (SELECT p_id FROM zsm_data.product WHERE p_name = %s) AND sli_name = %s ORDER BY 1', (product, name))
+        cur.execute('''SELECT sli_timestamp, sli_value from zsm_data.service_level_indicator
+        WHERE sli_product_id = (SELECT p_id FROM zsm_data.product WHERE p_name = %s) AND sli_name = %s
+        AND sli_timestamp >= \'now\'::timestamp - interval \'7 days\'
+        ORDER BY 1''', (product, name))
         return cur.fetchall()
     finally:
         pool.putconn(conn)
@@ -50,6 +54,30 @@ def post_update(product, name, body):
         pool.putconn(conn)
     count = slo.process_sli(product, name, definition, kairosdb_url, body.get('start', 5), 'minutes', database_uri)
     return {'count': count}
+
+
+def strip_column_prefix(d):
+    res = {}
+    for k, v in d.items():
+        res[k.split('_', 1)[1]] = v
+    return res
+
+
+def get_service_level_objectives(product):
+    conn = pool.getconn()
+    res = []
+    try:
+        cur = conn.cursor()
+        cur.execute('''SELECT slo.*
+                FROM zsm_data.service_level_objective slo
+                JOIN zsm_data.product ON p_id = slo_product_id
+                WHERE p_name = %s''', (product,))
+        rows = cur.fetchall()
+        for row in rows:
+            res.append(strip_column_prefix(row._asdict()))
+    finally:
+        pool.putconn(conn)
+    return res
 
 
 def get_service_level_objective_report(product, report_type):

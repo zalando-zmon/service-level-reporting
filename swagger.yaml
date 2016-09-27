@@ -33,6 +33,12 @@ paths:
           in: path
           type: string
           required: true
+        - name: time_from
+          in: query
+          type: string
+        - name: time_to
+          in: query
+          type: string
       responses:
         200:
           description: Return SLIs
@@ -66,6 +72,18 @@ paths:
       responses:
         200:
           description: Update successful
+  /service-level-objectives/{product}:
+    get:
+      tags: [SLO]
+      operationId: app.get_service_level_objectives
+      parameters:
+        - name: product
+          in: path
+          type: string
+          required: true
+      responses:
+        200:
+          description: Return SLO definitions
   /service-level-objectives/{product}/reports/{report_type}:
     get:
       tags: [SLO]
@@ -81,7 +99,7 @@ paths:
           required: true
       responses:
         200:
-          description: Update successful
+          description: Return report data
 
 securityDefinitions:
   oauth2:
