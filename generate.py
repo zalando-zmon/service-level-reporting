@@ -44,6 +44,8 @@ resp = requests.get(url, headers={'Authorization': 'Bearer {}'.format(zign.api.g
 resp.raise_for_status()
 slos = resp.json()
 
+os.makedirs('output/{}'.format(product), exist_ok=True)
+
 url = '{}/service-level-objectives/{}/reports/weekly'.format(base_url, product)
 resp = requests.get(url, headers={'Authorization': 'Bearer {}'.format(zign.api.get_token('zmon', ['uid']))})
 resp.raise_for_status()
@@ -79,12 +81,12 @@ for slo in slos:
     breaches_by_sli = collections.defaultdict(int)
     for day, day_data in sorted(report_data['days'].items()):
         slis = {}
-        unit = ''
         for sli, sli_data in day_data.items():
             breaches_by_sli[sli] += sli_data['breaches']
             classes = set()
             if sli_data['breaches']:
                 classes.add('orange')
+            unit = ''
             for target in slo['targets']:
                 if target['sli_name'] == sli:
                     unit = target['unit']
@@ -102,8 +104,8 @@ for slo in slos:
         slo['data'].append({'caption': day[5:10], 'slis': slis})
     slo['breaches'] = max(breaches_by_sli.values())
 
-    fn = 'output/chart-{}-{}-{}-{}.png'.format(product, slo['id'], min(report_data['days'].keys()), max(report_data['days'].keys()))
-    fn = re.sub('[^/0-9a-zA-Z-]', '', fn)
+    fn = 'output/{}/chart-{}-{}-{}.png'.format(product, slo['id'], min(report_data['days'].keys()), max(report_data['days'].keys()))
+    fn = re.sub('[^/0-9a-zA-Z.-]', '', fn)
     plot.plot(base_url, product, slo['id'], fn)
     slo['chart'] = os.path.basename(fn)
     data['slos'].append(slo)
@@ -111,5 +113,4 @@ for slo in slos:
 env.filters['sli_title'] = title
 env.filters['alarm_color'] = alarm_color
 template = env.get_template('slr.tpl')
-os.makedirs('output', exist_ok=True)
-template.stream(**data).dump('output/slr.html')
+template.stream(**data).dump('output/{}/index.html'.format(product))
