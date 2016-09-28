@@ -8,7 +8,7 @@ import zign.api
 
 precision = {'ms': 0, '%': 2}
 
-def plot(base_url, product, slo_id):
+def plot(base_url, product, slo_id, output_file):
 
     url = '{}/service-level-objectives/{}'.format(base_url, product)
     resp = requests.get(url, headers={'Authorization': 'Bearer {}'.format(zign.api.get_token('zmon', ['uid']))})
@@ -35,11 +35,12 @@ def plot(base_url, product, slo_id):
     plot = subprocess.Popen(['gnuplot'], stdin=subprocess.PIPE)
 
     gnuplot_data = '''
+    set output '{}'
     set term png enhanced size 800, 400
     set xdata time
     set format x "%m-%d"
     set timefmt "%Y-%m-%dT%H:%M:%SZ"
-    '''
+    '''.format(output_file)
 
     targets_by_unit = collections.defaultdict(list)
     for target in targets:
@@ -77,7 +78,8 @@ def plot(base_url, product, slo_id):
     gnuplot_data += ', '.join(plots) + '\n'
     plot.communicate(gnuplot_data.encode('utf-8'))
 
-url = sys.argv[1]
-product = sys.argv[2]
-sli = sys.argv[3]
-plot(url, product, sli)
+if __name__ == '__main__':
+    url = sys.argv[1]
+    product = sys.argv[2]
+    sli = sys.argv[3]
+    plot(url, product, sli)
