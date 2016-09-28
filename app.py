@@ -25,6 +25,22 @@ def get_health():
     return 'OK'
 
 
+def get_products():
+    conn = pool.getconn()
+    try:
+        cur = conn.cursor()
+        cur.execute('''SELECT p.*, pg_name AS pg_product_group_name, pg_department
+                FROM zsm_data.product p
+                JOIN zsm_data.product_group ON pg_id = p_product_group_id''')
+        rows = cur.fetchall()
+        res = [strip_column_prefix(r._asdict()) for r in rows]
+    finally:
+        pool.putconn(conn)
+    return res
+
+
+
+
 def get_service_level_indicators(product, name, time_from=None, time_to=None):
     # TODO: allow filtering by time_from/time_to
     conn = pool.getconn()
@@ -84,11 +100,41 @@ def get_service_level_objectives(product):
     return res
 
 
-def get_service_level_objective_report(product, report_type):
+def update_service_level_objectives(product):
     conn = pool.getconn()
-    res = collections.defaultdict(dict)
     try:
         cur = conn.cursor()
+        cur.execute('''SELECT sli_name, EXTRACT(EPOCH FROM now() - MAX(sli_timestamp)) AS seconds_ago
+                FROM zsm_data.service_level_indicator
+                JOIN zsm_data.product ON p_id = sli_product_id
+                WHERE p_slug = %s
+                GROUP BY sli_name''', (product, ))
+        rows = cur.fetchall()
+    finally:
+        pool.putconn(conn)
+    res = {}
+    for row in rows:
+        res[row.sli_name] = {'start': (row.seconds_ago // 60) + 5}
+        response = post_update(product, row.sli_name, res[row.sli_name])
+        res[row.sli_name]['count'] = response['count']
+
+    return res
+
+
+
+def get_service_level_objective_report(product, report_type):
+    conn = pool.getconn()
+    days = collections.defaultdict(dict)
+    try:
+        cur = conn.cursor()
+        cur.execute('''SELECT p.*, pg_name AS pg_product_group_name, pg_department
+                FROM zsm_data.product p
+                JOIN zsm_data.product_group ON pg_id = p_product_group_id
+                WHERE p_slug = %s''', (product, ))
+        row = cur.fetchone()
+        if not row:
+            return 'Product not found', 404
+        product_data = strip_column_prefix(row._asdict())
         cur.execute('''SELECT date_trunc(\'day\', sli_timestamp) AS day, sli_name AS name, MIN(sli_value) AS min, AVG(sli_value), MAX(sli_value), COUNT(sli_value),
                 (SELECT SUM(CASE b WHEN true THEN 0 ELSE 1 END) FROM UNNEST(array_agg(sli_value BETWEEN COALESCE(slit_from, \'-Infinity\') AND COALESCE(slit_to, \'Infinity\'))) AS dt(b)) AS agg
                 FROM zsm_data.service_level_indicator
@@ -99,10 +145,10 @@ def get_service_level_objective_report(product, report_type):
                 GROUP BY date_trunc(\'day\', sli_timestamp), sli_name''', (product, ))
         rows = cur.fetchall()
         for row in rows:
-            res[row.day.isoformat()][row.name] = {'min': row.min, 'avg': row.avg, 'max': row.max, 'count': row.count, 'breaches': row.agg}
+            days[row.day.isoformat()][row.name] = {'min': row.min, 'avg': row.avg, 'max': row.max, 'count': row.count, 'breaches': row.agg}
     finally:
         pool.putconn(conn)
-    return res
+    return {'product': product_data, 'days': days}
 
 
 logging.basicConfig(level=logging.INFO)

@@ -5,13 +5,17 @@
     body { font: 16px Arial, Helvetica, sans-serif; text-align: center; }
     th, td { font-size: 16px; }
     td.value { text-align: center; }
+    th.ok { color: #38761d; }
+    td.orange { background-color: orange; }
+    td.red { background-color: red; }
+    td.not-enough-samples { opacity: 0.5; }
     .sli-large { font-size: 48px; text-align: center; }
     .sli-caption { text-align: center; }
     </style>
 </head>
 <body>
 <h1>Service Levels Report</h1>
-<h2>Product Group - {{ product }}</h2>
+<h2>{{product.product_group_name }} - {{ product.name }}</h2>
 <h2>{{period}}</h2>
 
 {% for slo in slos %}
@@ -22,7 +26,7 @@
     <tr>
         {% for sli in slo.slis.keys()|sort %}
         {% if sli != 'requests': %}
-        <th class="sli-large">{{slo.slis[sli]}}</th>
+        <th class="sli-large {{ 'ok' if slo.slis[sli].ok }}">{{slo.slis[sli].avg}}</th>
         {% endif %}
         {% endfor %}
     </tr>
@@ -48,7 +52,7 @@
         <th>{{sli|sli_title}}</th>
         {% for data in slo.data %}
         {% if data.slis.get(sli) %}
-        <td class="value" {{ 'bgcolor="' + data.slis.get(sli).get('flag') + '"' if data.slis.get(sli).get('flag') }}>{{'%.2f'|format(data.slis.get(sli).get('value'))}} {{data.slis.get(sli).get('unit') }}</td>
+        <td class="value {{ ' '.join(data.slis.get(sli).classes)}}" title="min: {{ data.slis.get(sli).min }}, max: {{ data.slis.get(sli).max }}, breaches: {{data.slis.get(sli).breaches }}, count: {{ data.slis.get(sli).count }}">{{'%.2f'|format(data.slis.get(sli).avg)}} {{data.slis.get(sli).unit }}</td>
         {% else %}
         <td></td>
         {% endif %}

@@ -8,6 +8,7 @@ import zign.api
 
 precision = {'ms': 0, '%': 2}
 
+
 def plot(base_url, product, slo_id, output_file):
 
     url = '{}/service-level-objectives/{}'.format(base_url, product)

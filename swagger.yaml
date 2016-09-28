@@ -20,6 +20,13 @@ paths:
       responses:
         200:
           description: Health is OK
+  /products:
+    get:
+      tags: [SLO]
+      operationId: app.get_products
+      responses:
+        200:
+          description: List of products
   /service-level-indicators/{product}/{name}:
     get:
       tags: [SLO]
@@ -84,6 +91,18 @@ paths:
       responses:
         200:
           description: Return SLO definitions
+  /service-level-objectives/{product}/update:
+    post:
+      tags: [SLO]
+      operationId: app.update_service_level_objectives
+      parameters:
+        - name: product
+          in: path
+          type: string
+          required: true
+      responses:
+        200:
+          description: Update SLIs
   /service-level-objectives/{product}/reports/{report_type}:
     get:
       tags: [SLO]
