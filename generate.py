@@ -95,6 +95,9 @@ for slo in slos:
                     elif target['from'] and sli_data['avg'] < target['from']:
                         classes.add('red')
 
+            if not classes:
+                classes.add('ok')
+
             if sli_data['count'] < 1400:
                 classes.add('not-enough-samples')
 

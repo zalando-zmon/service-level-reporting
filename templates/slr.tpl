@@ -16,15 +16,13 @@
             crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/css?family=Merriweather|Roboto" rel="stylesheet">
     <style>
-        table.report td {background-color: #c4ff4d; text-align: center;}
-        td.ok { color: #38761d; }
-        table.report td.orange { background-color: #ffff4d; }
-        table.report td.red { background-color: #ff6474 	; }
+        table.report td { text-align: center;}
+        td.ok { }
+        td.orange { background-color: #ffffc8; }
+        td.red { background-color: #ffcece; }
+        td.not-enough-samples { opacity: 0.8; }
 
-        table.report td.not-enough-samples {background-color: #f7ffe6;}
-
-        table.report td.not-enough-samples.orange {background-color: #ffffb3;}
-        table.report td.not-enough-samples.red { background-color: #ffccd1;  }
+        .sli-large { font-size: 48px; }
 
         body {
             font-family: 'Roboto', sans-serif;
@@ -64,7 +62,7 @@
                         <tr>
                             {% for sli in slo.slis.keys() | sort %}
                                 {% if sli != 'requests' %}
-                                    <td class="sli-large {{ 'ok' if slo.slis[sli].ok }}">{{ slo.slis[sli].avg }}</td>
+                                    <td class="sli-large {{ 'red' if not slo.slis[sli].ok }}">{{ slo.slis[sli].avg }}</td>
                                 {% endif %}
                             {% endfor %}
                         </tr>
@@ -95,9 +93,9 @@
 
                     <table class="table">
                         <tr>
-                            <td bgcolor="#ffff4d">&nbsp;</td>
+                            <td class="orange">&nbsp;</td>
                             <td>At least one data point failed to meet the SLO</td>
-                            <td bgcolor="#ff6474">&nbsp;</td>
+                            <td class="red">&nbsp;</td>
                             <td>The weighted average for the period failed to meet the SLO</td>
                         </tr>
                     </table>
