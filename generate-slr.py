@@ -118,8 +118,10 @@ def generate_weekly_report(base_url, product, output_dir):
         slo['chart'] = os.path.basename(fn)
         data['slos'].append(slo)
 
+    data['now'] = datetime.datetime.utcnow()
+
     env.filters['sli_title'] = title
-    template = env.get_template('slr.tpl')
+    template = env.get_template('slr-weekly.html')
     template.stream(**data).dump(os.path.join(report_dir, 'index.html'))
 
     generate_directory_index(output_dir)

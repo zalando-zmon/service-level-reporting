@@ -38,6 +38,8 @@ def plot(base_url, product, slo_id, output_file):
     set output '{}'
     set term png enhanced size 1100, 400
     set xdata time
+    set samples 300
+    set grid xtics lt 0 lw 1 lc rgb "#bbbbbb"
     set format x "%m-%d"
     set timefmt "%Y-%m-%dT%H:%M:%SZ"
     '''.format(output_file)
@@ -74,6 +76,6 @@ def plot(base_url, product, slo_id, output_file):
     plots = []
     for target in sorted(targets, key=lambda t: t['unit']):
         if target['unit']:
-            plots.append('"{}" using 1:2 lw 2 smooth cspline axes x1{} with lines title "{}"'.format(target['fn'], target['yaxis'], target['sli_name'].replace('_', ' ')))
+            plots.append('"{}" using 1:2 lw 2 smooth csplines axes x1{} with lines title "{}"'.format(target['fn'], target['yaxis'], target['sli_name'].replace('_', ' ')))
     gnuplot_data += ', '.join(plots) + '\n'
     plot.communicate(gnuplot_data.encode('utf-8'))
