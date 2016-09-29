@@ -16,6 +16,23 @@ def title(s):
     return s.title().replace('_', ' ').replace('.', ' ')
 
 
+def human_time(minutes):
+    days = minutes // (60*24)
+    remainder = minutes % (60*24)
+    hours = remainder // 60
+    minutes = remainder % 60
+    s = []
+
+    if days:
+        s.append('{} day(s)'.format(days))
+    if hours:
+        s.append('{} hour(s)'.format(hours))
+    if minutes:
+        s.append('{} minute(s)'.format(minutes))
+
+    return ' '.join(s)
+
+
 def generate_directory_index(output_dir, path='/'):
     dirs = []
     for entry in sorted(os.listdir(output_dir)):
@@ -78,10 +95,12 @@ def generate_weekly_report(base_url, product, output_dir):
                     }
         slo['data'] = []
         breaches_by_sli = collections.defaultdict(int)
+        counts_by_sli = collections.defaultdict(int)
         for day, day_data in sorted(slo['days'].items()):
             slis = {}
             for sli, sli_data in day_data.items():
                 breaches_by_sli[sli] += sli_data['breaches']
+                counts_by_sli[sli] += sli_data['count']
                 classes = set()
                 if sli_data['breaches']:
                     classes.add('orange')
@@ -110,6 +129,7 @@ def generate_weekly_report(base_url, product, output_dir):
             dow = dt.strftime('%a')
             slo['data'].append({'caption': '{} {}'.format(dow, day[5:10]), 'slis': slis})
         slo['breaches'] = max(breaches_by_sli.values())
+        slo['count'] = max(counts_by_sli.values())
 
         fn = os.path.join(report_dir, 'chart-{}.png'.format(slo['id']))
         plot.plot(base_url, product, slo['id'], fn)
@@ -119,6 +139,7 @@ def generate_weekly_report(base_url, product, output_dir):
     data['now'] = datetime.datetime.utcnow()
 
     env.filters['sli_title'] = title
+    env.filters['human_time'] = human_time
     template = env.get_template('slr-weekly.html')
     template.stream(**data).dump(os.path.join(report_dir, 'index.html'))
 
