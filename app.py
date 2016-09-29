@@ -22,53 +22,53 @@ database_uri = os.getenv('DATABASE_URI')
 pool = psycopg2.pool.SimpleConnectionPool(1, 10, database_uri, cursor_factory=NamedTupleCursor)
 
 
+class DatabaseConnection:
+    def __enter__(self):
+        self.conn = pool.getconn()
+        return self.conn
+
+    def __exit__(self, type, value, traceback):
+        pool.putconn(self.conn)
+
+# more convenient short alias
+dbconn = DatabaseConnection
+
+
 def get_health():
     return 'OK'
 
 
 def get_products():
-    conn = pool.getconn()
-    try:
+    with dbconn() as conn:
         cur = conn.cursor()
-        cur.execute('''SELECT p.*, pg_name AS pg_product_group_name, pg_department
+        cur.execute('''SELECT p.*, pg_name AS pg_product_group_name, pg_slug AS pg_product_group_slug, pg_department
                 FROM zsm_data.product p
                 JOIN zsm_data.product_group ON pg_id = p_product_group_id''')
         rows = cur.fetchall()
         res = [strip_column_prefix(r._asdict()) for r in rows]
-    finally:
-        pool.putconn(conn)
     return res
-
-
 
 
 def get_service_level_indicators(product, name, time_from=None, time_to=None):
     # TODO: allow filtering by time_from/time_to
-    conn = pool.getconn()
-    try:
+    with dbconn() as conn:
         cur = conn.cursor()
         cur.execute('''SELECT sli_timestamp, sli_value from zsm_data.service_level_indicator
         WHERE sli_product_id = (SELECT p_id FROM zsm_data.product WHERE p_slug = %s) AND sli_name = %s
         AND sli_timestamp >= \'now\'::timestamp - interval \'7 days\'
         ORDER BY 1''', (product, name))
         return cur.fetchall()
-    finally:
-        pool.putconn(conn)
 
 
 def post_update(product, name, body):
     kairosdb_url = os.getenv('KAIROSDB_URL')
-    conn = pool.getconn()
-    try:
+    with dbconn() as conn:
         cur = conn.cursor()
         cur.execute('SELECT ds_definition FROM zsm_data.data_source WHERE ds_product_id = (SELECT p_id FROM zsm_data.product WHERE p_slug = %s) AND ds_sli_name = %s', (product, name))
         row = cur.fetchone()
         if not row:
             return 'Not found', 404
         definition, = row
-
-    finally:
-        pool.putconn(conn)
     count = slo.process_sli(product, name, definition, kairosdb_url, body.get('start', 5), 'minutes', database_uri)
     return {'count': count}
 
@@ -81,9 +81,8 @@ def strip_column_prefix(d):
 
 
 def get_service_level_objectives(product):
-    conn = pool.getconn()
     res = []
-    try:
+    with dbconn() as conn:
         cur = conn.cursor()
         cur.execute('''SELECT slo_id, slo_title
                 FROM zsm_data.service_level_objective slo
@@ -96,14 +95,11 @@ def get_service_level_objectives(product):
             targets = cur.fetchall()
             d['targets'] = [strip_column_prefix(r._asdict()) for r in targets]
             res.append(d)
-    finally:
-        pool.putconn(conn)
     return res
 
 
 def update_service_level_objectives(product):
-    conn = pool.getconn()
-    try:
+    with dbconn() as conn:
         cur = conn.cursor()
         cur.execute('''SELECT sli_name, EXTRACT(EPOCH FROM now() - MAX(sli_timestamp)) AS seconds_ago
                 FROM zsm_data.service_level_indicator
@@ -111,8 +107,6 @@ def update_service_level_objectives(product):
                 WHERE p_slug = %s
                 GROUP BY sli_name''', (product, ))
         rows = cur.fetchall()
-    finally:
-        pool.putconn(conn)
     res = {}
     for row in rows:
         res[row.sli_name] = {'start': (row.seconds_ago // 60) + 5}
@@ -126,7 +120,7 @@ def update_service_level_objectives(product):
 def get_service_level_objective_report(product, report_type):
     conn = pool.getconn()
     days = collections.defaultdict(dict)
-    try:
+    with dbconn() as conn:
         cur = conn.cursor()
         cur.execute('''SELECT p.*, pg_name AS pg_product_group_name, pg_department
                 FROM zsm_data.product p
@@ -147,8 +141,6 @@ def get_service_level_objective_report(product, report_type):
         rows = cur.fetchall()
         for row in rows:
             days[row.day.isoformat()][row.name] = {'min': row.min, 'avg': row.avg, 'max': row.max, 'count': row.count, 'breaches': row.agg}
-    finally:
-        pool.putconn(conn)
     return {'product': product_data, 'days': days}
 
 
