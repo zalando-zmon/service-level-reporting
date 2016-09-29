@@ -15,6 +15,22 @@ def title(s):
     return s.title().replace('_', ' ').replace('.', ' ')
 
 
+def generate_directory_index(output_dir, path='/'):
+    dirs = []
+    for entry in sorted(os.listdir(output_dir)):
+        if '.' not in entry:
+            dirs.append(entry)
+            if '-' not in entry:
+                generate_directory_index(os.path.join(output_dir, entry), os.path.join(path, entry))
+
+    data = {'path': path, 'dirs': dirs}
+
+    loader = jinja2.FileSystemLoader('templates')
+    env = jinja2.Environment(loader=loader)
+    template = env.get_template('directory_index.html')
+    template.stream(**data).dump(os.path.join(output_dir, 'index.html'))
+
+
 def generate_weekly_report(base_url, product, output_dir):
     url = '{}/service-level-objectives/{}'.format(base_url, product)
     resp = requests.get(url, headers={'Authorization': 'Bearer {}'.format(zign.api.get_token('zmon', ['uid']))})
@@ -98,6 +114,8 @@ def generate_weekly_report(base_url, product, output_dir):
     env.filters['sli_title'] = title
     template = env.get_template('slr.tpl')
     template.stream(**data).dump(os.path.join(report_dir, 'index.html'))
+
+    generate_directory_index(output_dir)
 
 
 @click.command()
