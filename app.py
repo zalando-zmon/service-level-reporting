@@ -117,7 +117,6 @@ def update_service_level_objectives(product):
     return res
 
 
-
 def get_service_level_objective_report(product, report_type):
     with dbconn() as conn:
         cur = conn.cursor()
@@ -156,7 +155,6 @@ def run_sli_update():
                 update_service_level_objectives(product['slug'])
         except:
             logger.exception('Failed to update SLIs')
-
 
 
 logging.basicConfig(level=logging.INFO)
