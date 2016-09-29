@@ -7,6 +7,7 @@ import psycogreen.gevent
 psycogreen.gevent.patch_psycopg()
 
 import collections
+import gevent
 import logging
 import os
 
@@ -15,7 +16,7 @@ import psycopg2
 import psycopg2.pool
 from psycopg2.extras import NamedTupleCursor
 
-import slo
+from slo import process_sli
 
 database_uri = os.getenv('DATABASE_URI')
 # NOTE: we can safely use SimpleConnectionPool instead of ThreadedConnectionPool as we use gevent greenlets
@@ -69,7 +70,7 @@ def post_update(product, name, body):
         if not row:
             return 'Not found', 404
         definition, = row
-    count = slo.process_sli(product, name, definition, kairosdb_url, body.get('start', 5), 'minutes', database_uri)
+    count = process_sli(product, name, definition, kairosdb_url, body.get('start', 5), 'minutes', database_uri)
     return {'count': count}
 
 
@@ -146,6 +147,18 @@ def get_service_level_objective_report(product, report_type):
     return {'product': product_data, 'service_level_objectives': service_level_objectives}
 
 
+def run_sli_update():
+    logger = logging.getLogger('sli-update')
+    while True:
+        gevent.sleep(int(os.getenv('UPDATE_INTERVAL_SECONDS', 600)))
+        try:
+            for product in get_products():
+                update_service_level_objectives(product['slug'])
+        except:
+            logger.exception('Failed to update SLIs')
+
+
+
 logging.basicConfig(level=logging.INFO)
 app = connexion.App(__name__)
 app.add_api('swagger.yaml')
@@ -154,5 +167,6 @@ app.add_api('swagger.yaml')
 application = app.app
 
 if __name__ == '__main__':
+    gevent.spawn(run_sli_update)
     # run our standalone gevent server
     app.run(port=8080, server='gevent')
