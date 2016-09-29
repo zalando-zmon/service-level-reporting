@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 
 import collections
-import requests
 import subprocess
-import sys
+
+import requests
 import zign.api
 
 precision = {'ms': 0, '%': 2}
 
 
 def plot(base_url, product, slo_id, output_file):
-
     url = '{}/service-level-objectives/{}'.format(base_url, product)
     resp = requests.get(url, headers={'Authorization': 'Bearer {}'.format(zign.api.get_token('zmon', ['uid']))})
     resp.raise_for_status()
@@ -37,7 +36,7 @@ def plot(base_url, product, slo_id, output_file):
 
     gnuplot_data = '''
     set output '{}'
-    set term png enhanced size 800, 400
+    set term png enhanced size 1100, 400
     set xdata time
     set format x "%m-%d"
     set timefmt "%Y-%m-%dT%H:%M:%SZ"
@@ -54,7 +53,7 @@ def plot(base_url, product, slo_id, output_file):
                 suff = ''
             else:
                 suff = '2'
-            gnuplot_data += 'set format y{} "%.{}f{}"\n'.format(suff, precision.get(unit, 0), unit.replace('%', '%%'))
+            gnuplot_data += 'set format y{} "%.{}f {}"\n'.format(suff, precision.get(unit, 0), unit.replace('%', '%%'))
             ymin, ymax = (min([t['from'] for t in _targets]), max([t['to'] for t in _targets]))
             if ymin is not None:
                 ymin = ymin - (0.2*abs(ymin))
@@ -78,10 +77,3 @@ def plot(base_url, product, slo_id, output_file):
             plots.append('"{}" using 1:2 lw 2 smooth cspline axes x1{} with lines title "{}"'.format(target['fn'], target['yaxis'], target['sli_name'].replace('_', ' ')))
     gnuplot_data += ', '.join(plots) + '\n'
     plot.communicate(gnuplot_data.encode('utf-8'))
-
-if __name__ == '__main__':
-    url = sys.argv[1]
-    product = sys.argv[2]
-    slo_id = sys.argv[3]
-    output_file = sys.argv[4]
-    plot(url, product, slo_id, output_file)

@@ -28,7 +28,7 @@
         td.ok { }
         td.orange { background-color: #ffffc8; }
         td.red { background-color: #ffcece; }
-        td.not-enough-samples { opacity: 0.8; }
+        td.not-enough-samples { opacity: 0.7; }
 
         .sli-large { font-size: 48px; }
 

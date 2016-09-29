@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
-import click
 import datetime
 import fnmatch
 import logging
+
 import psycopg2
 import requests
-import yaml
 import zign.api
 
 logger = logging.getLogger('slo')
@@ -121,19 +120,3 @@ def update(sli_definition, kairosdb_url, dsn, start, time_unit):
     for product_name, product_def in sli_definition.items():
         for sli_name, sli_def in product_def.items():
             process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit, dsn)
-
-
-@click.command()
-@click.argument('sli_definition', type=click.File('rb'))
-@click.option('--kairosdb-url')
-@click.option('--start', type=int, default=5)
-@click.option('--time-unit', default='minutes')
-@click.option('--dsn')
-def cli(sli_definition, kairosdb_url, dsn, start, time_unit):
-    sli_definition = yaml.safe_load(sli_definition)
-
-    update(sli_definition, kairosdb_url, dsn, start, time_unit)
-
-
-if __name__ == '__main__':
-    cli()

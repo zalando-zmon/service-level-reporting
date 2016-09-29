@@ -7,9 +7,10 @@ import psycogreen.gevent
 psycogreen.gevent.patch_psycopg()
 
 import collections
-import connexion
 import logging
 import os
+
+import connexion
 import psycopg2
 import psycopg2.pool
 from psycopg2.extras import NamedTupleCursor

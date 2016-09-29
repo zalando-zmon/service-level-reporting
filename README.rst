@@ -33,3 +33,7 @@ Configuration parameters:
     PostgreSQL database connection string.
 ``KAIROSDB_URL``
     KairosDB base URL.
+
+.. code-block:: bash
+
+    $ ./generate-slr.py http://localhost:8080 myproduct
