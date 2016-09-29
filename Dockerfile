@@ -1,4 +1,4 @@
-FROM registry.opensource.zalan.do/stups/python:3.5.2-37
+FROM registry.opensource.zalan.do/stups/python:3.5.2-38
 
 # libpq-dev is needed for PostgreSQL driver
 RUN apt-get update && apt-get install -y libpq-dev
