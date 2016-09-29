@@ -46,25 +46,29 @@ def generate_weekly_report(base_url, product, output_dir):
     # TODO: should use pg_slug from PostgreSQL database (but we don't return it right now)
     product_group = report_data['product']['product_group_name'].lower()
 
-    period_id = '{}-{}'.format(min(report_data['days'].keys())[:10].replace('-', ''), max(report_data['days'].keys())[:10].replace('-', ''))
+    period_from = min(report_data['service_level_objectives'][0]['days'].keys())[:10]
+    period_to = max(report_data['service_level_objectives'][0]['days'].keys())[:10]
+
+    period_id = '{}-{}'.format(period_from.replace('-', ''), period_to.replace('-', ''))
 
     report_dir = os.path.join(output_dir, product_group, product, period_id)
     os.makedirs(report_dir, exist_ok=True)
 
     values_by_sli = collections.defaultdict(list)
-    for day, data in sorted(report_data['days'].items()):
-        for sli_name, _sli_data in data.items():
-            values_by_sli[sli_name].append(_sli_data['avg'])
+    for slo in report_data['service_level_objectives']:
+        for day, data in sorted(slo['days'].items()):
+            for sli_name, _sli_data in data.items():
+                values_by_sli[sli_name].append(_sli_data['avg'])
 
     loader = jinja2.FileSystemLoader('templates')
     env = jinja2.Environment(loader=loader)
 
     data = {
         'product': report_data['product'],
-        'period': '{} - {}'.format(min(report_data['days'].keys())[:10], max(report_data['days'].keys())[:10]),
+        'period': '{} - {}'.format(period_from, period_to),
         'slos': []}
 
-    for slo in slos:
+    for slo in report_data['service_level_objectives']:
         slo['slis'] = {}
         for target in slo['targets']:
             val = sum(values_by_sli[target['sli_name']]) / len(values_by_sli[target['sli_name']])
@@ -79,7 +83,7 @@ def generate_weekly_report(base_url, product, output_dir):
                     }
         slo['data'] = []
         breaches_by_sli = collections.defaultdict(int)
-        for day, day_data in sorted(report_data['days'].items()):
+        for day, day_data in sorted(slo['days'].items()):
             slis = {}
             for sli, sli_data in day_data.items():
                 breaches_by_sli[sli] += sli_data['breaches']
