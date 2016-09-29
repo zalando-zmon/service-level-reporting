@@ -67,9 +67,9 @@ def plot(base_url, product, slo_id, output_file):
                 target['yaxis'] = 'y1' if i == 0 else 'y2'
                 coord = 'first' if i == 0 else 'second'
                 if target['from']:
-                    gnuplot_data += 'set arrow from graph 0,{} {} to graph 1, {} {} nohead linecolor rgb "#990000" back\n'.format(coord, target['from'], coord, target['from'])
+                    gnuplot_data += 'set arrow from graph 0,{} {} to graph 1, {} {} head linecolor rgb "#ffcece" linewidth 2\n'.format(coord, target['from'], coord, target['from'])
                 if target['to']:
-                    gnuplot_data += 'set arrow from graph 0,{} {} to graph 1, {} {} nohead linecolor rgb "#990000" back\n'.format(coord, target['to'], coord, target['to'])
+                    gnuplot_data += 'set arrow from graph 0,{} {} to graph 1, {} {} backhead linecolor rgb "#ffcece" linewidth 2\n'.format(coord, target['to'], coord, target['to'])
             i += 1
 
     gnuplot_data += 'plot '

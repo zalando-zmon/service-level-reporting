@@ -81,7 +81,7 @@
                                 {% for data in slo.data %}
                                     {% if data.slis.get(sli) %}
                                         <td class="value {{ ' '.join(data.slis.get(sli).classes) }}"
-                                            title="min: {{ data.slis.get(sli).min }}, max: {{ data.slis.get(sli).max }}, breaches: {{ data.slis.get(sli).breaches }}, count: {{ data.slis.get(sli).count }}">{{ '%.2f'|format(data.slis.get(sli).avg) }} {{ data.slis.get(sli).unit }}</td>
+                                            title="min: {{ data.slis.get(sli).min }}, max: {{ data.slis.get(sli).max }}, breaches: {{ data.slis.get(sli).breaches }}, count: {{ data.slis.get(sli).count }}">{% if 'total' in data.slis.get(sli) %}{{ data.slis.get(sli).total }}{% else %}{{ '%.2f'|format(data.slis.get(sli).avg) }} {{ data.slis.get(sli).unit }}{% endif %}</td>
                                     {% else %}
                                         <td></td>
                                     {% endif %}

@@ -33,11 +33,6 @@ def generate_directory_index(output_dir, path='/'):
 
 
 def generate_weekly_report(base_url, product, output_dir):
-    url = '{}/service-level-objectives/{}'.format(base_url, product)
-    resp = requests.get(url, headers={'Authorization': 'Bearer {}'.format(zign.api.get_token('zmon', ['uid']))})
-    resp.raise_for_status()
-    slos = resp.json()
-
     url = '{}/service-level-objectives/{}/reports/weekly'.format(base_url, product)
     resp = requests.get(url, headers={'Authorization': 'Bearer {}'.format(zign.api.get_token('zmon', ['uid']))})
     resp.raise_for_status()
@@ -105,6 +100,9 @@ def generate_weekly_report(base_url, product, output_dir):
                 if sli_data['count'] < 1400:
                     classes.add('not-enough-samples')
 
+                if sli == 'requests':
+                    # interpolate total number of requests per day from average per sec
+                    sli_data['total'] = int(sli_data['avg'] * sli_data['count'] * 60)
                 slis[sli] = sli_data
                 slis[sli]['unit'] = unit
                 slis[sli]['classes'] = classes
