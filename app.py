@@ -122,7 +122,7 @@ def get_service_level_objective_report(product, report_type):
     days = collections.defaultdict(dict)
     with dbconn() as conn:
         cur = conn.cursor()
-        cur.execute('''SELECT p.*, pg_name AS pg_product_group_name, pg_department
+        cur.execute('''SELECT p.*, pg_name AS pg_product_group_name, pg_slug AS pg_product_group_slug, pg_department
                 FROM zsm_data.product p
                 JOIN zsm_data.product_group ON pg_id = p_product_group_id
                 WHERE p_slug = %s''', (product, ))
@@ -136,7 +136,7 @@ def get_service_level_objective_report(product, report_type):
                 JOIN zsm_data.service_level_indicator_target ON slit_sli_name = sli_name
                 JOIN zsm_data.service_level_objective ON slo_id = slit_slo_id
                 JOIN zsm_data.product ON p_id = slo_product_id AND p_slug = %s
-                WHERE sli_timestamp >= \'now\'::timestamp - interval \'7 days\'
+                WHERE sli_timestamp >= date_trunc(\'day\', \'now\'::timestamp - interval \'7 days\')
                 GROUP BY date_trunc(\'day\', sli_timestamp), sli_name''', (product, ))
         rows = cur.fetchall()
         for row in rows:
