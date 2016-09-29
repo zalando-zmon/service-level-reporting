@@ -16,14 +16,6 @@
             crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/css?family=Merriweather|Roboto" rel="stylesheet">
     <style>
-        table.report td { text-align: center;}
-        td.ok { }
-        td.orange { background-color: #ffffc8; }
-        td.red { background-color: #ffcece; }
-        td.not-enough-samples { opacity: 0.8; }
-
-        .sli-large { font-size: 48px; }
-
         body {
             font-family: 'Roboto', sans-serif;
         }
@@ -32,20 +24,27 @@
             font-family: 'Merriweather', serif;
         }
 
+        table.report td, th.day { text-align: center;}
+        td.ok { }
+        td.orange { background-color: #ffffc8; }
+        td.red { background-color: #ffcece; }
+        td.not-enough-samples { opacity: 0.8; }
+
+        .sli-large { font-size: 48px; }
+
+        .chart { text-align: center; }
 
     </style>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 </head>
 <body>
 <div class="container-fluid">
-    <div class="page-header">
-        <h1>Service Levels Report</h1>
-        <h3>{{ product.product_group_name }} - {{ product.name }}</h3>
-        <h4>{{ period }}</h4>
-    </div>
-
     <div class="container">
-        <h2>Service Level Objectives</h2>
+        <div class="page-header">
+            <h1>Service Levels Report</h1>
+            <h3>{{ product.product_group_name }} - {{ product.name }}</h3>
+            <h4>{{ period }}</h4>
+        </div>
         {% for slo in slos %}
             <div class="panel panel-default">
                 <div class="panel-heading">{{ slo.title }}</div>
@@ -71,8 +70,8 @@
                     <table class="table table-bordered report">
                         <tr>
                             <th>SLI</th>
-                            {% for sli in slo.data %}
-                                <th>{{ sli.caption|sli_title }}</th>
+                            {% for data in slo.data %}
+                                <th class="day">{{ data.caption|sli_title }}</th>
                             {% endfor %}
                         </tr>
 
@@ -99,10 +98,12 @@
                             <td>The weighted average for the period failed to meet the SLO</td>
                         </tr>
                     </table>
-                    <p>
+                    <p class="chart">
                         <img src="{{ slo.chart }}" alt="Service Level Objective Chart"/>
                     </p>
-                    <div class="alert alert-danger"><p>During this period, the service failed to meet this SLO for {{ slo.breaches }} minute(s)</p></div>
+                    {% if slo.breaches %}
+                    <div class="alert alert-danger"><p>During this period, the service failed to meet this SLO for <strong>{{ slo.breaches }}</strong> minute(s)</p></div>
+                    {% endif %}
                 </div>
             </div>
         {% endfor %}
