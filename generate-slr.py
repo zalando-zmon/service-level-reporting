@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import collections
+import datetime
 import os
 
 import click
@@ -103,7 +104,9 @@ def generate_weekly_report(base_url, product, output_dir):
                 slis[sli] = sli_data
                 slis[sli]['unit'] = unit
                 slis[sli]['classes'] = classes
-            slo['data'].append({'caption': day[5:10], 'slis': slis})
+            dt = datetime.datetime.strptime(day[:10], '%Y-%m-%d')
+            dow = dt.strftime('%a')
+            slo['data'].append({'caption': '{} {}'.format(dow, day[5:10]), 'slis': slis})
         slo['breaches'] = max(breaches_by_sli.values())
 
         fn = os.path.join(report_dir, 'chart-{}.png'.format(slo['id']))
