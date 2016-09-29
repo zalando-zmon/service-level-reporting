@@ -75,12 +75,13 @@ def plot(base_url, product, slo_id, output_file):
     plots = []
     for target in sorted(targets, key=lambda t: t['unit']):
         if target['unit']:
-            plots.append('"{}" using 1:2 axes x1{} with lines title "{}"'.format(target['fn'], target['yaxis'], target['sli_name'].replace('_', ' ')))
+            plots.append('"{}" using 1:2 lw 2 smooth cspline axes x1{} with lines title "{}"'.format(target['fn'], target['yaxis'], target['sli_name'].replace('_', ' ')))
     gnuplot_data += ', '.join(plots) + '\n'
     plot.communicate(gnuplot_data.encode('utf-8'))
 
 if __name__ == '__main__':
     url = sys.argv[1]
     product = sys.argv[2]
-    sli = sys.argv[3]
-    plot(url, product, sli)
+    slo_id = sys.argv[3]
+    output_file = sys.argv[4]
+    plot(url, product, slo_id, output_file)

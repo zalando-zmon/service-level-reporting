@@ -1,79 +1,114 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Service Level Report - {{period}}</title>
+    <title>Service Level Report - {{ period }}</title>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
+          integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/css?family=Merriweather|Roboto" rel="stylesheet">
     <style>
-    body { font: 16px Arial, Helvetica, sans-serif; text-align: center; }
-    th, td { font-size: 16px; }
-    td.value { text-align: center; }
-    th.ok { color: #38761d; }
-    td.orange { background-color: orange; }
-    td.red { background-color: red; }
-    td.not-enough-samples { opacity: 0.5; }
-    .sli-large { font-size: 48px; text-align: center; }
-    .sli-caption { text-align: center; }
+        table.report td {background-color: #c4ff4d; text-align: center;}
+        td.ok { color: #38761d; }
+        table.report td.orange { background-color: #ffff4d; }
+        table.report td.red { background-color: #ff6474 	; }
+
+        table.report td.not-enough-samples {background-color: #f7ffe6;}
+
+        table.report td.not-enough-samples.orange {background-color: #ffffb3;}
+        table.report td.not-enough-samples.red { background-color: #ffccd1;  }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Merriweather', serif;
+        }
+
+
     </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 </head>
 <body>
-<h1>Service Levels Report</h1>
-<h2>{{product.product_group_name }} - {{ product.name }}</h2>
-<h2>{{period}}</h2>
+<div class="container-fluid">
+    <div class="page-header">
+        <h1>Service Levels Report</h1>
+        <h3>{{ product.product_group_name }} - {{ product.name }}</h3>
+        <h4>{{ period }}</h4>
+    </div>
 
-{% for slo in slos %}
-<h1>Service Level Objective</h1>
-{{slo.title}}
-<h2>Reliability Index</h2>
-<table style="width:100%">
-    <tr>
-        {% for sli in slo.slis.keys()|sort %}
-        {% if sli != 'requests': %}
-        <th class="sli-large {{ 'ok' if slo.slis[sli].ok }}">{{slo.slis[sli].avg}}</th>
-        {% endif %}
+    <div class="container">
+        <h2>Service Level Objectives</h2>
+        {% for slo in slos %}
+            <div class="panel panel-default">
+                <div class="panel-heading">{{ slo.title }}</div>
+                <div class="panel-body">
+                    <h4>Reliability Index</h4>
+                    <table class="table">
+                        <tr>
+                            {% for sli in slo.slis.keys() | sort %}
+                                {% if sli != 'requests' %}
+                                    <th class="sli-caption">{{ sli|sli_title }}</th>
+                                {% endif %}
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            {% for sli in slo.slis.keys() | sort %}
+                                {% if sli != 'requests' %}
+                                    <td class="sli-large {{ 'ok' if slo.slis[sli].ok }}">{{ slo.slis[sli].avg }}</td>
+                                {% endif %}
+                            {% endfor %}
+                        </tr>
+                    </table>
+
+                    <table class="table table-bordered report">
+                        <tr>
+                            <th>SLI</th>
+                            {% for sli in slo.data %}
+                                <th>{{ sli.caption|sli_title }}</th>
+                            {% endfor %}
+                        </tr>
+
+                        {% for sli in slo.slis.keys()|sort %}
+                            <tr>
+                                <th>{{ sli|sli_title }}</th>
+                                {% for data in slo.data %}
+                                    {% if data.slis.get(sli) %}
+                                        <td class="value {{ ' '.join(data.slis.get(sli).classes) }}"
+                                            title="min: {{ data.slis.get(sli).min }}, max: {{ data.slis.get(sli).max }}, breaches: {{ data.slis.get(sli).breaches }}, count: {{ data.slis.get(sli).count }}">{{ '%.2f'|format(data.slis.get(sli).avg) }} {{ data.slis.get(sli).unit }}</td>
+                                    {% else %}
+                                        <td></td>
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </table>
+
+                    <table class="table">
+                        <tr>
+                            <td bgcolor="#ffff4d">&nbsp;</td>
+                            <td>At least one data point failed to meet the SLO</td>
+                            <td bgcolor="#ff6474">&nbsp;</td>
+                            <td>The weighted average for the period failed to meet the SLO</td>
+                        </tr>
+                    </table>
+                    <p>
+                        <img src="{{ slo.chart }}" alt="Service Level Objective Chart"/>
+                    </p>
+                    <div class="alert alert-danger"><p>During this period, the service failed to meet this SLO for {{ slo.breaches }} minute(s)</p></div>
+                </div>
+            </div>
         {% endfor %}
-    </tr>
-    <tr>
-        {% for sli in slo.slis.keys()|sort %}
-        {% if sli != 'requests': %}
-        <td class="sli-caption">{{sli|sli_title}}</td>
-        {% endif %}
-        {% endfor %}
-    </tr>
-</table>
-
-<table style="width:100%">
-    <tr>
-        <th>SLI</th>
-        {% for sli in slo.data %}
-        <th>{{sli.caption|sli_title}}</th>
-        {% endfor %}
-    </tr>
-
-    {% for sli in slo.slis.keys()|sort %}
-    <tr>
-        <th>{{sli|sli_title}}</th>
-        {% for data in slo.data %}
-        {% if data.slis.get(sli) %}
-        <td class="value {{ ' '.join(data.slis.get(sli).classes)}}" title="min: {{ data.slis.get(sli).min }}, max: {{ data.slis.get(sli).max }}, breaches: {{data.slis.get(sli).breaches }}, count: {{ data.slis.get(sli).count }}">{{'%.2f'|format(data.slis.get(sli).avg)}} {{data.slis.get(sli).unit }}</td>
-        {% else %}
-        <td></td>
-        {% endif %}
-        {% endfor %}
-    </tr>
-    {% endfor %}
-</table>
-
-<table style="width:100%">
-    <tr>
-        <td bgcolor="orange">&nbsp;</td>
-        <td>At least one data point failed to meet the SLO</td>
-        <td bgcolor="red">&nbsp;</td>
-        <td>The weighted average for the period failed to meet the SLO</td>
-    </tr>
-</table>
-<p>
-<img src="{{slo.chart}}" alt="Service Level Objective Chart" />
-</p>
-<p>During this period, the service failed to meet this SLO for {{slo.breaches}} minute(s)</p>
-
-{% endfor %}
+    </div>
+</div>
 </body>
 </html>
