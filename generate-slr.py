@@ -38,7 +38,8 @@ def generate_directory_index(output_dir, path='/'):
     for entry in sorted(os.listdir(output_dir)):
         if '.' not in entry:
             dirs.append(entry)
-            if '-' not in entry:
+            if not entry.startswith('20'):
+                # leaf directory with actual report
                 generate_directory_index(os.path.join(output_dir, entry), os.path.join(path, entry))
 
     data = {'path': path, 'dirs': dirs}
