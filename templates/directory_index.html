@@ -40,7 +40,7 @@
                 {% if path != '/' %}
                     <li><a href="../index.html">..</a</li>
                 {% endif %}
-                {% for dir in dirs: %}
+                {% for dir in dirs | reverse : %}
                     <li><a href="{{ dir }}/index.html">{{ dir }}</a></li>
                 {% endfor %}
                 </ul>

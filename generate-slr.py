@@ -44,7 +44,7 @@ def generate_directory_index(output_dir, path='/'):
 
     data = {'path': path, 'dirs': dirs}
 
-    loader = jinja2.FileSystemLoader('templates')
+    loader = jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates'))
     env = jinja2.Environment(loader=loader)
     template = env.get_template('directory_index.html')
     template.stream(**data).dump(os.path.join(output_dir, 'index.html'))
@@ -73,7 +73,7 @@ def generate_weekly_report(base_url, product, output_dir):
             for sli_name, _sli_data in data.items():
                 values_by_sli[sli_name].append(_sli_data['avg'])
 
-    loader = jinja2.FileSystemLoader('templates')
+    loader = jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates'))
     env = jinja2.Environment(loader=loader)
 
     data = {
