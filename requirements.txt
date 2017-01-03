@@ -1,6 +1,6 @@
 clickclick
 psycopg2
 psycogreen
-gevent
+gevent<1.2.0
 connexion
 stups-zign
