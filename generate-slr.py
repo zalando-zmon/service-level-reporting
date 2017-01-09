@@ -84,14 +84,14 @@ def generate_weekly_report(base_url, product, output_dir):
     for slo in report_data['service_level_objectives']:
         slo['slis'] = {}
         for target in slo['targets']:
-            val = sum(values_by_sli[target['sli_name']]) / len(values_by_sli[target['sli_name']])
+            val = sum(values_by_sli[target['sli_name']]) / len(values_by_sli[target['sli_name']]) if len(values_by_sli[target['sli_name']]) > 0 else None
             ok = True
-            if target['to'] and val > target['to']:
+            if val is not None and target['to'] and val > target['to']:
                 ok = False
-            if target['from'] and val < target['from']:
+            if val is not None and target['from'] and val < target['from']:
                 ok = False
             slo['slis'][target['sli_name']] = {
-                    'avg': '{:.2f} {}'.format(val, target['unit']),
+                    'avg': '-' if val is None else '{:.2f} {}'.format(val, target['unit']),
                     'ok': ok
                     }
         slo['data'] = []
