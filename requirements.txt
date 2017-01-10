@@ -4,3 +4,4 @@ psycogreen
 gevent<1.2.0
 connexion
 stups-zign
+awesome-slugify

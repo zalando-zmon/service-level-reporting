@@ -10,40 +10,81 @@ security:
   # enable OAuth protection for all REST endpoints
   # (only active if the HTTP_TOKENINFO_URL environment variable is set)
   - oauth2: [uid]
+
 paths:
   /health:
     get:
       tags: [System]
-      operationId: app.get_health
+      operationId: app.handler.health.get_health
       summary: Return health
       security: []
       responses:
         200:
           description: Health is OK
+  /product-groups:
+    get:
+      tags: [Product Group]
+      operationId: app.handler.product_groups.get_product_groups
+      responses:
+        200:
+          description: List of Product Groups
+          schema:
+              type: array
+              items:
+                $ref: '#/definitions/ProductGroup'
+    post:
+      tags: [Product Group]
+      operationId: app.handler.product_groups.add_product_group
+      summary: Add a Product Group
+      description: Add a product group for a team
+      parameters:
+        - $ref: '#/parameters/ProductGroup'
+      responses:
+        201:
+          description: OK
+
   /products:
     get:
-      tags: [SLO]
-      operationId: app.get_products
+      tags: [Product]
+      operationId: app.handler.product.get_products
       responses:
         200:
           description: List of products
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Product'
           examples:
             "application/json":
-                - id: 123
-                  name: "E-Coin"
+                - slug: e-coin
+                  name: E-Coin
+                  group_slug: crypto-currency
+                  delivery_team: Dark Warriors
+
+    post:
+      tags: [Product]
+      operationId: app.handler.product.add_product
+      parameters:
+        - $ref: '#/parameters/Product'
+      responses:
+        201:
+          description: Product created
+
   /service-level-indicators/{product}/{name}:
     get:
-      tags: [SLO]
-      operationId: app.get_service_level_indicators
+      tags: [SLI]
+      operationId: app.handler.sli.get_service_level_indicators
       parameters:
         - name: product
           in: path
           type: string
           required: true
+          description: The product slug
         - name: name
           in: path
           type: string
           required: true
+          description: The name of the SLI
         - name: time_from
           in: query
           type: string
@@ -55,8 +96,8 @@ paths:
           description: Return SLIs
   /service-level-indicators/{product}/{name}/update:
     post:
-      tags: [SLO]
-      operationId: app.post_update
+      tags: [SLI]
+      operationId: app.handler.slo.post_update
       summary: Update
       parameters:
         - name: product
@@ -86,7 +127,7 @@ paths:
   /service-level-objectives/{product}:
     get:
       tags: [SLO]
-      operationId: app.get_service_level_objectives
+      operationId: app.handler.slo.get_service_level_objectives
       parameters:
         - name: product
           in: path
@@ -95,10 +136,24 @@ paths:
       responses:
         200:
           description: Return SLO definitions
+    post:
+      tags: [SLO]
+      operationId: app.handler.slo.add_slo
+      parameters:
+        - $ref: '#/parameters/ServiceLevelObjective'
+        - name: product
+          in: path
+          type: string
+          required: true
+          description: The product slug for this SLO
+      responses:
+        201:
+          description: SLO created
+
   /service-level-objectives/{product}/update:
     post:
       tags: [SLO]
-      operationId: app.update_service_level_objectives
+      operationId: app.updater.update_service_level_objectives
       parameters:
         - name: product
           in: path
@@ -110,7 +165,7 @@ paths:
   /service-level-objectives/{product}/reports/{report_type}:
     get:
       tags: [SLO]
-      operationId: app.get_service_level_objective_report
+      operationId: app.handler.report.get_service_level_objective_report
       parameters:
         - name: product
           in: path
@@ -123,6 +178,97 @@ paths:
       responses:
         200:
           description: Return report data
+
+definitions:
+  ProductGroup:
+    properties:
+      product_group_slug:
+        type: string
+        description: The identifier for the Product group.
+      product_group_name:
+        type: string
+        description: The actual name for the product group.
+      product_group_team:
+        type: string
+        description: The owning team of the product group.
+
+  Product:
+    properties:
+      slug:
+        type: string
+        description: The slug identifier for the Product
+      name:
+        type: string
+        description: The name of the product
+      group_slug:
+        type: string
+        description: The product group to which the product belongs.
+      delivery_team:
+        type: string
+        description: The owning team of the product.
+
+  SLITarget:
+    properties:
+      sli_name:
+        type: string
+        description: The SLI name
+        example: latency.p99
+      unit:
+        type: string
+        description: The unit for the SLI
+        example: ms
+      from:
+        type: number
+        description: The lower cutoff for the SLI
+        example: 100
+      to:
+        type: number
+        description: The upper cutoff for the SLI
+        example: 200
+
+
+parameters:
+  ServiceLevelObjective:
+    name: slo
+    required: true
+    in: body
+    description: The definition of the new SLO
+    schema:
+      type: object
+      properties:
+        title:
+          type: string
+          description: The title of the SLO
+          example: More than 95% successful responses under 200ms
+        targets:
+          type: array
+          items:
+            $ref: '#/definitions/SLITarget'
+
+  ProductGroup:
+    name: product_group
+    in: body
+    required: true
+    schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name for the new Product Group
+  Product:
+    name: product
+    in: body
+    required: true
+    schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of the new product
+        pg_slug:
+          type: string
+          description: The slug of the product group to which the product belongs.
+
 
 securityDefinitions:
   oauth2:
