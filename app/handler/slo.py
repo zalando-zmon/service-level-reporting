@@ -1,7 +1,6 @@
 from connexion import NoContent
 
-from app.handler.db import dbconn
-from app.slo import process_sli
+from app.db import dbconn
 from app.utils import strip_column_prefix
 
 
@@ -26,38 +25,7 @@ def get_service_level_objectives(product):
     return res
 
 
-def update_service_level_objectives(product):
-    with dbconn() as conn:
-        cur = conn.cursor()
-        cur.execute('''SELECT sli_name, EXTRACT(EPOCH FROM now() - MAX(sli_timestamp)) AS seconds_ago
-                FROM zsm_data.service_level_indicator
-                JOIN zsm_data.product ON p_id = sli_product_id
-                WHERE p_slug = %s
-                GROUP BY sli_name''', (product,))
-        rows = cur.fetchall()
-    res = {}
-    for row in rows:
-        res[row.sli_name] = {'start': (row.seconds_ago // 60) + 5}
-        response = post_update(product, row.sli_name, res[row.sli_name])
-        res[row.sli_name]['count'] = response['count']
 
-    return res
-
-
-def post_update(product, name, body):
-    kairosdb_url = os.getenv('KAIROSDB_URL')
-    with dbconn() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            'SELECT ds_definition FROM zsm_data.data_source WHERE '
-            'ds_product_id = (SELECT p_id FROM zsm_data.product WHERE p_slug = %s) AND ds_sli_name = %s',
-            (product, name))
-        row = cur.fetchone()
-        if not row:
-            return 'Not found', 404
-        definition, = row
-    count = process_sli(product, name, definition, kairosdb_url, body.get('start', 5), 'minutes', database_uri)
-    return {'count': count}
 
 
 def add_slo(product, slo):

@@ -1,4 +1,4 @@
-from app.handler.db import dbconn
+from app.db import dbconn
 
 
 def get_service_level_indicators(product, name, time_from=None, time_to=None):

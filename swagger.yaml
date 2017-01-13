@@ -24,7 +24,7 @@ paths:
   /product-groups:
     get:
       tags: [Product Group]
-      operationId: app.handler.product_groups.get_product_groups
+      operationId: app.handler.product_groups.get
       responses:
         200:
           description: List of Product Groups
@@ -34,7 +34,7 @@ paths:
                 $ref: '#/definitions/ProductGroup'
     post:
       tags: [Product Group]
-      operationId: app.handler.product_groups.add_product_group
+      operationId: app.handler.product_groups.add
       summary: Add a Product Group
       description: Add a product group for a team
       parameters:
@@ -43,10 +43,25 @@ paths:
         201:
           description: OK
 
+  /product-groups/{pg_slug}:
+    delete:
+      tags: [Product Group]
+      summary: Delete a Product Group
+      operationId: app.handler.product_groups.delete
+      parameters:
+        - type: string
+          name: pg_slug
+          in: path
+          description: The Product Group slug
+          required: true
+      responses:
+        200:
+          description: Product Group deleted.
+
   /products:
     get:
       tags: [Product]
-      operationId: app.handler.product.get_products
+      operationId: app.handler.product.get
       responses:
         200:
           description: List of products
@@ -63,23 +78,29 @@ paths:
 
     post:
       tags: [Product]
-      operationId: app.handler.product.add_product
+      operationId: app.handler.product.add
       parameters:
-        - $ref: '#/parameters/Product'
+        - $ref: '#/parameters/ProductDef'
       responses:
         201:
           description: Product created
+
+  /products/{product}:
+    delete:
+      tags: [Product]
+      operationId: app.handler.product.delete
+      parameters:
+        - $ref: '#/parameters/Product'
+      responses:
+        200:
+          description: Product Deleted
 
   /service-level-indicators/{product}/{name}:
     get:
       tags: [SLI]
       operationId: app.handler.sli.get_service_level_indicators
       parameters:
-        - name: product
-          in: path
-          type: string
-          required: true
-          description: The product slug
+        - $ref: '#/parameters/Product'
         - name: name
           in: path
           type: string
@@ -97,13 +118,10 @@ paths:
   /service-level-indicators/{product}/{name}/update:
     post:
       tags: [SLI]
-      operationId: app.handler.slo.post_update
+      operationId: app.handler.updater.post_update
       summary: Update
       parameters:
-        - name: product
-          in: path
-          type: string
-          required: true
+        - $ref: '#/parameters/Product'
         - name: name
           in: path
           type: string
@@ -129,10 +147,7 @@ paths:
       tags: [SLO]
       operationId: app.handler.slo.get_service_level_objectives
       parameters:
-        - name: product
-          in: path
-          type: string
-          required: true
+        - $ref: '#/parameters/Product'
       responses:
         200:
           description: Return SLO definitions
@@ -141,11 +156,7 @@ paths:
       operationId: app.handler.slo.add_slo
       parameters:
         - $ref: '#/parameters/ServiceLevelObjective'
-        - name: product
-          in: path
-          type: string
-          required: true
-          description: The product slug for this SLO
+        - $ref: '#/parameters/Product'
       responses:
         201:
           description: SLO created
@@ -153,24 +164,19 @@ paths:
   /service-level-objectives/{product}/update:
     post:
       tags: [SLO]
-      operationId: app.updater.update_service_level_objectives
+      operationId: app.handler.updater.update_service_level_objectives
       parameters:
-        - name: product
-          in: path
-          type: string
-          required: true
+        - $ref: '#/parameters/Product'
       responses:
         200:
           description: Update SLIs
+
   /service-level-objectives/{product}/reports/{report_type}:
     get:
       tags: [SLO]
       operationId: app.handler.report.get_service_level_objective_report
       parameters:
-        - name: product
-          in: path
-          type: string
-          required: true
+        - $ref: '#/parameters/Product'
         - name: report_type
           in: path
           type: string
@@ -178,6 +184,39 @@ paths:
       responses:
         200:
           description: Return report data
+
+  /data-source/{product}:
+    get:
+      tags: [Data Source]
+      operationId: app.handler.data_source.get
+      description: Get a list of data sources for a given product
+      parameters:
+        - $ref: '#/parameters/Product'
+      responses:
+        200:
+          description: Return the Targets for the the SLO
+    post:
+      tags: [Data Source]
+      operationId: app.handler.data_source.add
+      description: Create a new SLI Target for the SLO
+      parameters:
+        - $ref: '#/parameters/Product'
+        - $ref: '#/parameters/DataSource'
+      responses:
+        201:
+          description: The SLI Target was created.
+
+  /data-source/{product}/{sli_name}:
+    delete:
+      tags: [Data Source]
+      operationId: app.handler.data_source.delete
+      description: Delete the data source for a give SLI in a product
+      parameters:
+        - $ref: '#/parameters/Product'
+        - $ref: '#/parameters/ServiceLevelIndicator'
+      responses:
+        200:
+          description: Data source deleted.
 
 definitions:
   ProductGroup:
@@ -244,6 +283,9 @@ parameters:
           type: array
           items:
             $ref: '#/definitions/SLITarget'
+      required:
+        - title
+        - targets
 
   ProductGroup:
     name: product_group
@@ -255,7 +297,15 @@ parameters:
         name:
           type: string
           description: The name for the new Product Group
-  Product:
+          example: Recommendations Platform
+        department:
+          type: string
+          description: The department of the Product Group
+          example: Personalization
+      required:
+        - name
+        - department
+  ProductDef:
     name: product
     in: body
     required: true
@@ -265,9 +315,40 @@ parameters:
         name:
           type: string
           description: The name of the new product
-        pg_slug:
+          example: PDP Recommendations
+        product_group:
           type: string
-          description: The slug of the product group to which the product belongs.
+          description: The product group to which the product belongs
+          example: reco-platform
+      required:
+        - name
+        - product_group
+
+  DataSource:
+    name: data_source
+    in: body
+    required: true
+    schema:
+      type: object
+      properties:
+        sli_name:
+          type: string
+          description: The SLI name
+        definition:
+          type: object
+          description: The JSON definition for the SLI data source.
+
+  Product:
+    name: product
+    type: string
+    in: path
+    required: true
+
+  ServiceLevelIndicator:
+    name: sli_name
+    type: string
+    in: path
+    required: true
 
 
 securityDefinitions:

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
+import gevent.monkey
 
-# gevent.monkey.patch_all()
+gevent.monkey.patch_all()
 
 import logging
 import os
 
 import connexion
+from app.handler.updater import run_sli_update
 
 logging.basicConfig(level=logging.INFO)
 app = connexion.App(__name__)
@@ -17,9 +19,9 @@ application = app.app
 
 
 def run():
-    # gevent.spawn(run_sli_update)
+    gevent.spawn(run_sli_update)
     # run our standalone gevent server
-    app.run(port=8080, server='gevent', debug=True)
+    app.run(port=8080, server='gevent')
 
 
 if __name__ == '__main__':
