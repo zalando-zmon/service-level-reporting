@@ -25,9 +25,6 @@ def get_service_level_objectives(product):
     return res
 
 
-
-
-
 def add_slo(product, slo):
     with dbconn() as conn:
         cur = conn.cursor()
