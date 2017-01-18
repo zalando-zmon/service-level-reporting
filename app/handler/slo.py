@@ -4,7 +4,7 @@ from app.db import dbconn
 from app.utils import strip_column_prefix
 
 
-def get_service_level_objectives(product):
+def get(product):
     res = []
     with dbconn() as conn:
         cur = conn.cursor()
@@ -25,7 +25,7 @@ def get_service_level_objectives(product):
     return res
 
 
-def add_slo(product, slo):
+def add(product, slo):
     with dbconn() as conn:
         cur = conn.cursor()
         cur.execute('INSERT INTO zsm_data.service_level_objective (slo_title, slo_product_id) '
@@ -35,6 +35,6 @@ def add_slo(product, slo):
         for t in slo['targets']:
             cur.execute('INSERT INTO zsm_data.service_level_indicator_target '
                         '(slit_slo_id,slit_sli_name,slit_unit,slit_from,slit_to)'
-                        'VALUES (%s, %s, %s, %s, %s)', (slo_id, t['sli_name'], t['unit'], t['from'], t['to']))
+                        'VALUES (%s, %s, %s, %s, %s)', (slo_id, t['sli_name'], t['unit'], t.get('from'), t.get('to')))
         conn.commit()
         return NoContent, 201

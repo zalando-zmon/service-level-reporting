@@ -1,7 +1,7 @@
 import collections
 
 from app.db import dbconn
-from app.handler.slo import get_service_level_objectives
+from app.handler.slo import get as get_service_level_objectives
 from app.utils import strip_column_prefix
 
 

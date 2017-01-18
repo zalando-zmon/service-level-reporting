@@ -38,7 +38,7 @@ paths:
       summary: Add a Product Group
       description: Add a product group for a team
       parameters:
-        - $ref: '#/parameters/ProductGroup'
+        - $ref: '#/parameters/ProductGroupDef'
       responses:
         201:
           description: OK
@@ -49,11 +49,7 @@ paths:
       summary: Delete a Product Group
       operationId: app.handler.product_groups.delete
       parameters:
-        - type: string
-          name: pg_slug
-          in: path
-          description: The Product Group slug
-          required: true
+        - $ref: '#/parameters/ProductGroup'
       responses:
         200:
           description: Product Group deleted.
@@ -145,7 +141,7 @@ paths:
   /service-level-objectives/{product}:
     get:
       tags: [SLO]
-      operationId: app.handler.slo.get_service_level_objectives
+      operationId: app.handler.slo.get
       parameters:
         - $ref: '#/parameters/Product'
       responses:
@@ -153,7 +149,7 @@ paths:
           description: Return SLO definitions
     post:
       tags: [SLO]
-      operationId: app.handler.slo.add_slo
+      operationId: app.handler.slo.add
       parameters:
         - $ref: '#/parameters/ServiceLevelObjective'
         - $ref: '#/parameters/Product'
@@ -185,7 +181,7 @@ paths:
         200:
           description: Return report data
 
-  /data-source/{product}:
+  /data-sources/{product}:
     get:
       tags: [Data Source]
       operationId: app.handler.data_source.get
@@ -206,7 +202,7 @@ paths:
         201:
           description: The SLI Target was created.
 
-  /data-source/{product}/{sli_name}:
+  /data-sources/{product}/{sli_name}:
     delete:
       tags: [Data Source]
       operationId: app.handler.data_source.delete
@@ -287,7 +283,7 @@ parameters:
         - title
         - targets
 
-  ProductGroup:
+  ProductGroupDef:
     name: product_group
     in: body
     required: true
@@ -337,6 +333,13 @@ parameters:
         definition:
           type: object
           description: The JSON definition for the SLI data source.
+
+  ProductGroup:
+    name: pg_slug
+    type: string
+    in: path
+    required: true
+    description: The Product Group slug
 
   Product:
     name: product

@@ -16,8 +16,8 @@ def get():
 def add(product_group):
     with dbconn() as conn:
         cur = conn.cursor()
-        cur.execute('''INSERT INTO zsm_data.product_group (pg_name, pg_department, pg_slug) VALUES (%S, %S, %S)''',
-                    (product_group['name'], product_group['department'], product_group['slug']))
+        cur.execute('''INSERT INTO zsm_data.product_group (pg_name, pg_department, pg_slug) VALUES (%s, %s, %s)''',
+                    (product_group['name'], product_group['department'], slugger(product_group['name'])))
         conn.commit()
         cur.close()
         return NoContent, 201
