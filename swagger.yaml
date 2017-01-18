@@ -1,7 +1,7 @@
 swagger: '2.0'
 info:
   title: ZMON SLO Metrics
-  version: "0.1"
+  version: "0.2"
 consumes:
   - application/json
 produces:
