@@ -3,12 +3,14 @@
 import datetime
 import fnmatch
 import logging
+import os
 
 import psycopg2
 import requests
 import zign.api
 
 logger = logging.getLogger('slo')
+KAIROS_QUERY_LIMIT = os.getenv('KAIROS_QUERY_LIMIT', 10000)
 
 
 def key_matches(key, key_patterns):
@@ -37,16 +39,17 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit,
     if sli_def.get('tags'):
         tags.update(sli_def['tags'])
     q = {
-            'start_relative': {
-                'value': start,
-                'unit': time_unit
-            },
-            'metrics': [{
-                'name': kairosdb_metric_name,
-                'tags': tags,
-                'group_by': [{'name': 'tag', 'tags': ['entity', 'key']}]
-            }]
-        }
+        'start_relative': {
+            'value': start,
+            'unit': time_unit
+        },
+        'metrics': [{
+            'name': kairosdb_metric_name,
+            'tags': tags,
+            'limit': KAIROS_QUERY_LIMIT,
+            'group_by': [{'name': 'tag', 'tags': ['entity', 'key']}]
+        }]
+    }
 
     response = session.post(kairosdb_url + '/api/v1/datapoints/query', json=q)
     response.raise_for_status()
@@ -110,7 +113,11 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit,
         product_id, = row
         logger.info('Inserting %s SLI values..', len(res2))
         for minute, val in res2.items():
-            cur.execute('INSERT INTO zsm_data.service_level_indicator (sli_product_id, sli_name, sli_timestamp, sli_value) VALUES (%s, %s, TIMESTAMP \'epoch\' + %s * INTERVAL \'1 second\', %s) ON CONFLICT ON CONSTRAINT service_level_indicator_pkey DO UPDATE SET sli_value = EXCLUDED.sli_value', (product_id, sli_name, minute, val))
+            cur.execute('INSERT INTO zsm_data.service_level_indicator '
+                        '(sli_product_id, sli_name, sli_timestamp, sli_value) VALUES '
+                        '(%s, %s, TIMESTAMP \'epoch\' + %s * INTERVAL \'1 second\', %s) ON CONFLICT ON CONSTRAINT '
+                        'service_level_indicator_pkey DO UPDATE SET sli_value = EXCLUDED.sli_value',
+                        (product_id, sli_name, minute, val))
         conn.commit()
 
     return len(res2)
