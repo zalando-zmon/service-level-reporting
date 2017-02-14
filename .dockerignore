@@ -8,4 +8,7 @@ sample.yaml
 schema.sql
 
 tox.ini
+.tox
+.eggs/
+*.egg-info
 

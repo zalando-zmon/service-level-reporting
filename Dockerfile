@@ -10,5 +10,6 @@ COPY app /app
 
 # http://docs.stups.io/en/latest/user-guide/application-development.html#scm-source-json
 COPY scm-source.json /
+COPY swagger.yaml /
 
 CMD python -m app.main

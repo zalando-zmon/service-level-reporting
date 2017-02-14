@@ -2,3 +2,7 @@
 __pycache__/
 scm-source.json
 output/
+
+.tox
+.eggs/
+*.egg-info
