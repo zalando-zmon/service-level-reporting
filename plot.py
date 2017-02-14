@@ -58,24 +58,29 @@ def plot(base_url, product, slo_id, output_file):
             gnuplot_data += 'set format y{} "%.{}f {}"\n'.format(suff, precision.get(unit, 0), unit.replace('%', '%%'))
             ymin, ymax = (min([t['from'] for t in _targets]), max([t['to'] for t in _targets]))
             if ymin is not None:
-                ymin = ymin - (0.2*abs(ymin))
+                ymin = ymin - (0.2 * abs(ymin))
             if ymax is not None:
-                ymax = ymax + (0.2*abs(ymax))
+                ymax = ymax + (0.2 * abs(ymax))
             gnuplot_data += 'set y{}range [{}:{}]\n'.format(suff, ymin or '', ymax or '')
             gnuplot_data += 'set y{}tics\n'.format(suff)
             for target in _targets:
                 target['yaxis'] = 'y1' if i == 0 else 'y2'
                 coord = 'first' if i == 0 else 'second'
                 if target['from']:
-                    gnuplot_data += 'set arrow from graph 0,{} {} to graph 1, {} {} head linecolor rgb "#ffcece" linewidth 2\n'.format(coord, target['from'], coord, target['from'])
+                    gnuplot_data += (
+                        'set arrow from graph 0,{} {} to graph 1, {} {} head linecolor rgb "#ffcece" linewidth 2\n'
+                    ).format(coord, target['from'], coord, target['from'])
                 if target['to']:
-                    gnuplot_data += 'set arrow from graph 0,{} {} to graph 1, {} {} backhead linecolor rgb "#ffcece" linewidth 2\n'.format(coord, target['to'], coord, target['to'])
+                    gnuplot_data += (
+                        'set arrow from graph 0,{} {} to graph 1, {} {} backhead linecolor rgb "#ffcece" linewidth 2\n'
+                    ).format(coord, target['to'], coord, target['to'])
             i += 1
 
     gnuplot_data += 'plot '
     plots = []
     for target in sorted(targets, key=lambda t: t['unit']):
         if target['unit']:
-            plots.append('"{}" using 1:2 lw 2 smooth csplines axes x1{} with lines title "{}"'.format(target['fn'], target['yaxis'], target['sli_name'].replace('_', ' ')))
+            plots.append('"{}" using 1:2 lw 2 smooth csplines axes x1{} with lines title "{}"'.format(
+                target['fn'], target['yaxis'], target['sli_name'].replace('_', ' ')))
     gnuplot_data += ', '.join(plots) + '\n'
     plot.communicate(gnuplot_data.encode('utf-8'))

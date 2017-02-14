@@ -16,7 +16,10 @@ def run_sli_update():
         gevent.sleep(int(os.getenv('UPDATE_INTERVAL_SECONDS', 600)))
         try:
             for product in get_products():
-                update_service_level_objectives(product['slug'])
+                try:
+                    update_service_level_objectives(product['slug'])
+                except:
+                    logger.exception('Failed to update SLIs for product: {}'.format(product.get('slug')))
         except:
             logger.exception('Failed to update SLIs')
 

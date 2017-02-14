@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import gevent.monkey
 
-gevent.monkey.patch_all()
+gevent.monkey.patch_all()  # noqa
+
+import psycogreen.gevent
+psycogreen.gevent.patch_psycopg()  # noqa
 
 import logging
 import os

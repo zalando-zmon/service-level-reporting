@@ -17,8 +17,8 @@ def title(s):
 
 
 def human_time(minutes):
-    days = minutes // (60*24)
-    remainder = minutes % (60*24)
+    days = minutes // (60 * 24)
+    remainder = minutes % (60 * 24)
     hours = remainder // 60
     minutes = remainder % 60
     s = []
@@ -83,17 +83,20 @@ def generate_weekly_report(base_url, product, output_dir):
 
     for slo in report_data['service_level_objectives']:
         slo['slis'] = {}
+
         for target in slo['targets']:
-            val = sum(values_by_sli[target['sli_name']]) / len(values_by_sli[target['sli_name']]) if len(values_by_sli[target['sli_name']]) > 0 else None
+            val = (sum(values_by_sli[target['sli_name']]) / len(values_by_sli[target['sli_name']]) if
+                   len(values_by_sli[target['sli_name']]) > 0 else None)
             ok = True
             if val is not None and target['to'] and val > target['to']:
                 ok = False
             if val is not None and target['from'] and val < target['from']:
                 ok = False
             slo['slis'][target['sli_name']] = {
-                    'avg': '-' if val is None else '{:.2f} {}'.format(val, target['unit']),
-                    'ok': ok
-                    }
+                'avg': '-' if val is None else '{:.2f} {}'.format(val, target['unit']),
+                'ok': ok
+            }
+
         slo['data'] = []
         breaches_by_sli = collections.defaultdict(int)
         counts_by_sli = collections.defaultdict(int)
