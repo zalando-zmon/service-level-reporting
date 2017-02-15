@@ -1,7 +1,8 @@
 import logging
 import os
+import time
 
-import gevent
+from connexion import ProblemException
 
 from app.db import dbconn, database_uri
 from app.handler.product import get as get_products
@@ -13,7 +14,7 @@ MAX_QUERY_TIME_SLICE = os.getenv('MAX_QUERY_TIME_SLICE', 1440)
 def run_sli_update():
     logger = logging.getLogger('sli-update')
     while True:
-        gevent.sleep(int(os.getenv('UPDATE_INTERVAL_SECONDS', 600)))
+        time.sleep(int(os.getenv('UPDATE_INTERVAL_SECONDS', 600)))
         try:
             for product in get_products():
                 try:
@@ -52,8 +53,16 @@ def post_update(product, name, body):
         if not row:
             return 'Not found', 404
         definition, = row
-    count = process_sli(product, name, definition, kairosdb_url, body.get('start', MAX_QUERY_TIME_SLICE), 'minutes',
-                        database_uri)
+
+    start = body.get('start', MAX_QUERY_TIME_SLICE)
+    end = body.get('end')
+
+    if end and end >= start:
+        raise ProblemException(
+            title='Invalid "end" field value', detail='"end" field should be less than "start" field value')
+
+    count = process_sli(product, name, definition, kairosdb_url, start, end, 'minutes', database_uri)
+
     return {'count': count}
 
 

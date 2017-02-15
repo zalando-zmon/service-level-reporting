@@ -20,7 +20,7 @@ def key_matches(key, key_patterns):
     return False
 
 
-def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit, dsn):
+def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, end, time_unit, dsn):
     logger.info('Calculating SLI for %s/%s..', product_name, sli_name)
     check_id = sli_def['check_id']
     keys = sli_def['keys']
@@ -50,6 +50,9 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, time_unit,
             'group_by': [{'name': 'tag', 'tags': ['entity', 'key']}]
         }]
     }
+
+    if end:
+        q['end_relative'] = {'value': end, 'unit': time_unit}
 
     response = session.post(kairosdb_url + '/api/v1/datapoints/query', json=q)
     response.raise_for_status()

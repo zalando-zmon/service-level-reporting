@@ -130,6 +130,10 @@ paths:
               start:
                 type: integer
                 default: 5
+                description: Relative start value in time_unit
+              end:
+                type: integer
+                description: Relative end value in time_unit
               time_unit:
                 type: string
                 default: minutes
