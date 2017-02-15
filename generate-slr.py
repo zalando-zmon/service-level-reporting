@@ -35,13 +35,23 @@ def human_time(minutes):
 
 def generate_directory_index(output_dir, path='/'):
     dirs = []
+    reverse = False
     for entry in sorted(os.listdir(output_dir)):
         if '.' not in entry:
-            dirs.append(entry)
+            entry.split()
             if not entry.startswith('20'):
                 # leaf directory with actual report
                 generate_directory_index(os.path.join(output_dir, entry), os.path.join(path, entry))
+                dirs.append((entry, entry))
+            else:
+                from_date, to_date = entry.split('-')
+                start = datetime.datetime.strptime(from_date, '%Y%m%d')
+                end = datetime.datetime.strptime(to_date, '%Y%m%d')
+                dirs.append(('{} - {}'.format(start.strftime('%A, %d %B %Y'), end.strftime('%A, %d %B %Y')), entry))
+                reverse = True
 
+    if reverse:
+        dirs.reverse()
     data = {'path': path, 'dirs': dirs}
 
     loader = jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates'))
