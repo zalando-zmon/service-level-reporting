@@ -21,6 +21,7 @@ paths:
       responses:
         200:
           description: Health is OK
+
   /product-groups:
     get:
       tags: [Product Group]
@@ -111,6 +112,7 @@ paths:
       responses:
         200:
           description: Return SLIs
+
   /service-level-indicators/{product}/{name}/update:
     post:
       tags: [SLI]
@@ -142,6 +144,7 @@ paths:
       responses:
         200:
           description: Update successful
+
   /service-level-objectives/{product}:
     get:
       tags: [SLO]
@@ -160,6 +163,19 @@ paths:
       responses:
         201:
           description: SLO created
+
+  /service-level-objectives/{slo_id}:
+    delete:
+      tags: [SLO]
+      operationId: app.handler.slo.delete
+      parameters:
+        - name: slo_id
+          in: path
+          type: integer
+          required: true
+      responses:
+        204:
+          description: SLO Deleted
 
   /service-level-objectives/{product}/update:
     post:

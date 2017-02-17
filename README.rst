@@ -21,7 +21,7 @@ Idea:
     $ export DATABASE_URI='host=localhost user=postgres'
     $ export KAIROSDB_URL=https://kairosdb.example.org
     $ sudo pip3 install -r requirements.txt
-    $ ./app.py
+    $ python -m app.main
 
 Configuration parameters:
 
@@ -33,6 +33,11 @@ Configuration parameters:
     PostgreSQL database connection string.
 ``KAIROSDB_URL``
     KairosDB base URL.
+
+Generating Reports
+==================
+
+You will need to install ``gnuplot`` as a system dependency. Running the following command will generate a report for the specified project in ``output`` directory.
 
 .. code-block:: bash
 

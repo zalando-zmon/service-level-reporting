@@ -38,3 +38,12 @@ def add(product, slo):
                         'VALUES (%s, %s, %s, %s, %s)', (slo_id, t['sli_name'], t['unit'], t.get('from'), t.get('to')))
         conn.commit()
         return NoContent, 201
+
+
+def delete(slo_id):
+    with dbconn() as conn:
+        cur = conn.cursor()
+        cur.execute('''DELETE FROM zsm_data.service_level_indicator_target WHERE slit_slo_id = %s''', (slo_id,))
+        cur.execute('''DELETE FROM zsm_data.service_level_objective WHERE slo_id = %s''', (slo_id,))
+        conn.commit()
+        return (NoContent, 204,) if cur.rowcount else (NoContent, 404,)
