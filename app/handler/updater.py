@@ -11,8 +11,10 @@ from app.slo import process_sli
 MAX_QUERY_TIME_SLICE = os.getenv('MAX_QUERY_TIME_SLICE', 1440)
 
 
+logger = logging.getLogger('sli-update')
+
+
 def run_sli_update():
-    logger = logging.getLogger('sli-update')
     while True:
         time.sleep(int(os.getenv('UPDATE_INTERVAL_SECONDS', 600)))
         try:

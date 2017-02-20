@@ -38,10 +38,12 @@ def get_service_level_objective_report(product, report_type):
                 JOIN zsm_data.service_level_indicator_target ON slit_sli_name = sli_name
                 JOIN zsm_data.service_level_objective ON slo_id = slit_slo_id AND slo_id = %s
                 JOIN zsm_data.product ON p_id = slo_product_id AND p_slug = %s
-                WHERE sli_timestamp >= date_trunc(\'day\', \'now\'::TIMESTAMP - INTERVAL \'7 days\')
+                WHERE
+                    sli_timestamp >= date_trunc(\'day\', \'now\'::TIMESTAMP - INTERVAL \'7 days\') AND
+                    sli_product_id = %s
                 GROUP BY date_trunc(\'day\', sli_timestamp), sli_name
                 ''',
-                (slo['id'], product,))
+                (slo['id'], product, product_data['id'],))
 
             rows = cur.fetchall()
             for row in rows:
