@@ -43,6 +43,8 @@ paths:
       responses:
         201:
           description: OK
+        400:
+          description: BAD REQUEST
 
   /product-groups/{pg_slug}:
     delete:
@@ -81,6 +83,10 @@ paths:
       responses:
         201:
           description: Product created
+        400:
+          description: BAD REQUEST
+        404:
+          description: Product group Not Found
 
   /products/{product}:
     delete:

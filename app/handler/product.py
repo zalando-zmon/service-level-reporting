@@ -1,7 +1,13 @@
-from connexion import NoContent
+import logging
+
+from psycopg2 import IntegrityError
+from connexion import NoContent, ProblemException
 
 from app.db import dbconn
 from app.utils import strip_column_prefix, slugger
+
+
+logger = logging.getLogger('slo-product')
 
 
 def get():
@@ -18,12 +24,26 @@ def get():
 def add(product):
     with dbconn() as conn:
         cur = conn.cursor()
-        cur.execute(
-            '''INSERT INTO zsm_data.product (p_name, p_slug, p_product_group_id)
-              VALUES (%s, %s, (SELECT pg_id FROM zsm_data.product_group WHERE pg_slug = %s))''',
-            (product['name'], slugger(product['name']), product['product_group']))
-        conn.commit()
-        cur.close()
+
+        cur.execute('''SELECT * FROM zsm_data.product_group WHERE pg_slug = %s''', (product['product_group'],))
+        row = cur.fetchone()
+        if not row:
+            raise ProblemException(
+                status=404,
+                title='Product group not found',
+                detail='Can not find product group: {}'.format(product['product_group']))
+
+        product_group = strip_column_prefix(row._asdict())
+
+        try:
+            cur.execute('''INSERT INTO zsm_data.product (p_name, p_slug, p_product_group_id) VALUES (%s, %s, %s)''',
+                        (product['name'], slugger(product['name']), product_group['id'],))
+            conn.commit()
+        except IntegrityError:
+            raise ProblemException(
+                title='Product already exists',
+                detail='Product with name: "{}" already exists!'.format(product['name']))
+
         return NoContent, 201
 
 
