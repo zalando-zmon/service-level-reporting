@@ -1,5 +1,6 @@
+import connexion
+from connexion import NoContent
 from psycopg2 import IntegrityError
-from connexion import NoContent, ProblemException
 
 from app.db import dbconn
 from app.utils import strip_column_prefix, slugger
@@ -24,9 +25,9 @@ def add(product_group):
             cur.close()
             return NoContent, 201
         except IntegrityError:
-            raise ProblemException(
-                title='Product Group already exists',
-                detail='Product group with name: "{}" already exists!'.format(product_group['name']))
+            return connexion.problem(status=400, title='Product Group already exists',
+                                     detail='Product group with name: "{}" already exists!'.format(
+                                         product_group['name']))
 
 
 def delete(pg_slug: str):

@@ -1,11 +1,11 @@
 import logging
 
+import connexion
+from connexion import NoContent
 from psycopg2 import IntegrityError
-from connexion import NoContent, ProblemException
 
 from app.db import dbconn
 from app.utils import strip_column_prefix, slugger
-
 
 logger = logging.getLogger('slo-product')
 
@@ -28,10 +28,8 @@ def add(product):
         cur.execute('''SELECT * FROM zsm_data.product_group WHERE pg_slug = %s''', (product['product_group'],))
         row = cur.fetchone()
         if not row:
-            raise ProblemException(
-                status=404,
-                title='Product group not found',
-                detail='Can not find product group: {}'.format(product['product_group']))
+            return connexion.problem(status=404, title='Product group not found',
+                                     detail='Can not find product group: {}'.format(product['product_group']))
 
         product_group = strip_column_prefix(row._asdict())
 
@@ -40,10 +38,8 @@ def add(product):
                         (product['name'], slugger(product['name']), product_group['id'],))
             conn.commit()
         except IntegrityError:
-            raise ProblemException(
-                title='Product already exists',
-                detail='Product with name: "{}" already exists!'.format(product['name']))
-
+            return connexion.problem(status=400, title='Product Already Exists',
+                                     detail='Product with name: "{}" already exists!'.format(product['name']))
         return NoContent, 201
 
 
