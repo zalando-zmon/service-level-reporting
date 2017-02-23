@@ -3,6 +3,7 @@
 import collections
 import datetime
 import os
+import sys
 
 import click
 import jinja2
@@ -69,8 +70,16 @@ def generate_weekly_report(base_url, product, output_dir):
     # TODO: should use pg_slug from PostgreSQL database (but we don't return it right now)
     product_group = report_data['product']['product_group_name'].lower()
 
-    period_from = min(report_data['service_level_objectives'][0]['days'].keys())[:10]
-    period_to = max(report_data['service_level_objectives'][0]['days'].keys())[:10]
+    period_from = period_to = None
+    for slo in report_data['service_level_objectives']:
+        if slo['days']:
+            period_from = min(slo['days'].keys())[:10]
+            period_to = max(slo['days'].keys())[:10]
+            break
+
+    if not period_from or not period_to:
+        print('Can not determine "period_from" and "period_to" for the report. Terminating!')
+        sys.exit(1)
 
     period_id = '{}-{}'.format(period_from.replace('-', ''), period_to.replace('-', ''))
 
