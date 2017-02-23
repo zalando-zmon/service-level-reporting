@@ -84,9 +84,12 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, end, time_
             total_weight = 0
             total_value = 0
             for g, entry in values.items():
-                if 'weight' in entry and 'value' in entry:
-                    total_weight += entry['weight']
-                    total_value += entry['value'] * entry['weight']
+                if 'value' in entry:
+                    val = entry['value']
+                    weight = entry.get('weight', 1)  # In case weight was not available!
+
+                    total_weight += weight
+                    total_value += val * weight
             if total_weight != 0:
                 res2[minute] = total_value / total_weight
             else:
