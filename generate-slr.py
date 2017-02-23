@@ -67,8 +67,7 @@ def generate_weekly_report(base_url, product, output_dir):
     resp.raise_for_status()
     report_data = resp.json()
 
-    # TODO: should use pg_slug from PostgreSQL database (but we don't return it right now)
-    product_group = report_data['product']['product_group_name'].lower()
+    product_group = report_data['product']['product_group_slug']
 
     period_from = period_to = None
     for slo in report_data['service_level_objectives']:
