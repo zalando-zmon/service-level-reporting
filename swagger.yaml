@@ -61,6 +61,13 @@ paths:
     get:
       tags: [Product]
       operationId: app.handler.product.get
+      parameters:
+        - name: pg
+          type: string
+          in: query
+          description: Product Group slug filter.
+          required: false
+          default: ''
       responses:
         200:
           description: List of products
