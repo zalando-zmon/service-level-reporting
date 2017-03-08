@@ -10,7 +10,7 @@ from app.utils import strip_column_prefix, slugger
 logger = logging.getLogger('slo-product')
 
 
-def get(pg):
+def get(pg=None):
     with dbconn() as conn:
         cur = conn.cursor()
         param_dict = {}
