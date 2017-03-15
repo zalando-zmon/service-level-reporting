@@ -42,3 +42,71 @@ You will need to install ``gnuplot`` as a system dependency. Running the followi
 .. code-block:: bash
 
     $ ./generate-slr.py http://localhost:8080 myproduct
+
+
+Command Line Interface
+======================
+
+You can interact with API service using CLI tool ``cli.py``.
+
+Examples:
+
+
+.. code-block:: bash
+
+    $ pip3 install --update -r requirements.txt
+
+    $ ./cli.py -h
+    Usage: cli.py [OPTIONS] COMMAND [ARGS]...
+
+      Service Level Reporting command line interface
+
+    Options:
+      -h, --help  Show this message and exit.
+
+    Commands:
+      configure    Configure CLI
+      data-source  Data sources
+      group        SLR product groups
+      product      SLR products
+      sli          Service level indicators
+      slo          Service level objectives
+
+    $ ./cli.py group create "Monitoring Inc." "Tech Infrastructure"
+    Creating product_group: Monitoring Inc.
+     OK
+
+    $ ./cli.py group list
+    [
+        {
+            "name": "Monitoring Inc.",
+            "department": "Tech Infrastructure",
+            "slug": "monitoring-inc"
+        }
+    ]
+
+    $ ./cli.py product create ZMON monitoring-inc
+    Creating product: ZMON
+     OK
+
+    $ ./cli.py product list
+    [
+        {
+            "delivery_team": null,
+            "department": "Tech Infrastructure",
+            "product_group_id": 1,
+            "slug": "zmon",
+            "product_group_name": "Monitoring Inc.",
+            "id": 2,
+            "product_group_slug": "monitoring-inc",
+            "name": "ZMON"
+        }
+    ]
+
+    $ ./cli.py product delete zmon
+    Deleting product: zmon
+     OK
+
+    $ ./cli.py group delete monitoring-inc
+    Deleting product_group: monitoring-inc
+     OK

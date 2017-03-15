@@ -1,7 +1,8 @@
-clickclick
-psycopg2
-psycogreen
-gevent<1.2.0
-connexion
-stups-zign
 awesome-slugify
+clickclick
+connexion
+gevent<1.2.0
+psycogreen
+psycopg2
+stups-zign
+zmon-cli
