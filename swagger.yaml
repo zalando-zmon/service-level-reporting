@@ -96,6 +96,14 @@ paths:
           description: Product group Not Found
 
   /products/{product}:
+    get:
+      tags: [Product]
+      operationId: app.handler.product.get_product
+      parameters:
+        - $ref: '#/parameters/Product'
+      responses:
+        200:
+          description: Product Details
     delete:
       tags: [Product]
       operationId: app.handler.product.delete

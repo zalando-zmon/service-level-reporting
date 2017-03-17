@@ -27,6 +27,19 @@ def get(pg=None):
     return res
 
 
+def get_product(product):
+    with dbconn() as conn:
+        cur = conn.cursor()
+        cur.execute('''SELECT p_product_group_id, p_name, p_slug, p_delivery_team
+            FROM zsm_data.product WHERE p_slug = %s''', (product,))
+        rows = cur.fetchall()
+        if len(rows) < 1:
+            return connexion.problem(status=404, title='Product not found',
+                                     detail='Product with id {} does not exist'.format(product))
+        else:
+            return strip_column_prefix(rows[0]._asdict())
+
+
 def add(product):
     with dbconn() as conn:
         cur = conn.cursor()
