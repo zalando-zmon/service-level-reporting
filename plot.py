@@ -56,7 +56,12 @@ def plot(base_url, product, slo_id, output_file):
             else:
                 suff = '2'
             gnuplot_data += 'set format y{} "%.{}f {}"\n'.format(suff, precision.get(unit, 0), unit.replace('%', '%%'))
-            ymin, ymax = (min([t['from'] for t in _targets]), max([t['to'] for t in _targets]))
+
+            from_list = [t['from'] for t in _targets if t['from'] is not None] or [0]
+            to_list = [t['to'] for t in _targets if t['to'] is not None] or [0]
+
+            ymin, ymax = (min(from_list), max(to_list))
+
             if ymin is not None:
                 ymin = ymin - (0.2 * abs(ymin))
             if ymax is not None:
