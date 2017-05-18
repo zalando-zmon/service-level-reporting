@@ -107,6 +107,10 @@ def process_sli(product_name, sli_name, sli_def, kairosdb_url, start, end, time_
             for g, entry in values.items():
                 total_value += entry['value']
             res2[minute] = total_value
+        elif aggregation_type == 'minimum':
+            res2[minute] = min([entry['value'] for g, entry in values.items()])
+        elif aggregation_type == 'maximum':
+            res2[minute] = max([entry['value'] for g, entry in values.items()])
 
     for minute, value in sorted(res2.items()):
         dt = datetime.datetime.fromtimestamp(minute)

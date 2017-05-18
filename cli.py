@@ -17,7 +17,7 @@ from zmon_cli.client import Zmon
 DEFAULT_CONFIG_FILE = '~/.zmon-slr.yaml'
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-AGG_TYPES = ('average', 'weighted', 'sum')
+AGG_TYPES = ('average', 'weighted', 'sum', 'minimum', 'maximum')
 
 
 def get_config_data(config_file=DEFAULT_CONFIG_FILE):
