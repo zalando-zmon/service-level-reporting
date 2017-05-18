@@ -1,6 +1,6 @@
 awesome-slugify
 clickclick
-connexion
+connexion==1.1.4
 gevent<1.2.0
 psycogreen
 psycopg2
