@@ -90,6 +90,8 @@ def validate_sli(config, data_source):
     sli_exists = False
     sample_data = {}
     for alert in filtered:
+        if sli_exists:
+            break
         alert_data = zmon.get_alert_data(alert['id'])
 
         values = {v['entity']: v['results'][0]['value'] for v in alert_data if len(v['results'])}
