@@ -29,6 +29,9 @@ def plot(base_url, product, slo_id, output_file):
 
         with open(fn, 'w') as fd:
             data = resp.json()
+            values = [row[1] for row in data]
+            maxval = max(values)
+            minval = min(values)
             for row in data:
                 fd.write('{}\t{}\n'.format(row[0], row[1]))
 
@@ -60,7 +63,7 @@ def plot(base_url, product, slo_id, output_file):
             from_list = [t['from'] for t in _targets if t['from'] is not None] or [0]
             to_list = [t['to'] for t in _targets if t['to'] is not None] or [0]
 
-            ymin, ymax = (min(from_list), max(to_list))
+            ymin, ymax = (min(from_list + [minval]), max(to_list + [maxval]))
 
             if ymin is not None:
                 ymin = ymin - (0.2 * abs(ymin))
