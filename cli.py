@@ -110,7 +110,7 @@ def validate_sli(config, data_source):
 
     keys = data_source['definition']['keys']
     sli_exists = False
-    sample_data = {}
+    sample_data = set()
     for alert in filtered:
         if sli_exists:
             break
