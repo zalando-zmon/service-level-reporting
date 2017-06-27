@@ -68,6 +68,28 @@ def set_config_file(config_file=DEFAULT_CONFIG_FILE):
     return data
 
 
+def flatten(structure, key='', path='', flattened=None):
+    '''
+    >>> flatten({})
+    {}
+    >>> flatten({'a': {'b': {'c': ['d', 'e']}}})
+    {'a.b.c': ['d', 'e']}
+    >>> sorted(flatten({'a': {'b': 'c'}, 'd': 'e'}).items())
+    [('a.b', 'c'), ('d', 'e')]
+    '''
+    path = str(path)
+    key = str(key)
+
+    if flattened is None:
+        flattened = {}
+    if not isinstance(structure, dict):
+        flattened[((path + '.' if path else '')) + key] = structure
+    else:
+        for new_key, value in structure.items():
+            flatten(value, new_key, '.'.join(filter(None, [path, key])), flattened)
+    return flattened
+
+
 def validate_sli(config, data_source):
     if 'zmon_url' not in config:
         config = set_config_file()
@@ -98,9 +120,11 @@ def validate_sli(config, data_source):
 
         for entity, data in values.items():
             if type(data) is dict:
-                data_keys = data.keys()
-                if data_keys:
-                    sample_data = data_keys
+                flattened = flatten(data)
+
+                data_keys = flattened.keys()
+                sample_data.update(list(data_keys))
+
                 if not (set(keys) - set(data_keys)):
                     sli_exists = True
                     break
