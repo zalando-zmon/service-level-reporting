@@ -1,0 +1,108 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/paper-styles/typography.html">
+<link rel="import" href="../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+
+<dom-module id="slr-product-card">
+  <template>
+    <style include="common-styles">
+      :host {
+        display: block;
+        text-align: left;
+      }
+
+      :host([edit-mode][small-layout]) {
+        margin: 10px;
+      }
+
+      paper-card {
+        width: 100%;
+      }
+
+      paper-card:hover .report {
+        visibility: visible;
+      }
+
+      iron-icon { cursor: pointer; }
+
+      .header {
+        @apply --paper-font-headline;
+        display: flex;
+      }
+
+      .title {
+        flex: 2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .report {
+        visibility: hidden;
+      }
+
+      p {
+        white-space: nowrap;
+        overflow: hidden;
+      }
+    </style>
+
+    <paper-card>
+      <div class="card-content">
+        <div class="header">
+          <span class="title">[[item.name]]</span>
+          <a class="report" title="open report page" href="[[reportUrl]]">
+            <paper-icon-button icon="assignment"></paper-icon-button>
+          </a>
+        </div>
+        <p>[[item.product_group_name]]</p>
+      </div>
+    </paper-card>
+
+  </template>
+  <script>
+    class SlrProductCard extends Polymer.Element {
+      static get is() { return 'slr-product-card' }
+
+      static get properties() {
+        return {
+          item: {
+            type: Object
+          },
+          productGroups: {
+            type: Array,
+          },
+          productGroupSlug: {
+            type: String,
+          },
+          reportUrl: {
+            type: String,
+            value: '/slr/'
+          }
+        }
+      }
+
+      static get observers() {
+        return [ 'slugsChanged(item.slug, productGroups.*)' ]
+      }
+
+      slugsChanged(slug, productGroups) {
+        let productGroupSlug = this.getProductGroupSlug(productGroups.value)
+        this.set('reportUrl', `/slr/${productGroupSlug}/${slug}`)
+      }
+
+      getProductGroupSlug(productGroups) {
+        if (productGroups) {
+          let ix = this.productGroups.findIndex( (pg) => pg.uri === this.item.product_group_uri )
+          if (ix > -1) {
+            return this.productGroups[ix].slug
+          }
+        }
+        return ''
+      }
+    }
+
+    window.customElements.define(SlrProductCard.is, SlrProductCard)
+  </script>
+</dom-module>

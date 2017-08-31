@@ -2,7 +2,13 @@
 __pycache__/
 scm-source.json
 output/
-
+**/node_modules
+**/bower_components
+client/package-lock.json
+client/build
 .tox
 .eggs/
 *.egg-info
+build/
+dist/
+.mypy_cache/

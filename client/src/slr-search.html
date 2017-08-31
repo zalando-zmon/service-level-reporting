@@ -1,0 +1,104 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/iron-a11y-keys-behavior/iron-a11y-keys-behavior.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/iron-a11y-keys/iron-a11y-keys.html">
+
+<dom-module id="slr-search">
+  <template>
+    <style>
+      :host {
+        display: block;
+        margin-right: 10px;
+      }
+
+      .search {
+        float: right;
+        width: 100%;
+        margin-top: -20px;
+        max-width: 400px;
+      }
+
+      .searchInput {
+        --paper-input-container-color: rgba(255, 255, 255, 0.3);
+        --paper-input-container-focus-color: white;
+        --paper-input-container-input-color: white;
+      }
+
+      .closedBtn {
+        float: right;
+      }
+    </style>
+
+    <iron-a11y-keys
+      id="a11y"
+      on-keys-pressed="onEsc"
+      keys="esc"></iron-a11y-keys>
+
+    <div class="search" hidden$={{!searchMode}}>
+      <paper-input
+        type="text"
+        id="input"
+        name="search"
+        class="searchInput"
+        placeholder="product name"
+        autofocus="true"
+        value="{{searchStr}}">
+        <paper-icon-button
+          icon="search"
+          slot="prefix"></paper-icon-button>
+        <paper-icon-button
+          icon="clear"
+          slot="suffix"
+          on-click="closeSearch"></paper-icon-button>
+      </paper-input>
+    </div>
+
+    <div
+      class="search-btn-container"
+      hidden$="{{searchMode}}">
+      <paper-icon-button
+        icon="search"
+        class="closedBtn"
+        on-click="onSearchClick"></paper-icon-button>
+    </div>
+
+  </template>
+
+  <script>
+    class SlrSearch extends Polymer.Element {
+      static get is() { return 'slr-search'; }
+
+      static get properties() {
+        return {
+          searchMode: {
+            type: Boolean,
+            value: false
+          },
+          searchStr: {
+            type: String,
+            notify: true
+          },
+        }
+      }
+
+      onEsc(e) {
+        this.closeSearch()
+      }
+
+      onSearchClick() {
+        this.set('searchMode', true)
+        this.$.input.focus()
+        this.dispatchEvent(new CustomEvent('search-opened'))
+      }
+
+      closeSearch() {
+        this.set('searchStr', '')
+        this.set('searchMode', false)
+        this.dispatchEvent(new CustomEvent('search-closed'))
+      }
+    }
+
+    window.customElements.define(SlrSearch.is, SlrSearch)
+  </script>
+</dom-module>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta title="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>slr-products test</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <link rel="import" href="../src/slr-dialog.html">
+  </head>
+  <body>
+
+    <test-fixture id="dialog">
+      <template>
+         <slr-dialog item={"name":"pg"}></slr-dialog>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('slr-dialog', function() {
+        var element;
+
+        setup(function() {
+          element = fixture('dialog')
+        })
+
+        test('should save a copy of the original item', function(done) {
+          flush(function() {
+            assert.equal(element._item.name, element.item.name)
+            done()
+          })
+        })
+
+        test('should restore item after closed', function(done) {
+          element.item.name = 'another name'
+          element.whenClosed()
+          flush(function() {
+            assert.equal(element.item.name, element._item.name)
+            done()
+          })
+        })
+      })
+    </script>
+  </body>
+</html>

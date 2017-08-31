@@ -1,8 +1,8 @@
-"""Setup file for ZMON-SLO-METRICS"""
+"""Setup file for ZMON service level reports command line tool"""
 
 import os
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
 
 def read_version(package):
@@ -12,43 +12,39 @@ def read_version(package):
     return data['__version__']
 
 
-def get_requirements(path):
-    content = open(path).read()
-    return [req for req in content.split('\\n') if req != '']
-
-
-MAIN_PACKAGE = 'app'
+MAIN_PACKAGE = 'zmon_slr'
 VERSION = read_version(MAIN_PACKAGE)
-DESCRIPTION = 'ZMON SLO metrics.'
+DESCRIPTION = 'ZMON SLO reports.'
 
-CONSOLE_SCRIPTS = ['zmon-slo-metrics = app.main:main']
+CONSOLE_SCRIPTS = ['zmon-slr = zmon_slr.main:main']
+PACKAGE_DATA = {MAIN_PACKAGE: ['templates/*.*']}
 
+REQUIREMENTS = ['clickclick', 'stups-zign', 'zmon-cli']
 
 setup(
-    name='zmon-slo-metrics',
+    name='zmon-slr',
     version=VERSION,
     description=DESCRIPTION,
     long_description=open('README.rst').read(),
     license=open('LICENSE').read(),
-    packages=find_packages(exclude=['tests']),
-    install_requires=get_requirements('requirements.txt'),
+    packages=[MAIN_PACKAGE],
+    package_data=PACKAGE_DATA,
+    install_requires=REQUIREMENTS,
     setup_requires=['pytest-runner'],
     test_suite='tests',
     tests_require=['pytest', 'pytest_cov', 'mock==2.0.0'],
-    entry_points={
-        'console_scripts': CONSOLE_SCRIPTS
-    },
+    entry_points={'console_scripts': CONSOLE_SCRIPTS},
     classifiers=[
         'Development Status :: 4 - Beta',
+        'Environment :: Console',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
+        'Operating System :: MacOS :: MacOS X',
+        'Operating System :: POSIX :: Linux',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python',
         'Programming Language :: Python :: Implementation :: CPython',
-        'Environment :: Console',
-        'Operating System :: POSIX :: Linux',
-        'Operating System :: MacOS :: MacOS X',
+        'Programming Language :: Python',
         'Topic :: System :: Monitoring',
         'Topic :: System :: Networking :: Monitoring',
     ]

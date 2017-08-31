@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta title="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>slr-products test</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <link rel="import" href="../src/slr-product-group-card.html">
+  </head>
+  <body>
+
+    <test-fixture id="productGroupCard">
+      <template>
+         <slr-product-group-card item={"name":"pg"}></slr-product-group-card>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('slr-product-group-card', function() {
+        var element;
+
+        setup(function() {
+          element = fixture('productGroupCard')
+        })
+
+        test('should save a copy of the original item', function(done) {
+          flush(function() {
+            assert.equal(element._item.name, element.item.name)
+            done()
+          })
+        })
+
+        test('should restore item after cancelled', function(done) {
+          element.item.name = 'another name'
+          element.cancel()
+          flush(function() {
+            assert.equal(element.item.name, element._item.name)
+            done()
+          })
+        })
+      })
+    </script>
+  </body>
+</html>

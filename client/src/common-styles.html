@@ -1,0 +1,64 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
+<dom-module id="common-styles">
+  <template>
+    <style is="common-styles">
+      [hidden] {
+        display: none !important;
+      }
+
+      .icecream {
+        margin-top: 15vh;
+        margin-bottom: 30px;
+        opacity: 0.33;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+      }
+
+      .no-items {
+        opacity: 0.66;
+        font-style: italic;
+      }
+
+      paper-icon-button {
+        opacity: 0.66;
+      }
+
+      iron-label {
+        font-family: var(--paper-font-caption_-_font-family);
+        -webkit-font-smoothing: var(--paper-font-caption_-_webkit-font-smoothing);
+        white-space: var(--paper-font-caption_-_white-space);
+        overflow: var(--paper-font-caption_-_overflow);
+        text-overflow: var(--paper-font-caption_-_overflow);
+        font-size: var(--paper-font-caption_-_font-size);
+        font-weight: var(--paper-font-caption_-_font-weight);
+        letter-spacing: var(--paper-font-caption_-_letter-spacing);
+        line-height: var(--paper-font-caption_-_line-height);
+        color: var(--paper-input-container-color, var(--secondary-text-color));
+        opacity: 0.66;
+        position: relative;
+        top: 8px;
+      }
+
+      slr-fab {
+        position: fixed;
+        right: 3vw;
+        bottom: calc(-5vh - 56px);
+        transition: bottom 0.2s ease-in-out;
+      }
+
+      slr-fab[visible] {
+        bottom: 5vh;
+        transition: bottom 0.2s ease-in-out;
+      }
+    </style>
+  </template>
+</dom-module>

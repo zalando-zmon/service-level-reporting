@@ -1,0 +1,237 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/iron-media-query/iron-media-query.html">
+<link rel="import" href="../bower_components/app-layout/app-toolbar/app-toolbar.html">
+<link rel="import" href="../bower_components/paper-dialog/paper-dialog.html">
+<link rel="import" href="../bower_components/paper-dialog-scrollable/paper-dialog-scrollable.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-fab/paper-fab.html">
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../bower_components/paper-spinner/paper-spinner-lite.html">
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../bower_components/neon-animation/web-animations.html">
+<link rel="import" href="../bower_components/neon-animation/animations/scale-up-animation.html">
+<link rel="import" href="../bower_components/neon-animation/animations/fade-out-animation.html">
+
+<link rel="import" href="./common-styles.html">
+
+<dom-module id="slr-dialog">
+  <template>
+    <style include="common-styles">
+      :host {
+        display: block;
+        @apply --slr-content;
+        text-align: left;
+        --paper-input-container-disabled: {
+          opacity: 0.66;
+        };
+      }
+
+      paper-dialog {
+        max-width: var(--app-content-max-width);
+        min-width: 500px;
+      }
+
+      paper-dialog[small-layout] {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        margin: 0;
+        padding: 0;
+        min-width: 300px;
+      }
+
+      app-toolbar {
+        margin-top: 0;
+        padding: 0 10px;
+        background-color: var(--app-secondary-color);
+      }
+
+      .flex-horizontal {
+        @apply --layout-horizontal;
+        @apply --layout-wrap;
+      }
+
+      .flex-vertical {
+        @apply --layout-vertical;
+        @apply --layout-wrap;
+      }
+
+      .flex-equal-justified {
+        @apply --layout-horizontal;
+        @apply --layout-justified;
+      }
+
+      .flexchild {
+        @apply --layout-flex;
+      }
+
+      paper-fab {
+        margin-top: 60px;
+        margin-right: 5%;
+      }
+
+      .spinner {
+        width: 100px;
+        text-align: center;
+      }
+
+      paper-spinner-lite.orange {
+        --paper-spinner-color: var(--app-accent-color);
+      }
+    </style>
+
+    <iron-media-query
+      query="(max-width: 600px)"
+      query-matches="{{small}}"></iron-media-query>
+
+    <paper-dialog
+      small-layout$="{{small}}"
+      id="dialog"
+      opened="{{opened}}"
+      class="flex-vertical"
+      entry-animation="scale-up-animation"
+      exit-animation="fade-out-animation"
+      no-cancel-on-outside-click="{{editMode}}"
+      no-cancel-on-esc-key="{{editMode}}">
+
+      <app-toolbar class="flex-horizontal flex-equal-justified">
+        <slot name="close"></slot>
+        <div class="flexchild">{{title}}</div>
+        <paper-fab
+          icon="create"
+          title="edit"
+          on-click="toggleEditMode"
+          hidden$="{{editMode}}"
+          mini></paper-fab>
+          <div hidden="{{!loading}}">
+            <div
+              id="spinner"
+              class="spinner"
+              hidden$="{{!editMode}}">
+              <paper-spinner-lite
+                class="orange"
+                active></paper-spinner-lite>
+            </div>
+          </div>
+          <slot name="toolbar"></slot>
+      </app-toolbar>
+
+      <paper-dialog-scrollable class="flexchild">
+        <slot></slot>
+      </paper-dialog-scrollable>
+
+      <div class="buttons" hidden$="{{loading}}">
+        <slot name="actions"></slot>
+      </div>
+    </paper-dialog>
+  </template>
+  <script>
+    class SlrDialog extends Polymer.Element {
+      static get is() { return 'slr-dialog' }
+
+      static get properties() {
+        return {
+          title: {
+            type: String
+          },
+          icon: {
+            type: String,
+            value: 'close'
+          },
+          item: {
+            type: Object,
+            notify: true,
+            observer: 'itemChanged'
+          },
+          // save copy to reset form since iron-form
+          // and paper-input have issues
+          _item: {
+            type: Object
+          },
+          opened: {
+            type: Boolean,
+            value: false,
+            observer: 'openedChanged',
+            notify: true
+          },
+          editMode: {
+            type: Boolean,
+            notify: true
+          },
+          loading: {
+            type: Boolean,
+            value: false
+          },
+          triggerEvents: {
+            type: Boolean,
+            value: false,
+            reflectToAttribute: true
+          }
+        }
+      }
+
+      static get observers() {
+        return [ 'itemPropsChanged(item.slo, item.sli)' ]
+      }
+
+      openedChanged(opened) {
+        if (opened) {
+          return this.whenOpened()
+        }
+        this.whenClosed()
+      }
+
+      whenOpened() {
+        this.copyItem()
+        this.reset()
+        if (this.triggerEvents) {
+          this.dispatchEvent(new CustomEvent('slr-dialog-opened',
+            { bubble:true, composed: true }))
+        }
+      }
+
+      whenClosed() {
+        this.reset()
+        this.set('editMode', false)
+        if (this.triggerEvents) {
+          this.dispatchEvent(new CustomEvent('slr-dialog-closed',
+            { bubble:true, composed: true }))
+        }
+      }
+
+      itemChanged() {
+        this.copyItem()
+        this.center()
+      }
+
+      itemPropsChanged(obj) {
+        this.copyItem()
+        this.center()
+      }
+
+      toggleEditMode() {
+        this.set('editMode', !this.editMode)
+        this.center()
+      }
+
+      reset() {
+        this.set('item', Object.assign({}, this._item))
+        this.center()
+      }
+
+      copyItem() {
+        this.set('_item', Object.assign({}, this.item))
+      }
+
+      // <paper-dialog> fails to center after its content changed size
+      // so we center() every time that may happen
+      center() {
+        setTimeout(() => { this.$.dialog.center() }, 500)
+      }
+    }
+
+    window.customElements.define(SlrDialog.is, SlrDialog)
+  </script>
+</dom-module>

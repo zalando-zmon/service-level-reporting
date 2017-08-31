@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>slr-items-data test</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <link rel="import" href="../src/slr-items-data.html">
+  </head>
+  <body>
+
+    <test-fixture id="itemsData">
+      <template>
+         <slr-items-data
+          url="/products"></slr-items-data>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('slr-items-data', function() {
+        var element;
+        var server;
+        var responseHeaders = {
+          json: { 'Content-Type': 'application/json' }
+        };
+
+        setup(function() {
+          server = sinon.fakeServer.create()
+          server.respondWith(
+            'GET',
+            /\/error.*/, [
+              500,
+              responseHeaders.json,
+              ''
+            ]
+          );
+          server.respondWith(
+            'GET',
+            /\/products.*/, [
+              200,
+              responseHeaders.json,
+              '{"data":[{"name":"product test 2", "uri":"/product2","slug":"product2"},{"name":"product test","slug":"product","uri":"/product"},{"name":"product test 3","slug":"product3","uri":"/product3"}]}'
+            ]
+          );
+          element = fixture('itemsData')
+        })
+
+        teardown(function() {
+          server.restore();
+        });
+
+        test('notified of server failure', function(done) {
+          element.addEventListener('slr-notify', function(event) {
+            assert.equal(event.detail.message, "Can't load Item")
+            done()
+          })
+          element.url = '/error'
+          element.fetch()
+          server.respond()
+        })
+
+        test('requested data successfully', function(done) {
+          element.fetch()
+          server.respond()
+          flush(function() {
+            assert.equal(element.items.length, 3)
+            done()
+          })
+        })
+
+        test('found item by id', function(done) {
+          element.slug = 'product'
+          element.fetch()
+          server.respond()
+          flush(function() {
+            assert.equal(element.item.name, "product test")
+            done()
+          })
+        })
+
+        test('notified of item not found', function(done) {
+          element.addEventListener('slr-notify', function(e) {
+            assert.equal(e.detail.message, "Item not found")
+            done()
+          })
+          element.fetch()
+          server.respond()
+          flush(function() {
+            element.slug = 'productX'
+          })
+        })
+
+        test('items are sorted', function(done) {
+          element.fetch()
+          server.respond()
+          flush(function() {
+            assert.equal(element.items[0].slug, 'product')
+            assert.equal(element.items[1].slug, 'product2')
+            assert.equal(element.items[2].slug, 'product3')
+            done()
+          })
+        })
+
+        test('items are filtered', function(done) {
+          element.fetch()
+          server.respond()
+          flush(function() {
+            element.search = 'product2'
+            assert.equal(element.filteredItems.length, 1)
+            done()
+          })
+        })
+      })
+    </script>
+  </body>
+</html>

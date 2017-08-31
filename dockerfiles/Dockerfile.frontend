@@ -1,0 +1,33 @@
+FROM registry.opensource.zalan.do/stups/node:7.7-cd47
+
+RUN \
+    apt-get update && \
+    apt-get install -y wget git dnsutils && \
+    wget -qO - https://openresty.org/package/pubkey.gpg | apt-key add - && \
+    apt-get install -y software-properties-common && \
+    add-apt-repository -y "deb http://openresty.org/package/ubuntu $(lsb_release -sc) main" && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends openresty && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/usr/local/openresty/nginx/sbin:${PATH}"
+
+RUN mkdir -p /var/log/nginx /var/www /var/www/reports && \
+    chown -R www-data:www-data /var/log/nginx && \
+    chown -R www-data:www-data /var/www/ && \
+    chown -R www-data:www-data /var/www/reports
+
+COPY dockerfiles/nginx-default.conf /usr/local/openresty/nginx/conf/default.conf
+
+COPY client /client
+
+WORKDIR /client
+
+RUN npm install
+
+RUN npm run-script build
+
+RUN cp -rf build/default /var/www/app
+
+# Define default command.
+CMD nginx -c /usr/local/openresty/nginx/conf/default.conf

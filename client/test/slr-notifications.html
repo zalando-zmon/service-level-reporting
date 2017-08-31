@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>slr-notifications test</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <link rel="import" href="../src/slr-notifications.html">
+  </head>
+  <body>
+
+    <test-fixture id="notifications">
+      <template>
+         <slr-notifications></slr-notifications>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('slr-notifications', function() {
+        var element;
+
+        setup(function() {
+          element = fixture('notifications')
+        })
+
+        test('opens with message "test" and closes after 1s', function(done) {
+          element.open({ message: 'test', duration: 1000 })
+          flush(function() {
+            var toast = element.shadowRoot.querySelector('paper-toast')
+            assert.equal(toast.text, 'test')
+            assert.ok(toast.visible)
+            setTimeout(function() {
+              assert.ok(!toast.visible)
+              done()
+            }, 1100)
+          })
+        })
+
+        test('opens indefinitely and closes with close()', function(done) {
+          element.open({ message: 'test', duration: 0 })
+          flush(function() {
+            var toast = element.shadowRoot.querySelector('paper-toast')
+            assert.equal(toast.text, 'test')
+            assert.ok(toast.visible)
+            element.close()
+            assert.ok(!toast.visible)
+            done()
+          })
+        })
+
+        test('does not open if no message is given', function(done) {
+          element.open({ duration: 1000 })
+          flush(function() {
+            var toast = element.shadowRoot.querySelector('paper-toast')
+            assert.ok(!toast.visible)
+            done()
+          })
+        })
+      })
+    </script>
+  </body>
+</html>

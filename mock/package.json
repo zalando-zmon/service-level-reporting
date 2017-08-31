@@ -1,0 +1,25 @@
+{
+  "name": "slr-swagger-mockup",
+  "version": "0.0.1",
+  "description": "Swagger API mockup nodejs server",
+  "main": "mock.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "grunt"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zalando-zmon/service-level-reporting.git"
+  },
+  "author": "Emanuel Lauria",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/zalando-zmon/service-level-reporting/issues"
+  },
+  "homepage": "https://github.com/zalando-zmon/service-level-reporting#readme",
+  "dependencies": {
+    "grunt": "^1.0.1",
+    "grunt-contrib-connect": "^1.0.2",
+    "swagger-mock-api": "^1.6.0"
+  }
+}

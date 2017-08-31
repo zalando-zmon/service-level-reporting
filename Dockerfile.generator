@@ -1,7 +1,0 @@
-FROM registry.opensource.zalan.do/ci/toolchain-python35:latest
-RUN apt-get update && apt-get install -y libssl-dev gnuplot
-RUN pip3 install clickclick jinja2 stups-zign
-COPY plot.py /
-COPY generate-slr.py /
-COPY scm-source.json /
-ADD templates /templates

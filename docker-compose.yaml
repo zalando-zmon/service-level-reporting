@@ -1,0 +1,69 @@
+version: '3'
+services:
+
+  slr-redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+
+  slr-db:
+    image: postgres:9.6.3
+    ports:
+       - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: db-password
+
+  slr-migrate:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile
+    command: ["sh", "-c", "until nslookup slr-db; do echo waiting for database; sleep 2; done; ./migrate.py"]
+    depends_on:
+      - slr-db
+    restart: on-failure
+    environment:
+      DATABASE_URI: postgresql://postgres:db-password@slr-db/slr
+      DATABASE_USER: slr_user
+      DATABASE_PASSWORD: slr-user-password
+
+  slr-backend:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile
+    depends_on:
+      - slr-migrate
+      - slr-redis
+      - slr-db
+    restart: on-failure
+    ports:
+      - "8080:8080"
+    # wait until migration is done!
+    command: ["sh", "-c", "sleep 8 ; python -m app.main"]
+    environment:
+      DATABASE_URI: postgresql://slr_user:slr-user-password@slr-db/slr
+      KAIROSDB_URL: https://data-service.zmon.zalan.do/kairosdb-proxy
+      # TOKENINFO_URL: https://info.services.auth.zalando.com/oauth2/tokeninfo
+      SLR_PRESHARED_TOKEN: 'SLR-TOKEN'
+      SLR_LOCAL_ENV: "true"
+      SLR_APP_URL: http://localhost:8000/
+      # SESSION
+      SLR_SESSION_TYPE: redis
+      SLR_SESSION_REDIS_HOST: slr-redis
+      # SLR_API_AUTHORIZATION: admins
+
+      # CACHE
+      SLR_CACHE_TYPE: redis
+      SLR_CACHE_REDIS_HOST: slr-redis
+      # THROTTLING
+      SLR_RATE_LIMIT_STORAGE: redis://slr-redis:6379
+
+  slr-frontend:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.frontend
+    command: ["sh", "-c", "until nslookup slr-backend; do echo waiting for backend; sleep 2; done; nginx -c /usr/local/openresty/nginx/conf/default.conf"]
+    restart: on-failure
+    depends_on:
+      - slr-backend
+    ports:
+      - "8000:8000"

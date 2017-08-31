@@ -1,0 +1,186 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/iron-media-query/iron-media-query.html">
+
+<link rel="import" href="./slr-fab.html">
+<link rel="import" href="./slr-items-data.html">
+<link rel="import" href="./slr-product-card.html">
+<link rel="import" href="./slr-product-view.html">
+
+<dom-module id="slr-products">
+  <template>
+    <style include="common-styles">
+      :host {
+        display: block;
+        @apply --slr-content;
+        text-align: left;
+      }
+
+      .flex-grid-thirds {
+        display: flex;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        margin: 0 10px;
+      }
+
+      .flex-grid-thirds .col {
+        width: 30%;
+        margin: 10px;
+      }
+
+      .flex-grid-thirds[small-layout] {
+          flex-flow: column;
+          margin: 0;
+      }
+
+      .flex-grid-thirds .col[small-layout] {
+        width: 100%;
+        margin: 0;
+      }
+    </style>
+
+    <iron-media-query
+      query="(max-width: 600px)"
+      query-matches="{{small}}"></iron-media-query>
+
+    <slr-items-data
+      id="productsData"
+      slug="{{selectedSlug}}"
+      item="{{selectedProduct}}"
+      items="{{products}}"
+      filtered-items="{{filteredProducts}}"
+      search="[[searchStr]]"
+      url="/api/products"
+      item-type="Product"
+      loading="{{loading}}"></slr-items-data>
+
+    <slr-product-view
+      id="view"
+      item="{{selectedProduct}}"
+      slug="{{selectedSlug}}"
+      products="{{products}}"
+      product-groups="{{productGroups}}"
+      opened="{{viewIsOpen}}"
+      loading="{{loading}}"
+      route="{{route}}"
+      visible="{{visible}}"></slr-product-view>
+
+    <div class="flex-grid-thirds" small-layout$="{{small}}" id="list">
+      <template is="dom-repeat" items="[[filteredProducts]]">
+        <div class="col product" small-layout$="{{small}}">
+          <a href="/products/[[item.slug]]">
+            <slr-product-card
+              hidden$="[[!item.name]]"
+              product-groups="[[productGroups]]"
+              item="[[item]]"></slr-product-card>
+          </a>
+        </div>
+      </template>
+    </div>
+
+    <slr-fab
+      id="fab"
+      visible
+      on-click="addProduct"></slr-fab>
+
+  </template>
+
+  <script>
+    class SlrProducts extends Polymer.Element {
+      static get is() { return 'slr-products' }
+
+      static get properties() {
+        return {
+          products: {
+            type: Array,
+            value: []
+          },
+          productGroups: {
+            type: Array
+          },
+          route: {
+            type: Object
+          },
+          visible: {
+            type: Boolean,
+            value: false
+          },
+          loading: {
+            type: Boolean,
+            value: true,
+            notify: true
+          },
+          viewIsOpen: {
+            type: Boolean
+          },
+          searchStr: {
+            type: String
+          },
+          filteredProducts: {
+            type: Array
+          },
+          selectedProduct: {
+            type: Object
+          },
+          selectedSlug: {
+            type: String
+          }
+        }
+      }
+
+      static get observers() { return [
+        'routeChanged(route, visible)',
+      ]}
+
+      routeChanged(route, visible) {
+        if (visible && route.prefix === '/products') {
+          this.$.productsData.fetch()
+          this.dispatchEvent(new CustomEvent('product-groups-fetch'))
+        }
+      }
+
+      ready() {
+        super.ready()
+        this.addEventListener('product-submit', (e) => this.onSubmit(e))
+        this.addEventListener('product-cancel', (e) => this.onCancel(e))
+        this.addEventListener('slr-dialog-opened', (e) => this.onOpen(e))
+        this.addEventListener('slr-dialog-closed', (e) => this.onClose(e))
+      }
+
+      onSubmit(e) {
+        this.set('selectedProduct', null)
+        if (e.detail.item && e.detail.item.slug) {
+          this.set('selectedSlug', e.detail.item.slug)
+        } else {
+          this.set('selectedSlug', null)
+        }
+        this.$.productsData.fetch()
+      }
+
+      onCancel(e) {
+        if (!e.detail.item.name) {
+          this.pop('products')
+        }
+      }
+
+      onOpen(e) {
+        this.$.fab.hide()
+      }
+
+      onClose(e) {
+        this.set('selectedSlug', null)
+        this.$.fab.show()
+      }
+
+      addProduct() {
+        this.$.view.new()
+        this.$.fab.hide()
+      }
+
+      computeFilter(str) {
+        return SlrUtils.filterCollection(str)
+      }
+    }
+
+    window.customElements.define(SlrProducts.is, SlrProducts)
+  </script>
+</dom-module>

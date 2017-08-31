@@ -1,0 +1,7 @@
+{
+  "name": "slr",
+  "short_name": "slr",
+  "description": "Service Level Report User Interface",
+  "start_url": "/",
+  "display": "standalone"
+}

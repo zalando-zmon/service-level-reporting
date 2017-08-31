@@ -1,0 +1,100 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/app-route/app-route.html">
+
+<dom-module id="slr-slr">
+  <template>
+    <style>
+      :host {
+        display: block;
+        text-align: center;
+      }
+
+      iframe {
+        width: 90vw;
+        height: 80vh;
+        background: white;
+        border: none;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    </style>
+
+    <app-route
+      route="{{route}}"
+      pattern="/:productGroup/:product"
+      data="{{routeData}}"
+      tail="{{subroute}}"></app-route>
+
+    <iframe id="iframe" src="/reports/"></iframe>
+  </template>
+
+  <script>
+    class SlrSlr extends Polymer.Element {
+      static get is() { return 'slr-slr' }
+
+      static get properties() {
+        return {
+          route: {
+            type: Object
+          },
+          routeData: {
+            type: Object
+          },
+          subroute: {
+            type: Object
+          },
+          slug: {
+            type: String,
+            observer: 'slugChanged'
+          }
+        }
+      }
+
+      static get observers() {
+        return [ 'routeChanged(route)', 'routeDataChanged(routeData.product, routeData.productGroup)' ]
+      }
+
+      routeChanged() {
+        if (this.route.path === '' || this.route.path === '/') {
+          this.set('routeData.product', null)
+          this.set('routeData.productGroup', null)
+          this.setIframeSrc()
+        }
+      }
+
+      routeDataChanged(product, productGroup) {
+        if (productGroup && product) {
+          return this.setIframeSrc(`/${productGroup}/${product}/`)
+        }
+        this.setIframeSrc()
+      }
+
+      setIframeSrc(src = '') {
+        this.$.iframe.src = '/reports/' + src
+      }
+
+      ready() {
+        super.ready()
+        this.$.iframe.onload = () => this.onIframeLoad()
+      }
+
+      onIframeLoad() {
+        let pathname = this.$.iframe.contentWindow.location.pathname.split('/')
+        let page = pathname.slice(-1)
+        let path = pathname.slice(1, -1).join('/')
+
+        // Remove '/reports/' from path, returned by navigating inside of iframe
+        if (pathname.indexOf('reports') === 1) {
+          path = pathname.slice(2, -1).join('/')
+        }
+
+        // set history only when slr view is visible
+        if (this.route.prefix === '/slr' && path) {
+          window.history.replaceState({html: page}, page, `/slr/${path}/${page}`)
+        }
+      }
+    }
+
+    window.customElements.define(SlrSlr.is, SlrSlr)
+  </script>
+</dom-module>

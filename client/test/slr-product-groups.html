@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>slr-product-groups test</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <link rel="import" href="../src/slr-product-groups.html">
+  </head>
+  <body>
+
+    <test-fixture id="productGroups">
+      <template>
+         <slr-product-groups></slr-product-groups>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('slr-product-groups', function() {
+        var element;
+
+        setup(function() {
+          element = fixture('productGroups')
+        })
+
+        test('items should be displayed', function(done) {
+          element.productGroups = [
+            { name: 'product group 3', department: 'tech' },
+            { name: 'product group 1', department: 'tech' },
+            { name: 'product group 2', department: 'tech' }
+          ]
+          flush(function() {
+            var items = Polymer.dom(element.root).querySelectorAll('.productGroup');
+            assert.equal(element.productGroups.length, items.length)
+            done()
+          })
+        })
+      })
+    </script>
+  </body>
+</html>

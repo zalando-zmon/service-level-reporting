@@ -13,15 +13,37 @@ Idea:
 * Push metrics truncated to full minute timestamps into PostgreSQL
 * Generate reliabilty reports (weekly, monthly, ..)
 
+
+Server local setup
+==================
+
+Development
+-----------
+
+Prepare the database
+
 .. code-block:: bash
 
     $ docker run -d -p 5432:5432 postgres:9.5
-    $ cat schema.sql | psql -h localhost -U postgres
-    $ cat sample_data.sql | psql -h localhost -U postgres
-    $ export DATABASE_URI='host=localhost user=postgres'
+    $ echo 'CREATE DATABASE slr' | psql -h localhost -U postgres
+    $ export DATABASE_URI=postgresql://postgres@localhost/slr
     $ export KAIROSDB_URL=https://kairosdb.example.org
-    $ sudo pip3 install -r requirements.txt
-    $ python -m app.main
+
+Run migration
+
+.. code-block:: bash
+
+    $ export FLASK_APP=app/main.py
+    $ export SLR_LOCAL_ENV=true
+    $ pip3 install -r requirements.txt
+    $ flask db upgrade -d app/migrations/
+
+Run the server
+
+.. code-block:: bash
+
+    $ python -m app
+
 
 Configuration parameters:
 
@@ -33,6 +55,17 @@ Configuration parameters:
     PostgreSQL database connection string.
 ``KAIROSDB_URL``
     KairosDB base URL.
+
+
+Docker compose
+--------------
+
+You can deploy a server environment with ``docker-compose``
+
+.. code-block:: bash
+
+    $ docker-compose up
+
 
 Generating Reports
 ==================
@@ -47,17 +80,18 @@ You will need to install ``gnuplot`` as a system dependency. Running the followi
 Command Line Interface
 ======================
 
-You can interact with API service using CLI tool ``cli.py``.
+You can interact with API service using CLI tool ``zmon-slr``.
 
 Examples:
 
 
 .. code-block:: bash
 
-    $ pip3 install --update -r requirements.txt
+    $ python setup.py install
 
-    $ ./cli.py -h
-    Usage: cli.py [OPTIONS] COMMAND [ARGS]...
+    $ zmon-slr -h
+
+    Usage: zmon-slr [OPTIONS] COMMAND [ARGS]...
 
       Service Level Reporting command line interface
 
@@ -65,48 +99,61 @@ Examples:
       -h, --help  Show this message and exit.
 
     Commands:
-      configure    Configure CLI
-      data-source  Data sources
-      group        SLR product groups
-      product      SLR products
-      sli          Service level indicators
-      slo          Service level objectives
+      configure  Configure CLI
+      group      SLR product groups
+      product    SLR products
+      sli        Service level indicators
+      slo        Service level objectives
+      target     Service level objectives Targets
 
-    $ ./cli.py group create "Monitoring Inc." "Tech Infrastructure"
+    $ zmon-slr group create "Monitoring Inc." "Tech Infrastructure"
     Creating product_group: Monitoring Inc.
+    {
+      "created": "2017-06-19T12:31:44.665459Z",
+      "department": "Tech Infrastructure",
+      "updated": "2017-06-19T12:31:44.665473Z",
+      "slug": "monitoring-inc",
+      "name": "Monitoring Inc.",
+      "uri": "http://localhost:8080/api/product-groups/1",
+      "username": "username"
+    }
      OK
 
-    $ ./cli.py group list
+    $ zmon-slr group list
     [
-        {
-            "name": "Monitoring Inc.",
-            "department": "Tech Infrastructure",
-            "slug": "monitoring-inc"
-        }
+      {
+        "created": "2017-06-19T12:31:44.665459Z",
+        "department": "Tech Infrastructure",
+        "updated": "2017-06-19T12:31:44.665473Z",
+        "slug": "monitoring-inc",
+        "name": "Monitoring Inc.",
+        "uri": "http://localhost:8080/api/product-groups/1",
+        "username": "username"
+      }
     ]
 
-    $ ./cli.py product create ZMON monitoring-inc
+    $ zmon-slr product create ZMON monitoring-inc
     Creating product: ZMON
+    {
+      "product_reports_uri": "http://localhost:8080/api/products/1/reports",
+      "product_reports_weekly_uri": "http://localhost:8080/api/products/1/reports/weekly",
+      "username": "username",
+      "slug": "zmon",
+      "product_slo_uri": "http://localhost:8080/api/products/1/slo",
+      "updated": "2017-06-19T12:34:51.818225Z",
+      "product_group_uri": "http://localhost:8080/api/product-groups/1",
+      "product_group_name": "Monitoring Inc.",
+      "name": "ZMON",
+      "product_sli_uri": "http://localhost:8080/api/products/1/sli",
+      "uri": "http://localhost:8080/api/products/1",
+      "created": "2017-06-19T12:34:51.818210Z"
+    }
      OK
 
-    $ ./cli.py product list
-    [
-        {
-            "delivery_team": null,
-            "department": "Tech Infrastructure",
-            "product_group_id": 1,
-            "slug": "zmon",
-            "product_group_name": "Monitoring Inc.",
-            "id": 2,
-            "product_group_slug": "monitoring-inc",
-            "name": "ZMON"
-        }
-    ]
-
-    $ ./cli.py product delete zmon
+    $ zmon-slr product delete zmon
     Deleting product: zmon
      OK
 
-    $ ./cli.py group delete monitoring-inc
+    $ zmon-slr group delete monitoring-inc
     Deleting product_group: monitoring-inc
      OK

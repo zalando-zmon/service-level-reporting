@@ -1,0 +1,33 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+
+<dom-module id="slr-auth">
+  <template>
+    <style include="common-styles">
+      :host {
+        display: block;
+        @apply --slr-content;
+        opacity: 0.66;
+      }
+
+      h1 {
+        margin-top: 15vh;
+      }
+    </style>
+
+    <h1>Not logged in yet?</h1>
+    <p>Please follow the authentication process</p>
+    <paper-button raised on-click="toLogin">continue</paper-button>
+  </template>
+  <script>
+    class SlrAuth extends Polymer.Element {
+      static get is() { return 'slr-auth' }
+
+      toLogin() {
+        window.location.href = '/login'
+      }
+    }
+
+    window.customElements.define(SlrAuth.is, SlrAuth)
+    </script>
+  </dom-module>

@@ -1,8 +1,6 @@
 Dockerfile
 Dockerfile.generator
-LICENSE
 __pycache__
-README.rst
 sample_data.sql
 sample.yaml
 schema.sql
@@ -11,4 +9,8 @@ tox.ini
 .tox
 .eggs/
 *.egg-info
+build/
 
+client/build/
+
+docker-compose.yaml

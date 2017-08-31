@@ -1,0 +1,75 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/paper-toast/paper-toast.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+
+<link rel="import" href="./common-styles.html">
+
+<dom-module id="slr-notifications">
+  <template>
+    <style include="common-styles">
+      :host {
+        display: block;
+      }
+
+      paper-button {
+        color: var(--app-accent-color);
+      }
+    </style>
+
+    <paper-toast id="toast">
+      <paper-button
+        id="toastButton"
+        on-click="action"
+        hidden>Retry</paper-button>
+    </paper-toast>
+  </template>
+
+  <script>
+    class SlrNotifications extends Polymer.Element {
+      static get is() { return 'slr-notifications' }
+
+      static get properties() {
+        return {
+          action: {
+            type: Function,
+            value: () => {}
+          }
+        }
+      }
+
+      open({message, action, duration}) {
+
+        this.$.toast.close()
+
+        if (!message) {
+          console.log('Error showing notification, no message given.')
+          return
+        }
+
+        this.$.toast.text = message
+        this.$.toastButton.hidden = true;
+        this.$.toast.duration = 3000;
+
+        if (duration >= 0) {
+          this.$.toast.duration = duration
+        }
+
+        if (action) {
+          this.action = () => {
+            this.$.toast.close()
+            action()
+          }
+          this.$.toastButton.hidden = false
+        }
+
+        this.$.toast.open()
+      }
+
+      close() {
+        this.$.toast.close();
+      }
+    }
+
+    window.customElements.define(SlrNotifications.is, SlrNotifications)
+  </script>
+</dom-module>

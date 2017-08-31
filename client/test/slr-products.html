@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta title="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>slr-products test</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <link rel="import" href="../src/slr-products.html">
+  </head>
+  <body>
+
+    <test-fixture id="products">
+      <template>
+         <slr-products></slr-products>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('slr-products', function() {
+        var element;
+
+        setup(function() {
+          element = fixture('products')
+          element.products = [
+            { title: 'product 3', description: 'this is the 3rd product' },
+            { title: 'product 1', description: 'this is the 1st product' },
+            { title: 'product 2', description: 'this is the 2nd product' }
+          ]
+        })
+
+        test('items should be displayed', function(done) {
+          flush(function() {
+            var items = Polymer.dom(element.root).querySelectorAll('.product')
+            assert.equal(element.products.length, items.length)
+            done()
+          })
+        })
+
+        test('should add a new item and open view', function(done) {
+          flush(function() {
+            var view = Polymer.dom(element.root).querySelectorAll('#view')
+            element.addProduct()
+            assert.equal(element.products.length, 4)
+            assert.equal(element.viewIsOpen, true)
+            done()
+          })
+        })
+      })
+    </script>
+  </body>
+</html>

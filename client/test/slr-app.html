@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>slr-app test</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <link rel="import" href="../src/slr-app.html">
+  </head>
+  <body>
+
+    <test-fixture id="basic">
+      <template>
+         <slr-app></slr-app>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('slr-app', function() {
+        var app;
+
+        setup(function() {
+          app = fixture('basic')
+        })
+      })
+    </script>
+  </body>
+</html>

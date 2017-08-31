@@ -1,0 +1,222 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+
+<dom-module id="slr-items-data">
+  <template>
+    <iron-ajax
+      auto="{{auto}}"
+      id="ajax"
+      url="{{url}}"
+      loading="{{loading}}"
+      handle-as="json"
+      on-response="handleResponse"
+      on-error="handleErrorResponse"
+      debounce-duration="300"></iron-ajax>
+  </template>
+
+  <script>
+    class SlrItemsData extends Polymer.Element {
+      static get is() { return 'slr-items-data' }
+
+      static get properties() {
+        return {
+          item: {
+            type: Object,
+            notify: true
+          },
+          itemType: {
+            type: String,
+            value: 'Item'
+          },
+          idName: {
+            type: String,
+            value: 'slug'
+          },
+          slug: {
+            type: String,
+            observer: 'slugChanged'
+          },
+          items: {
+            type: Array,
+            value: null,
+            notify: true
+          },
+          search: {
+            type: String,
+            observer: 'searchChanged'
+          },
+          filteredItems: {
+            type: Array,
+            value: null,
+            notify: true
+          },
+          loading: {
+            type: Boolean,
+            value: false,
+            notify: true
+          },
+          url: {
+            type: String
+          },
+          fetchAttempts: {
+            type: Number,
+            value: 0
+          },
+          auto: {
+            type: Boolean,
+            value: false
+          }
+        }
+      }
+
+      static get observers() {
+        return [
+          'itemsChanged(items.*)'
+        ]
+      }
+
+      itemsChanged() {
+        this.set('filteredItems', this.filter())
+      }
+
+      searchChanged() {
+        this.set('filteredItems', this.filter())
+      }
+
+      handleResponse(e) {
+        try {
+          this.set('items', e.detail.response.data)
+          this.sort()
+          this.set('filteredItems', this.filter())
+        } catch(e) {
+          console.error('Error loading ' + this.itemType, e)
+          this.notify("Can't Load "+ this.itemType, () => this.fetch(), 0)
+        }
+      }
+
+      handleErrorResponse(e) {
+        try {
+          if (e.detail.request.xhr.response.status === 401) {
+            this.dispatchEvent(
+              new CustomEvent('slr-authenticate', {bubbles: true, composed: true})
+            )
+            return
+          }
+        } catch(e) {}
+        this.notify("Can't load " + this.itemType, () => this.fetch(), 0)
+      }
+
+      fetch() {
+        if (!this.url) {
+          return
+        }
+
+        if (this.fetchAttempts > 3) {
+          return this.notify("Can't load " + this.itemType, () => this.fetch, 0)
+        }
+
+        let ajax = this.$.ajax.generateRequest();
+        this.set('fetchAttempts', this.fetchAttempts+1)
+        Promise.all([ajax.completes]).then( (reqs) => {
+          this.set('items', reqs[0].response.data)
+          this.fetchAttempts = 0;
+          if (this.slug && this.items.length) {
+            this.findAndSetItem()
+          }
+        })
+      }
+
+      slugChanged() {
+        if (!this.slug) {
+          return
+        }
+
+        if (!this.items) {
+          return this.fetch()
+        }
+
+        if (this.items.length === 0 && this.fetchAttempts === 0) {
+          return this.fetch()
+        }
+
+        if (this.items.length) {
+          this.findAndSetItem()
+        }
+      }
+
+      findAndSetItem() {
+        if (!this.slug) {
+          return this.set('item', null)
+        }
+        let ix = this.items.findIndex( (p) => ''+p[this.idName] === ''+this.slug)
+        if (ix > -1) {
+          this.set('item', this.items[ix])
+        } else {
+          this.notify(this.itemType + ' not found')
+          this.set('item', null)
+        }
+      }
+
+      filter() {
+        if (!this.items) {
+          return
+        }
+
+        let items = this.items.filter( (item) => {
+
+          // add new items {}
+          if (!item.uri || !this.search) {
+            return true
+          }
+
+          let content = []
+          for (var key in item) {
+            if (item[key] && item[key].toLowerCase)
+            content.push(item[key].toLowerCase())
+          }
+          return (content.join('').indexOf(this.search.toLowerCase()) != -1)
+        })
+        return items
+      }
+
+      sort() {
+        let sorted = [].concat(this.items.sort( (a, b) =>
+                                                  this.favoriteSort(a, b)))
+        this.set('items', sorted)
+      }
+
+      favoriteSort(a, b) {
+        let nameA = (a.name || a.title || a.slug || a.id).toUpperCase();
+        let nameB = (b.name || b.title || b.slug || b.id).toUpperCase();
+
+        if (a.favorite) {
+          return -1;
+        }
+        if (b.favorite) {
+          return 1;
+        }
+        if (nameA < nameB) {
+          return -1
+        }
+        if (nameA > nameB) {
+          return 1
+        }
+        // names must be equal
+        return 0
+      }
+
+      notify(message, action, duration) {
+        this.dispatchEvent(
+          new CustomEvent('slr-notify', {
+            detail: { message, action, duration },
+            duration,
+            bubbles: true,
+            composed: true
+          })
+        )
+      }
+    }
+
+    window.customElements.define(SlrItemsData.is, SlrItemsData)
+  </script>
+</dom-module>

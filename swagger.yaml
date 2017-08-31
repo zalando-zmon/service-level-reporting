@@ -1,404 +1,1110 @@
 swagger: '2.0'
+
 info:
-  title: ZMON SLO Metrics
-  version: "0.2"
+  title: ZMON service level reporting
+  version: "0.3"
+
+basePath: /api
+
 consumes:
   - application/json
+
 produces:
   - application/json
+
+securityDefinitions:
+  oauth2:
+    type: oauth2
+    flow: password
+    tokenUrl: ""
+    scopes:
+      uid: Unique identifier of the user accessing the service.
+
 security:
   # enable OAuth protection for all REST endpoints
   # (only active if the HTTP_TOKENINFO_URL environment variable is set)
   - oauth2: [uid]
 
+definitions:
+  Meta:
+    properties:
+      next_uri:
+        type: string
+        readOnly: true
+        description: Pagination next URI
+      previous_uri:
+        type: string
+        readOnly: true
+        description: Pagination previous URI
+      count:
+        type: number
+        readOnly: true
+        description: Total number of resources
+
+  APIRoot:
+    properties:
+      health_uri:
+        type: string
+        readOnly: true
+        description: Health resource URI
+      session_uri:
+        type: string
+        readOnly: true
+        description: Session resource URI. Info about logged in user.
+      product_groups_uri:
+        type: string
+        readOnly: true
+        description: Product Groups URI
+      products_uri:
+        type: string
+        readOnly: true
+        description: Products URI
+
+  ProductGroupList:
+    properties:
+      _meta:
+        $ref: '#/definitions/Meta'
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/ProductGroup'
+
+  ProductGroup:
+    properties:
+      name:
+        type: string
+        description: The actual name for the product group.
+      department:
+        type: string
+        description: The department of the product group.
+      slug:
+        type: string
+        description: Product group slug.
+        readOnly: true
+      username:
+        type: string
+        readOnly: true
+        description: User name created the resource.
+      created:
+        type: string
+        readOnly: true
+        description: Created datetime.
+      updated:
+        type: string
+        readOnly: true
+        description: Updated datetime.
+      uri:
+        type: string
+        readOnly: true
+        description: Self reference URI (e.g /product-groups/110)
+
+  ProductList:
+    properties:
+      _meta:
+        $ref: '#/definitions/Meta'
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/Product'
+
+  Product:
+    properties:
+      name:
+        type: string
+        description: Product name.
+      email:
+        type: ["string", "null"]
+        description: Product owner email. This could be used in notifications.
+      product_group_uri:
+        type: string
+        description: Product Group URI (e.g. /product-groups/110)
+      slug:
+        type: string
+        readOnly: true
+        description: Product slug.
+      product_group_name:
+        type: string
+        readOnly: true
+        description: Product Group name.
+      username:
+        type: string
+        readOnly: true
+        description: User name created the resource.
+      created:
+        type: string
+        readOnly: true
+        description: Created datetime.
+      updated:
+        type: string
+        readOnly: true
+        description: Updated datetime.
+      uri:
+        type: string
+        readOnly: true
+        description: Self reference URI (e.g /products/3)
+      product_sli_uri:
+        type: string
+        readOnly: true
+        description: Product SLI URI (e.g /products/3/sli)
+      product_slo_uri:
+        type: string
+        readOnly: true
+        description: Product SLO URI (e.g /products/3/slo)
+      product_reports_uri:
+        type: string
+        readOnly: true
+        description: Product Reports URI (e.g /products/3/reports)
+      product_reports_weekly_uri:
+        type: string
+        readOnly: true
+        description: Product Reports URI (e.g /products/3/reports/weekly)
+
+  SLIList:
+    properties:
+      _meta:
+        $ref: '#/definitions/Meta'
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/SLI'
+
+  SLI:
+    properties:
+      name:
+        type: string
+        description: SLI name.
+      source:
+        type: object
+        description: |
+          {
+            "check_id": 2017,
+            "aggregation": {"type": "average"},
+            "keys": ["latency.p99", "requests_count"],
+            "tags": {"application_id": ["app-1"]}
+          }
+      unit:
+        type: string
+        description: SLI unit (s, ms, %).
+      aggregation:
+        type: string
+        readOnly: true
+        description: Aggregation type (retrieved from source for convenience)
+      product_name:
+        type: string
+        readOnly: true
+        description: Product name
+      slug:
+        type: string
+        readOnly: true
+        description: SLI slug.
+      username:
+        type: string
+        readOnly: true
+        description: User name created the resource.
+      created:
+        type: string
+        readOnly: true
+        description: Created datetime.
+      updated:
+        type: string
+        readOnly: true
+        description: Updated datetime.
+      uri:
+        type: string
+        readOnly: true
+        description: Self reference URI (e.g /products/3/sli/33)
+      sli_values_uri:
+        type: string
+        readOnly: true
+        description: Product SLI URI (e.g /products/3/sli/33/values)
+      sli_query_uri:
+        type: string
+        readOnly: true
+        description: Product SLO URI (e.g /products/3/sli/33/query)
+
+  SLOList:
+    properties:
+      _meta:
+        $ref: '#/definitions/Meta'
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/SLO'
+
+  SLO:
+    properties:
+      title:
+        type: string
+        description: SLO title.
+      description:
+        type: string
+        description: SLO description.
+      id:
+        type: integer
+        readOnly: true
+        description: SLO ID.
+      username:
+        type: string
+        readOnly: true
+        description: User name created the resource.
+      created:
+        type: string
+        readOnly: true
+        description: Created datetime.
+      updated:
+        type: string
+        readOnly: true
+        description: Updated datetime.
+      uri:
+        type: string
+        readOnly: true
+        description: Self reference URI (e.g /products/3/slo/333)
+      slo_targets_uri:
+        type: string
+        readOnly: true
+        description: Product SLO targets URI (e.g /products/3/slo/333/targets)
+      targets:
+        type: array
+        items:
+          $ref: '#/definitions/Target'
+        readOnly: true
+        description: SLO Targets
+      product_name:
+        type: string
+        readOnly: true
+        description: Product name
+
+  TargetList:
+    properties:
+      _meta:
+        $ref: '#/definitions/Meta'
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/Target'
+
+  Target:
+    properties:
+      from:
+        type: ["number", "null"]
+        description: SLO target lower bound.
+      to:
+        type: ["number", "null"]
+        description: SLO target upper bound.
+      sli_uri:
+        type: string
+        description: Product SLI URI (e.g /products/3/sli/33).
+      sli_name:
+        type: string
+        readOnly: true
+        description: Product SLI name
+      product_name:
+        type: string
+        readOnly: true
+        description: Product name
+      username:
+        type: string
+        readOnly: true
+        description: User name created the resource.
+      created:
+        type: string
+        readOnly: true
+        description: Created datetime.
+      updated:
+        type: string
+        readOnly: true
+        description: Updated datetime.
+      uri:
+        type: string
+        readOnly: true
+        description: Self reference URI (e.g /products/3/slo/333/targets/3333).
+
+  Report:
+    properties:
+      product_name:
+        type: string
+        description: Product name
+      product_group_name:
+        type: string
+        description: Product Group name
+      department:
+        type: string
+        description: Product group department
+      slo:
+        type: array
+        items:
+          $ref: '#/definitions/ReportSLO'
+
+  ReportSLO:
+    properties:
+      days:
+        type: object
+        readOnly: true
+        description: |
+          {
+            "2017-02-16T00:00:00": {
+              "sli-name-1": {"min": 10, "max": 100, "avg": 88.9, "count": 19000, "breaches": 1, "unit": "ms", "aggregation": "average"},
+              "sli-name-2": {"min": 19090, "max": 20110, "avg": 15558, "count": 19000, "breaches": 0, "unit": "", "aggregation": "max"}
+            }
+          }
+      title:
+        type: string
+        readOnly: true
+        description: 99.5 of requests succeed
+      slo_uri:
+        type: string
+        readOnly: true
+      targets:
+        type: array
+        readOnly: true
+        items:
+          $ref: '#/definitions/Target'
+
+parameters:
+  ResourceId:
+    name: id
+    type: integer
+    in: path
+    required: true
+    description: Resource ID.
+
+  ProductId:
+    name: product_id
+    type: string
+    in: path
+    required: true
+    description: Product ID.
+
+  SLOId:
+    name: slo_id
+    type: string
+    in: path
+    required: true
+    description: SLO ID.
+
+  From:
+    name: from
+    type: integer
+    in: query
+    description: Relative start minutes
+
+  To:
+    name: to
+    type: integer
+    in: query
+    description: Relative end minutes
+
+  Offset:
+    name: page
+    type: integer
+    in: query
+    description: Pagination page.
+
+  Limit:
+    name: page_size
+    type: integer
+    in: query
+    description: Pagination page size limit.
+
+
 paths:
+  /:
+    get:
+      tags: [API Root]
+      operationId: app.resources.APIRoot.get
+      summary: Root API entry point
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/APIRoot'
+
   /health:
     get:
       tags: [System]
-      operationId: app.handler.health.get_health
+      operationId: app.resources.APIRoot.health
       summary: Return health
-      security: []
       responses:
         200:
           description: Health is OK
 
+  /session:
+    get:
+      tags: [System]
+      operationId: app.resources.APIRoot.session
+      summary: Return session info
+      responses:
+        200:
+          description: OK
+          schema:
+            properties:
+              username:
+                type: string
+                readOnly: true
+                description: Current username
+              last_login:
+                type: string
+                readOnly: true
+                description: Login datetime
+
   /product-groups:
     get:
       tags: [Product Group]
-      operationId: app.handler.product_groups.get
+      operationId: app.resources.ProductGroupResource.list
+      parameters:
+        - name: name
+          type: string
+          in: query
+          description: Filter product groups by name.
+        - $ref: '#/parameters/Limit'
+        - $ref: '#/parameters/Offset'
       responses:
         200:
           description: List of Product Groups
           schema:
-              type: array
-              items:
-                $ref: '#/definitions/ProductGroup'
+            $ref: '#/definitions/ProductGroupList'
+        401:
+          description: UNAUTHORIZED
+
     post:
       tags: [Product Group]
-      operationId: app.handler.product_groups.add
-      summary: Add a Product Group
-      description: Add a product group for a team
+      operationId: app.resources.ProductGroupResource.create
+      summary: Create a Product Group
+      description: Create a product group.
       parameters:
-        - $ref: '#/parameters/ProductGroupDef'
+        - name: product_group
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                description: The name for the new Product Group
+                example: Recommendations Platform
+              department:
+                type: string
+                description: The department of the Product Group
+                example: Personalization
+            required:
+              - name
       responses:
         201:
-          description: OK
+          description: CREATED
+          schema:
+            $ref: '#/definitions/ProductGroup'
         400:
           description: BAD REQUEST
+        401:
+          description: UNAUTHORIZED
 
-  /product-groups/{pg_slug}:
+  /product-groups/{id}:
+    get:
+      tags: [Product Group]
+      summary: Retrieve a Product Group
+      operationId: app.resources.ProductGroupResource.get
+      parameters:
+        - $ref: '#/parameters/ResourceId'
+      responses:
+        200:
+          description: OK.
+          schema:
+            $ref: '#/definitions/ProductGroup'
+        401:
+          description: UNAUTHORIZED.
+        404:
+          description: NOT FOUND.
+
+    put:
+      tags: [Product Group]
+      operationId: app.resources.ProductGroupResource.update
+      summary: Update a Product Group
+      parameters:
+        - $ref: '#/parameters/ResourceId'
+        - name: product_group
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/ProductGroup'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/ProductGroup'
+        400:
+          description: BAD REQUEST
+        401:
+          description: UNAUTHORIZED
+
     delete:
       tags: [Product Group]
       summary: Delete a Product Group
-      operationId: app.handler.product_groups.delete
+      operationId: app.resources.ProductGroupResource.delete
       parameters:
-        - $ref: '#/parameters/ProductGroup'
+        - $ref: '#/parameters/ResourceId'
       responses:
-        200:
-          description: Product Group deleted.
+        204:
+          description: NO CONTENT.
+        401:
+          description: UNAUTHORIZED.
+        404:
+          description: NOT FOUND.
 
   /products:
     get:
       tags: [Product]
-      operationId: app.handler.product.get
+      operationId: app.resources.ProductResource.list
       parameters:
-        - name: pg
+        - name: name
           type: string
           in: query
-          description: Product Group slug filter.
-          required: false
-          default: ''
+          description: Filter products by name.
+        - name: product_group
+          type: string
+          in: query
+          description: Filter by product group name.
+        - $ref: '#/parameters/Limit'
+        - $ref: '#/parameters/Offset'
       responses:
         200:
-          description: List of products
+          description: List of Products
           schema:
-            type: array
-            items:
-              $ref: '#/definitions/Product'
-          examples:
-            "application/json":
-                - slug: e-coin
-                  name: E-Coin
-                  group_slug: crypto-currency
-                  delivery_team: Dark Warriors
+            $ref: '#/definitions/ProductList'
+        401:
+          description: UNAUTHORIZED
 
     post:
       tags: [Product]
-      operationId: app.handler.product.add
+      operationId: app.resources.ProductResource.create
+      description: Create a new Product
       parameters:
-        - $ref: '#/parameters/ProductDef'
+        - name: product
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                description: The name for the new Product
+                example: ZMON
+              product_group_uri:
+                type: string
+                description: Product Group URI
+                example: /product-groups/110
+            required:
+              - name
+              - product_group_uri
       responses:
         201:
-          description: Product created
+          description: CREATED
+          schema:
+            $ref: '#/definitions/Product'
         400:
           description: BAD REQUEST
+        401:
+          description: UNAUTHORIZED
         404:
-          description: Product group Not Found
+          description: NOT FOUND (Product group does not exist)
 
-  /products/{product}:
+  /products/{id}:
     get:
       tags: [Product]
-      operationId: app.handler.product.get_product
+      summary: Retrieve a Product
+      operationId: app.resources.ProductResource.get
       parameters:
-        - $ref: '#/parameters/Product'
+        - $ref: '#/parameters/ResourceId'
       responses:
         200:
-          description: Product Details
+          description: OK.
+          schema:
+            $ref: '#/definitions/Product'
+        401:
+          description: UNAUTHORIZED.
+        404:
+          description: NOT FOUND.
+
+    put:
+      tags: [Product]
+      operationId: app.resources.ProductResource.update
+      summary: Update a Product
+      parameters:
+        - $ref: '#/parameters/ResourceId'
+        - name: product
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/Product'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/Product'
+        400:
+          description: BAD REQUEST
+        401:
+          description: UNAUTHORIZED
+        404:
+          description: NOT FOUND
+
     delete:
       tags: [Product]
-      operationId: app.handler.product.delete
+      summary: Delete a Product
+      operationId: app.resources.ProductResource.delete
       parameters:
-        - $ref: '#/parameters/Product'
+        - $ref: '#/parameters/ResourceId'
       responses:
-        200:
-          description: Product Deleted
+        204:
+          description: NO CONTENT.
+        401:
+          description: UNAUTHORIZED.
+        404:
+          description: NOT FOUND.
 
-  /service-level-indicators/{product}/{name}:
+  /products/{product_id}/sli:
     get:
       tags: [SLI]
-      operationId: app.handler.sli.get_service_level_indicators
+      description: Get list of Product SLIs
+      operationId: app.resources.SLIResource.list
       parameters:
-        - $ref: '#/parameters/Product'
+        - $ref: '#/parameters/ProductId'
         - name: name
-          in: path
           type: string
-          required: true
-          description: The name of the SLI
-        - name: time_from
           in: query
-          type: string
-        - name: time_to
-          in: query
-          type: string
+          description: Filter SLI by name.
+        - $ref: '#/parameters/Limit'
+        - $ref: '#/parameters/Offset'
       responses:
         200:
-          description: Return SLIs
+          description: List of Product SLIs
+          schema:
+            $ref: '#/definitions/SLIList'
+        401:
+          description: UNAUTHORIZED
+        404:
+          description: NOT FOUND (Product does not exist)
 
-  /service-level-indicators/{product}/{name}/update:
     post:
       tags: [SLI]
-      operationId: app.handler.updater.post_update
-      summary: Update
+      operationId: app.resources.SLIResource.create
+      description: Create a new Product SLI
       parameters:
-        - $ref: '#/parameters/Product'
-        - name: name
-          in: path
-          type: string
-          required: true
-        - name: body
+        - $ref: '#/parameters/ProductId'
+        - name: sli
           in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                description: The SLI name
+                example: latency_p99
+              unit:
+                type: string
+                description: SLI unit (s, ms, %).
+              source:
+                type: object
+                description: SLI data source
+                example: |
+                  {
+                    "check_id": 2017,
+                    "aggregation": {"type": "average"},
+                    "keys": ["latency.p99", "requests_count"],
+                    "tags": {"application_id": ["app-1"]}
+                  }
+            required:
+              - name
+              - source
+              - unit
+      responses:
+        201:
+          description: CREATED
+          schema:
+            $ref: '#/definitions/SLI'
+        400:
+          description: BAD REQUEST
+        401:
+          description: UNAUTHORIZED
+        404:
+          description: NOT FOUND (Product does not exist)
+
+  /products/{product_id}/sli/{id}:
+    get:
+      tags: [SLI]
+      summary: Retrieve a SLI
+      operationId: app.resources.SLIResource.get
+      parameters:
+        - $ref: '#/parameters/ProductId'
+        - $ref: '#/parameters/ResourceId'
+      responses:
+        200:
+          description: OK.
+          schema:
+            $ref: '#/definitions/SLI'
+        401:
+          description: UNAUTHORIZED.
+        404:
+          description: NOT FOUND.
+
+    put:
+      tags: [SLI]
+      operationId: app.resources.SLIResource.update
+      summary: Update a Product SLI
+      parameters:
+        - $ref: '#/parameters/ProductId'
+        - $ref: '#/parameters/ResourceId'
+        - name: sli
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/SLI'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/SLI'
+        400:
+          description: BAD REQUEST
+        401:
+          description: UNAUTHORIZED
+        404:
+          description: NOT FOUND
+
+    delete:
+      tags: [SLI]
+      summary: Delete a Product SLI
+      operationId: app.resources.SLIResource.delete
+      parameters:
+        - $ref: '#/parameters/ProductId'
+        - $ref: '#/parameters/ResourceId'
+      responses:
+        204:
+          description: NO CONTENT.
+        401:
+          description: UNAUTHORIZED.
+        404:
+          description: NOT FOUND.
+
+  /products/{product_id}/sli/{id}/values:
+    get:
+      tags: [SLI]
+      description: Get list of Product SLIs values
+      operationId: app.resources.SLIValueResource.list
+      parameters:
+        - $ref: '#/parameters/ProductId'
+        - $ref: '#/parameters/ResourceId'
+        - $ref: '#/parameters/From'
+        - $ref: '#/parameters/To'
+        - $ref: '#/parameters/Limit'
+        - $ref: '#/parameters/Offset'
+      responses:
+        200:
+          description: List of SLI values
+          schema:
+            properties:
+              _meta:
+                type: object
+                properties:
+                  count:
+                    type: number
+                    description: Total number of values
+              data:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    timestamp:
+                      type: string
+                    value:
+                      type: number
+
+        401:
+          description: UNAUTHORIZED
+        404:
+          description: NOT FOUND (Product does not exist)
+
+  /products/{product_id}/sli/{id}/query:
+    post:
+      tags: [SLI]
+      description: Update Product SLI values
+      operationId: app.resources.SLIQueryResource.create
+      parameters:
+        - $ref: '#/parameters/ProductId'
+        - $ref: '#/parameters/ResourceId'
+        - name: duration
+          in: body
+          required: true
           schema:
             type: object
             properties:
               start:
                 type: integer
-                default: 5
-                description: Relative start value in time_unit
+                description: Relative start minutes
+                example: 1440
               end:
                 type: integer
-                description: Relative end value in time_unit
-              time_unit:
-                type: string
-                default: minutes
-            additionalProperties: true
-
+                description: Relative end minutes
+            required:
+              - start
       responses:
         200:
-          description: Update successful
+          description: List of SLI values
+          schema:
+            type: object
+            properties:
+              count:
+                type: integer
+                description: Number of points updated for this SLI
+        401:
+          description: UNAUTHORIZED
+        404:
+          description: NOT FOUND (Product does not exist)
 
-  /service-level-objectives/{product}:
+  /products/{product_id}/slo:
     get:
       tags: [SLO]
-      operationId: app.handler.slo.get
+      description: Get list of Product SLOs
+      operationId: app.resources.SLOResource.list
       parameters:
-        - $ref: '#/parameters/Product'
+        - $ref: '#/parameters/ProductId'
+        - $ref: '#/parameters/Limit'
+        - $ref: '#/parameters/Offset'
+        - name: id
+          type: integer
+          in: query
+          description: Filter SLO by ID.
       responses:
         200:
-          description: Return SLO definitions
+          description: List of Product SLOs
+          schema:
+            $ref: '#/definitions/SLOList'
+        401:
+          description: UNAUTHORIZED
+        404:
+          description: NOT FOUND (Product does not exist)
+
     post:
       tags: [SLO]
-      operationId: app.handler.slo.add
+      operationId: app.resources.SLOResource.create
+      description: Create a new Product SLO
       parameters:
-        - $ref: '#/parameters/ServiceLevelObjective'
-        - $ref: '#/parameters/Product'
+        - $ref: '#/parameters/ProductId'
+        - name: slo
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+                description: The SLO title
+                example: "99.5% of the requests succeed in less than 500 ms"
+            required:
+              - title
       responses:
         201:
-          description: SLO created
+          description: CREATED
+          schema:
+            $ref: '#/definitions/SLO'
+        400:
+          description: BAD REQUEST
+        401:
+          description: UNAUTHORIZED
+        404:
+          description: NOT FOUND (Product does not exist)
 
-  /service-level-objectives/{slo_id}:
+  /products/{product_id}/slo/{id}:
+    get:
+      tags: [SLO]
+      summary: Retrieve a SLO
+      operationId: app.resources.SLOResource.get
+      parameters:
+        - $ref: '#/parameters/ProductId'
+        - $ref: '#/parameters/ResourceId'
+      responses:
+        200:
+          description: OK.
+          schema:
+            $ref: '#/definitions/SLO'
+        401:
+          description: UNAUTHORIZED.
+        404:
+          description: NOT FOUND.
+
+    put:
+      tags: [SLO]
+      operationId: app.resources.SLOResource.update
+      summary: Update a Product SLO
+      parameters:
+        - $ref: '#/parameters/ProductId'
+        - $ref: '#/parameters/ResourceId'
+        - name: slo
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/SLO'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/SLO'
+        400:
+          description: BAD REQUEST
+        401:
+          description: UNAUTHORIZED
+        404:
+          description: NOT FOUND
+
     delete:
       tags: [SLO]
-      operationId: app.handler.slo.delete
+      summary: Delete a Product SLO
+      operationId: app.resources.SLOResource.delete
       parameters:
-        - name: slo_id
-          in: path
-          type: integer
-          required: true
+        - $ref: '#/parameters/ProductId'
+        - $ref: '#/parameters/ResourceId'
       responses:
         204:
-          description: SLO Deleted
+          description: NO CONTENT.
+        401:
+          description: UNAUTHORIZED.
+        404:
+          description: NOT FOUND.
 
-  /service-level-objectives/{product}/update:
-    post:
-      tags: [SLO]
-      operationId: app.handler.updater.update_service_level_objectives
+  /products/{product_id}/slo/{slo_id}/targets:
+    get:
+      tags: [Target]
+      description: Get list of SLO targets
+      operationId: app.resources.TargetResource.list
       parameters:
-        - $ref: '#/parameters/Product'
+        - $ref: '#/parameters/ProductId'
+        - $ref: '#/parameters/SLOId'
+        - $ref: '#/parameters/Limit'
+        - $ref: '#/parameters/Offset'
       responses:
         200:
-          description: Update SLIs
+          description: List of Product SLO targets
+          schema:
+            $ref: '#/definitions/TargetList'
+        401:
+          description: UNAUTHORIZED
+        404:
+          description: NOT FOUND (Product does not exist)
 
-  /service-level-objectives/{product}/reports/{report_type}:
-    get:
-      tags: [SLO]
-      operationId: app.handler.report.get_service_level_objective_report
+    post:
+      tags: [Target]
+      operationId: app.resources.TargetResource.create
+      description: Create a new Product SLO target
       parameters:
-        - $ref: '#/parameters/Product'
-        - name: report_type
-          in: path
-          type: string
+        - $ref: '#/parameters/ProductId'
+        - $ref: '#/parameters/SLOId'
+        - name: target
+          in: body
           required: true
-      responses:
-        200:
-          description: Return report data
-
-  /data-sources/{product}:
-    get:
-      tags: [Data Source]
-      operationId: app.handler.data_source.get
-      description: Get a list of data sources for a given product
-      parameters:
-        - $ref: '#/parameters/Product'
-      responses:
-        200:
-          description: Return the Targets for the the SLO
-    post:
-      tags: [Data Source]
-      operationId: app.handler.data_source.add
-      description: Create a new SLI Target for the SLO
-      parameters:
-        - $ref: '#/parameters/Product'
-        - $ref: '#/parameters/DataSource'
+          schema:
+            type: object
+            properties:
+              sli_uri:
+                type: string
+                description: Product SLI URI (e.g /products/3/sli/33)
+              from:
+                type: ["number", "null"]
+                description: SLO target lower bound.
+              to:
+                type: ["number", "null"]
+                description: SLO target upper bound.
+            required:
+              - sli_uri
       responses:
         201:
-          description: The SLI Target was created.
+          description: CREATED
+          schema:
+            $ref: '#/definitions/Target'
+        400:
+          description: BAD REQUEST
+        401:
+          description: UNAUTHORIZED
+        404:
+          description: NOT FOUND (Product/SLO do not exist)
 
-  /data-sources/{product}/{sli_name}:
-    delete:
-      tags: [Data Source]
-      operationId: app.handler.data_source.delete
-      description: Delete the data source for a give SLI in a product
+  /products/{product_id}/slo/{slo_id}/targets/{id}:
+    get:
+      tags: [Target]
+      summary: Retrieve a SLO Target
+      operationId: app.resources.TargetResource.get
       parameters:
-        - $ref: '#/parameters/Product'
-        - $ref: '#/parameters/ServiceLevelIndicator'
+        - $ref: '#/parameters/ProductId'
+        - $ref: '#/parameters/SLOId'
+        - $ref: '#/parameters/ResourceId'
       responses:
         200:
-          description: Data source deleted.
+          description: OK.
+          schema:
+            $ref: '#/definitions/Target'
+        401:
+          description: UNAUTHORIZED.
+        404:
+          description: NOT FOUND.
 
-definitions:
-  ProductGroup:
-    properties:
-      product_group_slug:
-        type: string
-        description: The identifier for the Product group.
-      product_group_name:
-        type: string
-        description: The actual name for the product group.
-      product_group_team:
-        type: string
-        description: The owning team of the product group.
+    put:
+      tags: [Target]
+      operationId: app.resources.TargetResource.update
+      summary: Update a Product SLO Target
+      parameters:
+        - $ref: '#/parameters/ProductId'
+        - $ref: '#/parameters/SLOId'
+        - $ref: '#/parameters/ResourceId'
+        - name: target
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/Target'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/Target'
+        400:
+          description: BAD REQUEST
+        401:
+          description: UNAUTHORIZED
+        404:
+          description: NOT FOUND
 
-  Product:
-    properties:
-      slug:
-        type: string
-        description: The slug identifier for the Product
-      name:
-        type: string
-        description: The name of the product
-      group_slug:
-        type: string
-        description: The product group to which the product belongs.
-      delivery_team:
-        type: string
-        description: The owning team of the product.
+    delete:
+      tags: [Target]
+      summary: Delete a Product SLO Target
+      operationId: app.resources.TargetResource.delete
+      parameters:
+        - $ref: '#/parameters/ProductId'
+        - $ref: '#/parameters/SLOId'
+        - $ref: '#/parameters/ResourceId'
+      responses:
+        204:
+          description: NO CONTENT.
+        401:
+          description: UNAUTHORIZED.
+        404:
+          description: NOT FOUND.
 
-  SLITarget:
-    properties:
-      sli_name:
-        type: string
-        description: The SLI name
-        example: latency.p99
-      unit:
-        type: string
-        description: The unit for the SLI
-        example: ms
-      from:
-        type: number
-        description: The lower cutoff for the SLI
-        example: 100
-      to:
-        type: number
-        description: The upper cutoff for the SLI
-        example: 200
-
-
-parameters:
-  ServiceLevelObjective:
-    name: slo
-    required: true
-    in: body
-    description: The definition of the new SLO
-    schema:
-      type: object
-      properties:
-        title:
+  /products/{product_id}/reports/{report_type}:
+    get:
+      tags: [Report]
+      description: Get Product weekly report
+      operationId: app.resources.ReportResource.get
+      parameters:
+        - $ref: '#/parameters/ProductId'
+        - name: report_type
           type: string
-          description: The title of the SLO
-          example: More than 95% successful responses under 200ms
-        targets:
-          type: array
-          items:
-            $ref: '#/definitions/SLITarget'
-      required:
-        - title
-        - targets
-
-  ProductGroupDef:
-    name: product_group
-    in: body
-    required: true
-    schema:
-      type: object
-      properties:
-        name:
-          type: string
-          description: The name for the new Product Group
-          example: Recommendations Platform
-        department:
-          type: string
-          description: The department of the Product Group
-          example: Personalization
-      required:
-        - name
-        - department
-  ProductDef:
-    name: product
-    in: body
-    required: true
-    schema:
-      type: object
-      properties:
-        name:
-          type: string
-          description: The name of the new product
-          example: PDP Recommendations
-        product_group:
-          type: string
-          description: The product group to which the product belongs
-          example: reco-platform
-      required:
-        - name
-        - product_group
-
-  DataSource:
-    name: data_source
-    in: body
-    required: true
-    schema:
-      type: object
-      properties:
-        sli_name:
-          type: string
-          description: The SLI name
-        definition:
-          type: object
-          description: The JSON definition for the SLI data source.
-
-  ProductGroup:
-    name: pg_slug
-    type: string
-    in: path
-    required: true
-    description: The Product Group slug
-
-  Product:
-    name: product
-    type: string
-    in: path
-    required: true
-
-  ServiceLevelIndicator:
-    name: sli_name
-    type: string
-    in: path
-    required: true
-
-
-securityDefinitions:
-  oauth2:
-    type: oauth2
-    flow: implicit
-    authorizationUrl: https://example.com/oauth2/dialog
-    scopes:
-      uid: Unique identifier of the user accessing the service.
+          in: path
+          required: true
+          description: Report type [weekly, monthly, quarterly].
+      responses:
+        200:
+          description: Generated report
+          schema:
+            $ref: '#/definitions/Report'
+        401:
+          description: UNAUTHORIZED
+        404:
+          description: NOT FOUND (Product does not exist)

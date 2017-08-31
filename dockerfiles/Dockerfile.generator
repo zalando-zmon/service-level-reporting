@@ -1,0 +1,18 @@
+FROM registry.opensource.zalan.do/stups/python:latest
+
+RUN apt-get update && apt-get install -y libssl-dev gnuplot
+
+RUN pip3 install -U setuptools clickclick jinja2 stups-zign awscli
+
+COPY dockerfiles/reports.py /reports.py
+RUN chmod a+x /reports.py
+
+COPY zmon_slr /zmon_slr
+COPY README.rst /
+COPY MANIFEST.in /
+COPY LICENSE /
+COPY setup.py /
+
+RUN python3 setup.py install
+
+CMD python3 /reports.py

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>slr-error test</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <link rel="import" href="../src/slr-error.html">
+  </head>
+  <body>
+
+    <test-fixture id="error">
+      <template>
+         <slr-error></slr-error>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('slr-error', function() {
+        var element;
+
+        setup(function() {
+          element = fixture('error')
+        })
+
+        test('paper-button is present and raised', function(done) {
+          var btn = element.shadowRoot.querySelector('paper-button')
+          assert.ok(btn.raised)
+          done()
+        })
+
+        test('link to reload exists', function(done) {
+          var link = element.shadowRoot.querySelector('a')
+          assert.equal(link.href, 'http://localhost:8081/')
+          done()
+        })
+      })
+    </script>
+  </body>
+</html>

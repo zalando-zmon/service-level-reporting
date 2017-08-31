@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>slr-fab test</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <link rel="import" href="../src/slr-fab.html">
+  </head>
+  <body>
+
+    <test-fixture id="fab">
+      <template>
+         <slr-fab></slr-fab>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('slr-fab', function() {
+        var element;
+
+        setup(function() {
+          element = fixture('fab')
+        })
+
+        test('fab is visible after show()', function(done) {
+          element.show()
+          assert.ok(element.visible)
+          done()
+        })
+
+        test('fab is hidden after hide()', function(done) {
+          element.hide()
+          assert.ok(!element.visible)
+          done()
+        })
+      })
+    </script>
+  </body>
+</html>
