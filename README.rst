@@ -1,6 +1,6 @@
-====================
-ZMON SRE SLO Metrics
-====================
+============================
+ZMON Service Level Reporting
+============================
 
 **WORK IN PROGRESS**
 
@@ -70,11 +70,11 @@ You can deploy a server environment with ``docker-compose``
 Generating Reports
 ==================
 
-You will need to install ``gnuplot`` as a system dependency. Running the following command will generate a report for the specified project in ``output`` directory.
+You will need to install ``gnuplot`` as a system dependency. Running the following command will generate a report for the specified project in ``output`` directory. You will need ``zmon-slr`` CLI to be installed (next section)
 
 .. code-block:: bash
 
-    $ ./generate-slr.py http://localhost:8080 myproduct
+    $ zmon-slr report create myproduct
 
 
 Command Line Interface
