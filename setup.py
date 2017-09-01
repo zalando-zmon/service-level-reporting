@@ -19,7 +19,7 @@ DESCRIPTION = 'ZMON SLO reports.'
 CONSOLE_SCRIPTS = ['zmon-slr = zmon_slr.main:main']
 PACKAGE_DATA = {MAIN_PACKAGE: ['templates/*.*']}
 
-REQUIREMENTS = ['clickclick', 'stups-zign', 'zmon-cli']
+REQUIREMENTS = ['clickclick', 'stups-zign', 'zmon-cli', 'jinja2']
 
 setup(
     name='zmon-slr',
