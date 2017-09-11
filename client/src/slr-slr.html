@@ -54,8 +54,9 @@
         return [ 'routeChanged(route)', 'routeDataChanged(routeData.product, routeData.productGroup)' ]
       }
 
-      routeChanged() {
-        if (this.route.path === '' || this.route.path === '/') {
+      routeChanged(route) {
+        console.log('routeChanged!!!, route=', route, 'routeData=', this.routeData)
+        if (route.path === '' || route.path === '/') {
           this.set('routeData.product', null)
           this.set('routeData.productGroup', null)
           this.setIframeSrc()
@@ -63,6 +64,7 @@
       }
 
       routeDataChanged(product, productGroup) {
+        console.log('routeDataChanged!!!, route=', this.route, 'routeData=', this.routeData, 'product=', product, 'productGroup', productGroup)
         if (productGroup && product) {
           return this.setIframeSrc(`/${productGroup}/${product}/`)
         }
@@ -70,6 +72,7 @@
       }
 
       setIframeSrc(src = '') {
+        console.log('setIframeSrc!!!', '/reports/' + src)
         this.$.iframe.src = '/reports/' + src
       }
 
@@ -82,14 +85,16 @@
         let pathname = this.$.iframe.contentWindow.location.pathname.split('/')
         let page = pathname.slice(-1)
         let path = pathname.slice(1, -1).join('/')
-
+        console.log('onIframeLoad!!!', pathname, page, path)
         // Remove '/reports/' from path, returned by navigating inside of iframe
         if (pathname.indexOf('reports') === 1) {
           path = pathname.slice(2, -1).join('/')
+          console.log('onIframeLoad!!! (reports === 1)', path)
         }
 
         // set history only when slr view is visible
         if (this.route.prefix === '/slr' && path) {
+          console.log('onIframeLoad!!! (set history)', page, `/slr/${path}/${page}`)
           window.history.replaceState({html: page}, page, `/slr/${path}/${page}`)
         }
       }
