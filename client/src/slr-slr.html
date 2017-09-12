@@ -65,10 +65,7 @@
 
       routeDataChanged(product, productGroup) {
         console.log('routeDataChanged!!!, route=', this.route, 'routeData=', this.routeData, 'product=', product, 'productGroup', productGroup)
-        if (productGroup && product) {
-          return this.setIframeSrc(`/${productGroup}/${product}/`)
-        }
-        this.setIframeSrc()
+        this.setIframeSrc(this.routeData.path.slice(1))
       }
 
       setIframeSrc(src = '') {
