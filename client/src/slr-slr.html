@@ -51,12 +51,12 @@
       }
 
       static get observers() {
-        return [ 'routeChanged(route)' ]
+        return [ 'routePathChanged(route.path)' ]
       }
 
-      routeChanged(route) {
-        console.log('routeChanged!!!, route=', route)
-        this.setIframeSrc(route.path || '')
+      routePathChanged(path) {
+        console.log('routePathChanged!!!, route.path=', path)
+        this.setIframeSrc(path)
       }
 
       setIframeSrc(path = '') {

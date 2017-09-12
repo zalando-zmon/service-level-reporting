@@ -89,7 +89,7 @@
 
       slugsChanged(slug, productGroups) {
         let productGroupSlug = this.getProductGroupSlug(productGroups.value)
-        this.set('reportUrl', `/slr/${productGroupSlug}/${slug}`)
+        this.set('reportUrl', `/slr/${productGroupSlug}/${slug}/`)
       }
 
       getProductGroupSlug(productGroups) {
