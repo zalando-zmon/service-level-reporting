@@ -51,12 +51,22 @@
       }
 
       static get observers() {
-        return [ 'routePathChanged(route.path)' ]
+        return [
+          'routePathChanged(route.path)',
+          'routeDataChanged(routeData.product, routeData.productGroup)'
+        ]
       }
 
       routePathChanged(path) {
         console.log('routePathChanged!!!, route.path=', path)
         this.setIframeSrc(path)
+      }
+
+      routeDataChanged(product, productGroup) {
+        console.log('routeDataChanged!!!', product, productGroup)
+        if (!this.path && (!product || !productGroup)) {
+          this.setIframeSrc()
+        }
       }
 
       setIframeSrc(path = '') {
