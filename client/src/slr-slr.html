@@ -51,27 +51,20 @@
       }
 
       static get observers() {
-        return [ 'routeChanged(route)', 'routeDataChanged(routeData.product, routeData.productGroup)' ]
+        return [ 'routeChanged(route)' ]
       }
 
       routeChanged(route) {
-        console.log('routeChanged!!!, route=', route, 'routeData=', this.routeData)
-        if (route.path === '' || route.path === '/') {
-          this.set('routeData.product', null)
-          this.set('routeData.productGroup', null)
-          this.setIframeSrc()
+        console.log('routeChanged!!!, route=', route)
+        this.setIframeSrc(route.path || '')
+      }
+
+      setIframeSrc(path = '') {
+        if (path[0] === '/') {
+          path = path.slice(1)
         }
-      }
-
-      routeDataChanged(product, productGroup) {
-        console.log('routeDataChanged!!!, route=', this.route, 'routeData=', this.routeData, 'product=', product, 'productGroup', productGroup)
-        let path = this.routeData.path ? this.routeData.path.slice(1) : ''
-        this.setIframeSrc(path)
-      }
-
-      setIframeSrc(src = '') {
-        console.log('setIframeSrc!!!', '/reports/' + src)
-        this.$.iframe.src = '/reports/' + src
+        console.log('setIframeSrc!!!', '/reports/' + path)
+        this.$.iframe.src = '/reports/' + path
       }
 
       ready() {
