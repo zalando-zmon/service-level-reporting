@@ -51,26 +51,27 @@
       }
 
       static get observers() {
-        return [ 'routeChanged(route)', 'routeDataChanged(routeData.product, routeData.productGroup)' ]
+        return [
+          'routePathChanged(route.path)',
+          'routeDataChanged(routeData.product, routeData.productGroup)'
+        ]
       }
 
-      routeChanged() {
-        if (this.route.path === '' || this.route.path === '/') {
-          this.set('routeData.product', null)
-          this.set('routeData.productGroup', null)
+      routePathChanged(path) {
+        this.setIframeSrc(path)
+      }
+
+      routeDataChanged(product, productGroup) {
+        if (!this.path && (!product || !productGroup)) {
           this.setIframeSrc()
         }
       }
 
-      routeDataChanged(product, productGroup) {
-        if (productGroup && product) {
-          return this.setIframeSrc(`/${productGroup}/${product}/`)
+      setIframeSrc(path = '') {
+        if (path[0] === '/') {
+          path = path.slice(1)
         }
-        this.setIframeSrc()
-      }
-
-      setIframeSrc(src = '') {
-        this.$.iframe.src = '/reports/' + src
+        this.$.iframe.src = '/reports/' + path
       }
 
       ready() {
@@ -82,7 +83,6 @@
         let pathname = this.$.iframe.contentWindow.location.pathname.split('/')
         let page = pathname.slice(-1)
         let path = pathname.slice(1, -1).join('/')
-
         // Remove '/reports/' from path, returned by navigating inside of iframe
         if (pathname.indexOf('reports') === 1) {
           path = pathname.slice(2, -1).join('/')
