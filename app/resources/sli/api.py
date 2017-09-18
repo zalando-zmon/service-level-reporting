@@ -20,7 +20,7 @@ from .updater import update_indicator_values
 
 
 class SLIResource(ResourceHandler):
-    model_fields = ('name', 'source', 'unit', 'aggregation', 'created', 'updated', 'username')
+    model_fields = ('name', 'slug', 'source', 'unit', 'aggregation', 'created', 'updated', 'username')
 
     @staticmethod
     def get_uri_from_id(obj_id: Union[str, int], **kwargs) -> str:
