@@ -447,7 +447,7 @@ def slo_delete(obj, product_name, slo_id):
 
     slo = slo[0]
 
-    if product_name != slo['product_name']:
+    if product['name'] != slo['product_name']:
         fatal_error('Cannot delete SLO {} as it does not belong to product {}'.format(slo_id, product_name))
 
     with Action('Deleting SLO: {}'.format(slo['uri']), nl=True):
@@ -595,9 +595,15 @@ def target_delete(obj, product_name, target_uri):
     """Delete Target for certain product"""
     client = get_client(obj)
 
+    product = client.product_list(name=product_name)
+    if not product:
+        fatal_error('Product {} does not exist'.format(product_name))
+
+    product = product[0]
+
     target = client.target_get(target_uri)
 
-    if product_name != target['product_name']:
+    if product['name'] != target['product_name']:
         fatal_error('Cannot delete Target {} as it does not belong to product {}'.format(target_uri, product_name))
 
     with Action('Deleting Target: {}'.format(target_uri), nl=True):
