@@ -246,7 +246,7 @@ class Client:
         return res.json()
 
     def product_report(self, product: dict) -> dict:
-        resp = self.session.get(product['product_reports_weekly_uri'])
+        resp = self.session.get(product['product_reports_weekly_uri'], timeout=180)
 
         resp.raise_for_status()
 
