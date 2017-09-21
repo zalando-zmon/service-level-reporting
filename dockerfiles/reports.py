@@ -77,6 +77,11 @@ def main():
         products = client.product_list(limit=1000)
 
         for product in products:
+
+            # Token could expire if report generation takes a long time!
+            token = SLR_TOKEN if SLR_TOKEN else zign.api.get_token('uid', ['uid'])
+            client = Client(SLR_URI, token)
+
             name = product['name']
             try:
                 # Make sure the product has the minimum req for generating a report
