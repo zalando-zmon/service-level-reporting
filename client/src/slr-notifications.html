@@ -1,6 +1,8 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../bower_components/paper-toast/paper-toast.html">
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-dialog/paper-dialog.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
 
 <link rel="import" href="./common-styles.html">
 
@@ -14,9 +16,29 @@
       paper-button {
         color: var(--app-accent-color);
       }
+
+      .info {
+        color: var(--app-secondary-color);
+        opacity: 0.8;
+        width: var(--iron-icon-width, 18px);
+        height: var(--iron-icon-height, 18px);
+      }
     </style>
 
+    <paper-dialog id="detail">
+      <h2>Additional Information</h2>
+      <paper-dialog-scrollable>
+        [[detail]]
+      </paper-dialog-scrollable>
+      <div class="buttons">
+        <paper-button dialog-dismiss>ok</paper-button>
+      </div>
+    </paper-dialog>
+
     <paper-toast id="toast">
+      <a href="" id="more" on-click="showDetail" hidden>
+        <iron-icon class="info" icon="help-outline"></iron-icon>
+      </a>
       <paper-button
         id="toastButton"
         on-click="action"
@@ -33,12 +55,16 @@
           action: {
             type: Function,
             value: () => {}
+          },
+          detail: {
+            type: String
           }
         }
       }
 
-      open({message, action, duration}) {
-
+      open({message, action, duration, detail}) {
+        this.$.more.hidden = true
+        this.detail = null
         this.$.toast.close()
 
         if (!message) {
@@ -62,11 +88,20 @@
           this.$.toastButton.hidden = false
         }
 
+        if (detail) {
+          this.$.more.hidden = false
+          this.detail = detail
+        }
+
         this.$.toast.open()
       }
 
       close() {
-        this.$.toast.close();
+        this.$.toast.close()
+      }
+
+      showDetail() {
+        this.$.detail.open()
       }
     }
 

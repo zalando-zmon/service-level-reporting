@@ -206,7 +206,6 @@
 
       onError(e) {
         this.set('loading', false)
-        console.error('Error saving Indicator.')
         let method = this.$.indicatorForm.request.method || 'default'
         let m = {
           'POST': 'add',
@@ -215,12 +214,21 @@
           'default': 'save'
         }
 
-        this.notify(`Can't ${m[method]} Indicator.`)
-        this.initForm()
-
-        if (e.detail.request.xhr.response.status === 401) {
-          this.dispatchEvent(new CustomEvent('slr-authenticate', {bubbles: true, composed: true}))
+        try {
+          if (e.detail.request.xhr.response.status === 401) {
+            this.dispatchEvent(new CustomEvent('slr-authenticate',
+            {bubbles: true, composed: true}))
+          } else {
+            this.notify(`Can't ${m[method]} Indicator`,
+              () => this.$.form.submit(), 5000,
+              e.detail.request.xhr.response.detail)
+          }
+        } catch(e) {
+          this.notify(`Can't ${m[method]} Indicator.`,
+            () => this.$.form.submit())
         }
+
+        this.initForm()
       }
 
       onResponse(e) {
@@ -316,11 +324,10 @@
         this.$.indicatorForm.submit()
       }
 
-      notify(message, action, duration) {
+      notify(message, action, duration, detail) {
         this.dispatchEvent(
           new CustomEvent('slr-notify', {
-            detail: { message, action, duration },
-            duration,
+            detail: { message, action, duration, detail },
             bubbles: true,
             composed: true
           })

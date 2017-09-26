@@ -171,13 +171,21 @@
        this.set('loading', false)
        let method = this.$.form.request.method || 'default'
        let m = { 'POST': 'add', 'PUT': 'update', 'DELETE': 'delete', 'default': 'save' }
-       this.notify(`Can't ${m[method]} Product Group.`, () => this.$.form.submit())
-       this.initForm()
-       console.error('Error saving Product Group')
 
-       if (e.detail.request.xhr.response.status === 401) {
-         this.dispatchEvent(new CustomEvent('slr-authenticate', {bubbles: true, composed: true}))
+       try {
+         if (e.detail.request.xhr.response.status === 401) {
+           this.dispatchEvent(new CustomEvent('slr-authenticate', {bubbles: true, composed: true}))
+         } else {
+           this.notify(`Can't ${m[method]} Product Group.`,
+             () => this.$.form.submit(), 5000,
+             e.detail.request.xhr.response.detail)
+         }
+       } catch(e) {
+         this.notify(`Can't ${m[method]} Product Group.`,
+           () => this.$.form.submit())
        }
+
+       this.initForm()
      }
 
      onResponse(e) {
@@ -271,10 +279,10 @@
         this.set('item', Object.assign({}, this._item))
       }
 
-      notify(message, action, duration) {
+      notify(message, action, duration, detail) {
         this.dispatchEvent(
           new CustomEvent('slr-notify', {
-            detail: { message, action, duration },
+            detail: { message, action, duration, detail },
             bubbles: true,
             composed: true
           })
