@@ -102,7 +102,7 @@
               {bubbles: true, composed: true}))
           } else {
             this.notify("Can't load " + this.itemType,
-              () => this.fetch(), 0, e.detail.request.xhr.response.detail)
+              () => this.fetch(), 5000, e.detail.request.xhr.response.detail)
           }
         } catch(e) {
           this.notify("Can't load " + this.itemType, () => this.fetch())
