@@ -206,7 +206,6 @@
 
       onError(e) {
         this.set('loading', false)
-        console.error('Error saving Objective.')
         let method = this.$.objectiveForm.request.method || 'default'
         let m = {
           'POST': 'add',
@@ -215,22 +214,21 @@
           'default': 'save'
         }
 
-        this.dispatchEvent(
-          new CustomEvent('slr-notify', {
-            detail: {
-              message: `Can't ${m[method]} Objective.`,
-              action: () => this.$.objectiveForm.submit()
-            },
-            bubbles: true,
-            composed: true
-          })
-        )
+        try {
+          if (e.detail.request.xhr.response.status === 401) {
+            this.dispatchEvent(new CustomEvent('slr-authenticate',
+            {bubbles: true, composed: true}))
+          } else {
+            this.notify(`Can't ${m[method]} Objective.`,
+              () => this.$.form.submit(), 5000,
+              e.detail.request.xhr.response.detail)
+          }
+        } catch(e) {
+          this.notify(`Can't ${m[method]} Objective.`,
+            () => this.$.form.submit())
+        }
 
         this.initForm()
-
-        if (e.detail.request.xhr.response.status === 401) {
-          this.dispatchEvent(new CustomEvent('slr-authenticate', {bubbles: true, composed: true}))
-        }
       }
 
       onResponse(e) {
@@ -328,26 +326,30 @@
       handleErrorResponse(e) {
         try {
           if (e.detail.request.xhr.response.status === 401) {
-            this.dispatchEvent(
-              new CustomEvent('slr-authenticate', {bubbles: true, composed: true})
-            )
-            return
+            return this.dispatchEvent(
+              new CustomEvent('slr-authenticate',
+              {bubbles: true, composed: true}))
+          } else {
+            this.notify("Can't Load Objective.",
+              () => this.$.ajax.generateRequest(), 5000,
+              e.detail.request.xhr.response.detail)
           }
-        } catch(e) {}
-        console.error('Error loading Objective')
-        this.notify("Can't Load Objective.", () => this.$.ajax.generateRequest())
+        } catch(e) {
+          this.notify("Can't Load Objective.",
+          () => this.$.ajax.generateRequest(), 0)
+        }
       }
 
-      notify(message, action, duration) {
+      notify(message, action, duration, detail) {
         this.dispatchEvent(
           new CustomEvent('slr-notify', {
-            detail: { message, action, duration },
-            duration,
+            detail: { message, action, duration, detail },
             bubbles: true,
             composed: true
           })
         )
       }
+
     }
     window.customElements.define(SlrObjectiveView.is, SlrObjectiveView)
   </script>

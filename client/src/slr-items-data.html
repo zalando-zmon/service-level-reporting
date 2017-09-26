@@ -90,20 +90,23 @@
           this.set('filteredItems', this.filter())
         } catch(e) {
           console.error('Error loading ' + this.itemType, e)
-          this.notify("Can't Load "+ this.itemType, () => this.fetch(), 0)
+          this.notify("Can't Load "+ this.itemType, () => this.fetch())
         }
       }
 
       handleErrorResponse(e) {
         try {
           if (e.detail.request.xhr.response.status === 401) {
-            this.dispatchEvent(
-              new CustomEvent('slr-authenticate', {bubbles: true, composed: true})
-            )
-            return
+            return this.dispatchEvent(
+              new CustomEvent('slr-authenticate',
+              {bubbles: true, composed: true}))
+          } else {
+            this.notify("Can't load " + this.itemType,
+              () => this.fetch(), 0, e.detail.request.xhr.response.detail)
           }
-        } catch(e) {}
-        this.notify("Can't load " + this.itemType, () => this.fetch(), 0)
+        } catch(e) {
+          this.notify("Can't load " + this.itemType, () => this.fetch())
+        }
       }
 
       fetch() {
@@ -205,11 +208,10 @@
         return 0
       }
 
-      notify(message, action, duration) {
+      notify(message, action, duration, detail) {
         this.dispatchEvent(
           new CustomEvent('slr-notify', {
-            detail: { message, action, duration },
-            duration,
+            detail: { message, action, duration, detail },
             bubbles: true,
             composed: true
           })

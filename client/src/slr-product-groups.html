@@ -176,21 +176,27 @@
       }
 
       handleErrorResponse(e) {
-        if (e.detail.request.xhr.response.status === 401) {
-          return this.dispatchEvent(
-            new CustomEvent('slr-authenticate', {bubbles: true, composed: true})
-          )
+        try {
+          if (e.detail.request.xhr.response.status === 401) {
+            return this.dispatchEvent(
+              new CustomEvent('slr-authenticate',
+              {bubbles: true, composed: true})
+            )
+          } else {
+            this.notify("Can't delete Product Group",
+              () => this.$.ajax.generateRequest(), 5000,
+              e.detail.request.xhr.response.detail)
+          }
+        } catch(e) {
+          this.notify("Can't delete Product Group",
+            () => this.$.ajax.generateRequest())
         }
-        console.error('Error deleting Product Group')
-        this.notify("Can't delete Product Group.",
-          () => this.$.ajax.generateRequest())
       }
 
-      notify(message, action, duration) {
+      notify(message, action, duration, detail) {
         this.dispatchEvent(
           new CustomEvent('slr-notify', {
-            detail: { message, action, duration },
-            duration,
+            detail: { message, action, duration, detail },
             bubbles: true,
             composed: true
           })
