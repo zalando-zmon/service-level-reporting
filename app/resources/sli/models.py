@@ -18,7 +18,7 @@ class Indicator(db.Model):
     slug = db.Column(db.String(120), nullable=False, index=True)
 
     targets = db.relationship('Target', backref=db.backref('indicator', lazy='joined'), lazy='dynamic')
-    values = db.relationship('IndicatorValue', backref='indicator', lazy='dynamic', cascade="all, delete")
+    values = db.relationship('IndicatorValue', backref='indicator', lazy='dynamic', passive_deletes=True)
 
     username = db.Column(db.String(120), default='')
     created = db.Column(db.DateTime(), default=datetime.utcnow)

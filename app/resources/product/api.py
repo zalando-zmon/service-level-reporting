@@ -86,6 +86,10 @@ class ProductResource(ResourceHandler):
         return obj
 
     def delete_object(self, obj: Product, **kwargs) -> None:
+        if obj.indicators.count():
+            raise ProblemException(
+                status=403, title='Deleting product forbidden', detail='Some SLIs reference this product.')
+
         db.session.delete(obj)
         db.session.commit()
 

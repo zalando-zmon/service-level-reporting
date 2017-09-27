@@ -12,7 +12,7 @@ class Objective(db.Model):
     product_id = db.Column(db.Integer(), db.ForeignKey('product.id', ondelete='CASCADE'))
 
     targets = db.relationship(
-        'Target', backref=db.backref('objective', lazy='joined'), lazy='joined', cascade='all, delete')
+        'Target', backref=db.backref('objective', lazy='joined'), passive_deletes=True)
 
     username = db.Column(db.String(120), default='')
     created = db.Column(db.DateTime(), default=datetime.utcnow)

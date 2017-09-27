@@ -13,9 +13,9 @@ class Product(db.Model):
     product_group_id = db.Column(db.Integer(), db.ForeignKey('product_group.id'), nullable=False)
 
     objectives = db.relationship(
-        'Objective', backref=db.backref('product', lazy='joined'), lazy='dynamic', cascade='all, delete')
+        'Objective', backref=db.backref('product', lazy='joined'), lazy='dynamic', passive_deletes=True)
     indicators = db.relationship(
-        'Indicator', backref=db.backref('product', lazy='joined'), lazy='dynamic', cascade='all, delete')
+        'Indicator', backref=db.backref('product', lazy='joined'), lazy='dynamic', passive_deletes=True)
 
     username = db.Column(db.String(120), default='')
     created = db.Column(db.DateTime(), default=datetime.utcnow)

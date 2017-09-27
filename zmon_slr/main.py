@@ -527,7 +527,7 @@ def target_create(obj, product_name, slo_id, sli_name, target_from, target_to, t
     product = client.product_list(name=slo['product_name'])[0]
 
     sli = client.sli_list(product=product, name=sli_name)
-    if not sli:
+    if not sli or not sli_name:
         fatal_error('SLI {} does not exist'.format(sli_name))
     sli = sli[0]
 
