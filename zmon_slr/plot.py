@@ -91,7 +91,7 @@ def plot(client: Client, product: dict, slo_id: int, output_file):
     plots = []
     for target in sorted(targets, key=lambda t: t['unit']):
         if target['unit']:
-            plots.append('"{}" using 1:2 lw 2 smooth csplines axes x1{} with lines title "{}"'.format(
+            plots.append('"{}" using 1:2 lw 2 axes x1{} with lines title "{}"'.format(
                 target['fn'], target['yaxis'], target['sli_name'].replace('_', ' ')))
     gnuplot_data += ', '.join(plots) + '\n'
     plot.communicate(gnuplot_data.encode('utf-8'))
