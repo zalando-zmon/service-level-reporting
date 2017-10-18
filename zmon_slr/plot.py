@@ -67,10 +67,9 @@ def plot(client: Client, product: dict, slo_id: int, output_file):
 
             ymin, ymax = (min(from_list + min_list), max(to_list + max_list))
 
-            if ymin is not None:
-                ymin = ymin - (0.2 * abs(ymin))
-            if ymax is not None:
-                ymax = ymax + (0.2 * abs(ymax))
+            padding = (0.1 * (ymax - ymin))
+            ymin = ymin - padding
+            ymax = ymax + padding
 
             gnuplot_data += 'set y{}range [{}:{}]\n'.format(suff, ymin or '', ymax or '')
             gnuplot_data += 'set y{}tics\n'.format(suff)
