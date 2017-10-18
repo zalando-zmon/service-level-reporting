@@ -17,8 +17,8 @@ def plot(client: Client, product: dict, slo_id: int, output_file):
     targets_by_unit = collections.defaultdict(list)
 
     for i, target in enumerate(targets):
-        maxval = 0
-        minval = 0
+        target['maxval'] = 0
+        target['minval'] = 0
 
         fn = '/tmp/data{}.tsv'.format(i)
         target['fn'] = fn
@@ -34,8 +34,8 @@ def plot(client: Client, product: dict, slo_id: int, output_file):
 
         with open(fn, 'w') as fd:
             values = [row['value'] for row in data]
-            maxval = max(values) if values else maxval
-            minval = min(values) if values else minval
+            target['maxval'] = max(values) if values else target['maxval']
+            target['minval'] = min(values) if values else target['minval']
             for row in data:
                 fd.write('{}\t{}\n'.format(row['timestamp'], row['value']))
 
@@ -62,13 +62,14 @@ def plot(client: Client, product: dict, slo_id: int, output_file):
 
             from_list = [t['from'] for t in _targets if t['from'] is not None and t['from'] != float('-inf')] or [0]
             to_list = [t['to'] for t in _targets if t['to'] is not None and t['to'] != float('inf')] or [0]
+            min_list = [t['minval'] for t in _targets]
+            max_list = [t['maxval'] for t in _targets]
 
-            ymin, ymax = (min(from_list + [minval]), max(to_list + [maxval]))
+            ymin, ymax = (min(from_list + min_list), max(to_list + max_list))
 
-            if ymin is not None:
-                ymin = ymin - (0.2 * abs(ymin))
-            if ymax is not None:
-                ymax = ymax + (0.2 * abs(ymax))
+            padding = (0.1 * (ymax - ymin))
+            ymin = ymin - padding
+            ymax = ymax + padding
 
             gnuplot_data += 'set y{}range [{}:{}]\n'.format(suff, ymin or '', ymax or '')
             gnuplot_data += 'set y{}tics\n'.format(suff)
