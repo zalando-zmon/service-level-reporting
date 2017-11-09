@@ -35,7 +35,7 @@ def update_all_indicators(app: Flask):
     for indicator in Indicator.query.all():
         try:
             updater_pool.spawn(update_indicator, app, indicator)
-        except:
+        except Exception:
             logger.exception('Updater: Failed to spawn indicator updater!')
 
     updater_pool.join()
@@ -66,7 +66,7 @@ def update_indicator(app: Flask, indicator: Indicator):
             count = update_indicator_values(indicator, start=start)
             logger.info('Updater: Updated {} indicator values "{}" for product "{}"'.format(
                 count, indicator.name, indicator.product.name))
-        except:
+        except Exception:
             logger.exception('Updater: Failed to update indicator "{}" values for product "{}"'.format(
                 indicator.name, indicator.product.name))
 

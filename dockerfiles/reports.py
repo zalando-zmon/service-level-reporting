@@ -108,12 +108,12 @@ def main():
             except KeyboardInterrupt:
                 logger.info('Report generation interrupted. Terminating ...')
                 return
-            except:
+            except Exception:
                 logger.exception('Failed to generate report for product: {}'.format(name))
     except KeyboardInterrupt:
         logger.info('Report generation interrupted. Terminating ...')
         return
-    except:
+    except Exception:
         logger.exception('Failed in generating reports. Terminating ...')
         sys.exit(1)
 

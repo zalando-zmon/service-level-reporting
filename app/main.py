@@ -93,7 +93,7 @@ def run_updater(app: flask.Flask, once=False):
                     logger.info('Updating all indicators ...')
 
                     update_all_indicators(app)
-                except:
+                except Exception:
                     logger.exception('Updater failed!')
 
                 if once:

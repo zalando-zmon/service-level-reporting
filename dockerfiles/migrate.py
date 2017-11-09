@@ -39,7 +39,7 @@ def create_user(database_uri, user, password):
         conn.execute("CREATE USER {} WITH PASSWORD '{}';".format(user, password))
     except ProgrammingError:
         logger.error('SQL error creating user')
-    except:
+    except Exception:
         logger.exception('Error creating user')
 
     try:
@@ -61,7 +61,7 @@ def create_user(database_uri, user, password):
         )
     except ProgrammingError as e:
         logger.error('SQL error assigning permissions: {}'.format(e))
-    except:
+    except Exception:
         logger.exception('Error assigning permissions')
 
 
