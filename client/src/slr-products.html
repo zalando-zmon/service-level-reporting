@@ -47,7 +47,6 @@
       slug="{{selectedSlug}}"
       item="{{selectedProduct}}"
       items="{{products}}"
-      filtered-items="{{filteredProducts}}"
       search="[[searchStr]]"
       url="/api/products"
       item-type="Product"
@@ -65,7 +64,7 @@
       visible="{{visible}}"></slr-product-view>
 
     <div class="flex-grid-thirds" small-layout$="{{small}}" id="list">
-      <template is="dom-repeat" items="[[filteredProducts]]">
+      <template is="dom-repeat" items="[[products]]">
         <div class="col product" small-layout$="{{small}}">
           <a href="/products/[[item.slug]]">
             <slr-product-card
@@ -114,9 +113,6 @@
           },
           searchStr: {
             type: String
-          },
-          filteredProducts: {
-            type: Array
           },
           selectedProduct: {
             type: Object

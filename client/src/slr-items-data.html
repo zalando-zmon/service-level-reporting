@@ -7,6 +7,7 @@
       auto="{{auto}}"
       id="ajax"
       url="{{url}}"
+      params="{{params}}"
       loading="{{loading}}"
       handle-as="json"
       on-response="handleResponse"
@@ -45,11 +46,6 @@
             type: String,
             observer: 'searchChanged'
           },
-          filteredItems: {
-            type: Array,
-            value: null,
-            notify: true
-          },
           loading: {
             type: Boolean,
             value: false,
@@ -57,6 +53,9 @@
           },
           url: {
             type: String
+          },
+          params: {
+            type: Object
           },
           fetchAttempts: {
             type: Number,
@@ -69,25 +68,21 @@
         }
       }
 
-      static get observers() {
-        return [
-          'itemsChanged(items.*)'
-        ]
-      }
-
-      itemsChanged() {
-        this.set('filteredItems', this.filter())
-      }
-
       searchChanged() {
-        this.set('filteredItems', this.filter())
+        if (this.params && this.params.name) {
+          this.params.name = null
+        }
+
+        if (this.search) {
+          this.set('params', { name: this.search })
+        }
+
+        this.fetch()
       }
 
       handleResponse(e) {
         try {
-          this.set('items', e.detail.response.data)
-          this.sort()
-          this.set('filteredItems', this.filter())
+          this.set('items', this.sort(e.detail.response.data))
         } catch(e) {
           console.error('Error loading ' + this.itemType, e)
           this.notify("Can't Load "+ this.itemType, () => this.fetch())
@@ -160,32 +155,9 @@
         }
       }
 
-      filter() {
-        if (!this.items) {
-          return
-        }
-
-        let items = this.items.filter( (item) => {
-
-          // add new items {}
-          if (!item.uri || !this.search) {
-            return true
-          }
-
-          let content = []
-          for (var key in item) {
-            if (item[key] && item[key].toLowerCase)
-            content.push(item[key].toLowerCase())
-          }
-          return (content.join('').indexOf(this.search.toLowerCase()) != -1)
-        })
-        return items
-      }
-
-      sort() {
-        let sorted = [].concat(this.items.sort( (a, b) =>
-                                                  this.favoriteSort(a, b)))
-        this.set('items', sorted)
+      sort(items) {
+        let sorted = [].concat(items.sort( (a, b) => this.favoriteSort(a, b)))
+        return sorted
       }
 
       favoriteSort(a, b) {

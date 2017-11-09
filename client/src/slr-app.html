@@ -129,7 +129,6 @@
     <slr-items-data
       id="productGroupsData"
       items="{{productGroups}}"
-      filtered-items="{{filteredProductGroups}}"
       url="/api/product-groups"
       search="[[searchStr]]"
       item-type="Product Group"
@@ -210,7 +209,7 @@
         name="product-groups"
         route="{{subroute}}"
         loading="{{loading}}"
-        product-groups="{{filteredProductGroups}}"
+        product-groups="{{productGroups}}"
         search-str="{{searchStr}}"></slr-product-groups>
 
       <slr-products

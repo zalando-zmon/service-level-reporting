@@ -106,14 +106,17 @@
         })
 
         test('items are filtered', function(done) {
-          element.fetch()
-          server.respond()
           flush(function() {
             element.search = 'product2'
-            assert.equal(element.filteredItems.length, 1)
+            server.respond()
+            flush(function() {
+              assert.equal(element.items.length, 1)
+              done()
+            })
             done()
           })
         })
+
       })
     </script>
   </body>
