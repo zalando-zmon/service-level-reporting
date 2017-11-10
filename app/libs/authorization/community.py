@@ -34,7 +34,7 @@ def get_user_groups(username):
         res = resp.json()
 
         return [r['name'] for r in res]
-    except:
+    except Exception:
         logger.exception('Failed to get user {} groups'.format(username))
         return []
 

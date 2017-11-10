@@ -623,7 +623,7 @@ def validate_sli_source(config, source, ignore_keys=False):
 
     try:
         check = zmon.get_check_definition(check_id)
-    except:
+    except Exception:
         raise SLRClientError('Check definition {} does not seem to exist!'.format(check_id))
 
     alerts = zmon.get_alert_definitions()
@@ -923,7 +923,7 @@ def main():
         detail = ''
         try:
             detail = e.response.json()['detail']
-        except:
+        except Exception:
             pass
 
         fatal_error('HTTP error: {} - {} - {}'.format(e.response.status_code, e.response.reason, detail))
