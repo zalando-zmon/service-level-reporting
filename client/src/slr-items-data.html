@@ -70,7 +70,8 @@
 
       searchChanged() {
         if (this.params && this.params.name) {
-          this.params.name = null
+          this.set('params.name', null)
+          delete this.params.name
         }
 
         if (this.search) {
