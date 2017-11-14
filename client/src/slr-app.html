@@ -132,7 +132,8 @@
       url="/api/product-groups"
       search="[[searchStr]]"
       item-type="Product Group"
-      loading="{{loading}}"></slr-items-data>
+      loading="{{loading}}"
+      params="[[params]]"></slr-items-data>
 
     <app-header
       reveals
@@ -242,7 +243,6 @@
       handle-as="json"></iron-ajax>
 
     <iron-ajax
-      auto
       id="sessionAjax"
       url="/api/session"
       last-response="{{session}}"
@@ -272,6 +272,10 @@
           },
           productGroups: {
             type: Array
+          },
+          params: {
+            type: Object,
+            value: {}
           },
           headerIsHidden: {
             type: Boolean,
@@ -341,6 +345,7 @@
         this.$.productGroups.addEventListener('product-groups-fetch', () => this.$.productGroupsData.fetch())
         this.$.products.addEventListener('product-groups-fetch', () => this.$.productGroupsData.fetch())
         this.$.searchSmall.addEventListener('search-closed', () => this.$.searchBar.hidden = true)
+        this.$.sessionAjax.generateRequest()
       }
 
       pageLoaded() {

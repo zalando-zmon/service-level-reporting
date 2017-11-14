@@ -29,14 +29,6 @@
             type: String,
             value: 'Item'
           },
-          idName: {
-            type: String,
-            value: 'slug'
-          },
-          slug: {
-            type: String,
-            observer: 'slugChanged'
-          },
           items: {
             type: Array,
             value: null,
@@ -55,7 +47,25 @@
             type: String
           },
           params: {
-            type: Object
+            type: Object,
+            value: {}
+          },
+          page: {
+            type: Number,
+            value: 0
+          },
+          pageSize: {
+            type: Number,
+            value: 9
+          },
+          paginationEnabled: {
+            type: Boolean,
+            value: false
+          },
+          totalItems: {
+            type: Number,
+            value: 0,
+            notify: true
           },
           fetchAttempts: {
             type: Number,
@@ -75,15 +85,37 @@
         }
 
         if (this.search) {
-          this.set('params', { name: this.search })
+          this.set('params.name', this.search)
         }
 
+        this.resetCol()
+        this.incPage()
+      }
+
+      incPage() {
+        if (this.page > 1 && this.page * this.pageSize >= this.totalItems) {
+          return
+        }
+        this.set('page', this.page+1)
+        this.set('params.page', this.page)
+        this.set('params.page_size', this.pageSize)
         this.fetch()
+      }
+
+      resetCol() {
+        this.set('page', 0)
+        this.set('items', [])
       }
 
       handleResponse(e) {
         try {
-          this.set('items', this.sort(e.detail.response.data))
+          let res = e.detail.response
+          if (this.paginationEnabled) {
+            this.set('items', this.items.concat(this.sort(res.data)))
+          } else {
+            this.set('items', this.sort(res.data))
+          }
+          this.set('totalItems', res._meta.count)
         } catch(e) {
           console.error('Error loading ' + this.itemType, e)
           this.notify("Can't Load "+ this.itemType, () => this.fetch())
@@ -117,43 +149,8 @@
         let ajax = this.$.ajax.generateRequest();
         this.set('fetchAttempts', this.fetchAttempts+1)
         Promise.all([ajax.completes]).then( (reqs) => {
-          this.set('items', reqs[0].response.data)
           this.fetchAttempts = 0;
-          if (this.slug && this.items.length) {
-            this.findAndSetItem()
-          }
         })
-      }
-
-      slugChanged() {
-        if (!this.slug) {
-          return
-        }
-
-        if (!this.items) {
-          return this.fetch()
-        }
-
-        if (this.items.length === 0 && this.fetchAttempts === 0) {
-          return this.fetch()
-        }
-
-        if (this.items.length) {
-          this.findAndSetItem()
-        }
-      }
-
-      findAndSetItem() {
-        if (!this.slug) {
-          return this.set('item', null)
-        }
-        let ix = this.items.findIndex( (p) => ''+p[this.idName] === ''+this.slug)
-        if (ix > -1) {
-          this.set('item', this.items[ix])
-        } else {
-          this.notify(this.itemType + ' not found')
-          this.set('item', null)
-        }
       }
 
       sort(items) {

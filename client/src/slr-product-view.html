@@ -9,6 +9,7 @@
 <link rel="import" href="../bower_components/iron-label/iron-label.html">
 <link rel="import" href="../bower_components/iron-form/iron-form.html">
 <link rel="import" href="../bower_components/iron-media-query/iron-media-query.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
 
 <link rel="import" href="./slr-items-data.html">
 <link rel="import" href="./slr-dialog.html">
@@ -85,6 +86,16 @@
       query="(max-width: 600px)"
       query-matches="{{small}}"></iron-media-query>
 
+    <iron-ajax
+      id="ajax"
+      url="/api/products"
+      params="{{params}}"
+      loading="{{loading}}"
+      handle-as="json"
+      on-response="handleResponse"
+      on-error="handleErrorResponse"
+      debounce-duration="300"></iron-ajax>
+
     <slr-items-data
       auto
       id="objectivesData"
@@ -94,6 +105,7 @@
       items="{{objectives}}"
       url="[[item.product_slo_uri]]"
       item-type="Objective"
+      params="[[paramsObjective]]"
       loading="{{loading}}"></slr-items-data>
 
     <slr-items-data
@@ -105,6 +117,7 @@
       items="{{indicators}}"
       url="[[item.product_sli_uri]]"
       item-type="Indicator"
+      params="[[paramsIndicator]]"
       loading="{{loading}}"></slr-items-data>
 
     <slr-objective-view
@@ -279,6 +292,18 @@
             type: String,
             notify: true
           },
+          params: {
+            type: Object,
+            computed: 'computeParams(slug)'
+          },
+          paramsObjective: {
+            type: Object,
+            value: {}
+          },
+          paramsIndicator: {
+            type: Object,
+            value: {}
+          },
           products: {
             type: Array
           },
@@ -370,6 +395,12 @@
         return uri ? uri : '/api/products'
       }
 
+      computeParams(slug) {
+        return {
+          name: slug
+        }
+      }
+
       static get observers() {
         return [ 'routeDataChanged(routeData.slug, visible)' ]
       }
@@ -377,6 +408,7 @@
       routeDataChanged(slug, visible) {
         if (slug && visible && this.route.prefix === '/products' && this.route.path) {
           this.set('slug', slug)
+          this.$.ajax.generateRequest()
         } else {
           this.set('slug', null)
           this.set('opened', false)
@@ -485,6 +517,34 @@
 
         if (this.item.product_sli_uri) {
           this.$.indicatorsData.fetch()
+        }
+      }
+
+      handleResponse(e) {
+        try {
+          let res = e.detail.response
+          this.set('item', e.detail.response.data.pop())
+        } catch(e) {
+          console.error('Error loading Product', e)
+          this.notify("Can't Load Product")
+        }
+      }
+
+      handleErrorResponse(e) {
+        try {
+          if (e.detail.request.xhr.response.status === 401) {
+            return this.dispatchEvent(
+              new CustomEvent('slr-authenticate',
+              {bubbles: true, composed: true}))
+          } else {
+            this.notify("Can't load Product",
+              () => this.$.ajax.generateRequest(),
+              5000,
+              e.detail.request.xhr.response.detail
+            )
+          }
+        } catch(e) {
+          this.notify("Can't load Product", () => this.$.ajax.generateRequest())
         }
       }
 
