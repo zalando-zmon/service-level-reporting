@@ -100,32 +100,26 @@
       auto
       id="objectivesData"
       id-name="id"
-      slug="{{selectedObjectiveId}}"
-      item="{{selectedObjective}}"
       items="{{objectives}}"
       url="[[item.product_slo_uri]]"
       item-type="Objective"
-      params="[[paramsObjective]]"
       loading="{{loading}}"></slr-items-data>
 
     <slr-items-data
       auto="true"
       id="indicatorsData"
       id-name="name"
-      slug="{{selectedIndicatorId}}"
-      item="{{selectedIndicator}}"
       items="{{indicators}}"
       url="[[item.product_sli_uri]]"
       item-type="Indicator"
-      params="[[paramsIndicator]]"
       loading="{{loading}}"></slr-items-data>
 
     <slr-objective-view
       id="objectiveView"
       item="{{selectedObjective}}"
-      product="{{item}}"
-      objectives="{{objectives}}"
-      indicators="{{indicators}}"
+      product="[[item]]"
+      objectives="[[objectives]]"
+      indicators="[[indicators]]"
       loading="{{loading}}"
       route="{{subroute}}"
       route-data="{{routeData}}"
@@ -296,14 +290,6 @@
             type: Object,
             computed: 'computeParams(slug)'
           },
-          paramsObjective: {
-            type: Object,
-            value: {}
-          },
-          paramsIndicator: {
-            type: Object,
-            value: {}
-          },
           products: {
             type: Array
           },
@@ -372,14 +358,8 @@
           selectedObjective: {
             type: Object,
           },
-          selectedObjectiveId: {
-            type: String
-          },
           selectedIndicator: {
             type: Object
-          },
-          selectedIndicatorId: {
-            type: String
           },
           objectiveViewOpened: {
             type: Boolean
@@ -493,20 +473,10 @@
       }
 
       onObjectiveSubmit(e) {
-        if (e.detail.item && e.detail.item.id) {
-          this.set('selectedObjectiveId', e.detail.item.id)
-        } else {
-          this.set('selectedObjectiveId', null)
-        }
         this.$.objectivesData.fetch()
       }
 
       onIndicatorSubmit(e) {
-        if (e.detail.item && e.detail.item.name) {
-          this.set('selectedIndicatorId', e.detail.item.name)
-        } else {
-          this.set('selectedIndicatorId', null)
-        }
         this.$.indicatorsData.fetch()
       }
 
@@ -582,24 +552,22 @@
       }
 
       openObjectiveView(e) {
-        this.set('selectedObjectiveId', e.model.objective.id)
+        this.set('selectedObjective', e.model.objective)
         this.$.objectiveView.open()
       }
 
       openIndicatorView(e) {
-        this.set('selectedIndicatorId', e.model.indicator.name)
+        this.set('selectedIndicator', e.model.indicator)
         this.$.indicatorView.open()
       }
 
       addObjective() {
         this.set('selectedObjective', {})
-        this.set('selectedObjectiveId', null)
         this.$.objectiveView.new()
       }
 
       addIndicator() {
         this.set('selectedIndicator', { "source": {} })
-        this.set('selectedIndicatorId', null)
         this.$.indicatorView.new()
       }
 
