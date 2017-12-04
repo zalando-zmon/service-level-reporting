@@ -47,9 +47,9 @@
         </div>
         {% for slo in slos %}
             <div class="panel panel-default">
-                <div class="panel-heading">{{ slo.title }}</div>
+                <div class="panel-heading"><h4>{{ slo.title }}</h4></div>
                 <div class="panel-body">
-                    <h4>Reliability Index</h4>
+                    <div>{{ slo.description }}</div>
                     <table class="table">
                         <tr>
                             {% for sli in slo.slis.keys() | sort %}
