@@ -1,0 +1,12 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+
+<dom-module id="slr-ajax">
+  <script>
+    class SlrAjax extends window.customElements.get('iron-ajax') {
+      static get is() { return 'slr-ajax' }
+    }
+
+    window.customElements.define(SlrAjax.is, SlrAjax)
+  </script>
+</dom-module>

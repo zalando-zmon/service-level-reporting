@@ -3,12 +3,13 @@
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="../bower_components/iron-form/iron-form.html">
-<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
 <link rel="import" href="../bower_components/paper-listbox/paper-listbox.html">
 <link rel="import" href="../bower_components/paper-item/paper-item.html">
 <link rel="import" href="../bower_components/paper-item/paper-item-body.html">
 <link rel="import" href="../bower_components/paper-dropdown-menu/paper-dropdown-menu.html">
 <link rel="import" href="../bower_components/paper-input/paper-input.html">
+
+<link rel="import" href="./slr-ajax.html">
 
 <dom-module id="slr-target">
   <template>
@@ -48,14 +49,14 @@
       }
     </style>
 
-    <iron-ajax
+    <slr-ajax
       id="ajax"
       url="{{uri}}"
       handle-as="json"
       on-response="handleResponse"
       on-error="handleErrorResponse"
       debounce-duration="300"
-      loading="{{loading}}"></iron-ajax>
+      loading="{{loading}}"></slr-ajax>
 
     <paper-card>
       <div class="card-content">

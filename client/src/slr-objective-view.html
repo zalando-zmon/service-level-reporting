@@ -1,12 +1,12 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../bower_components/iron-form/iron-form.html">
-<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
 <link rel="import" href="../bower_components/paper-input/paper-input.html">
 <link rel="import" href="../bower_components/iron-label/iron-label.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 
 <link rel="import" href="./slr-dialog.html">
 <link rel="import" href="./slr-target.html">
+<link rel="import" href="./slr-ajax.html">
 
 <dom-module id="slr-objective-view">
   <template>
@@ -18,14 +18,14 @@
       }
     </style>
 
-    <iron-ajax
+    <slr-ajax
       id="ajax"
       url="[[item.uri]]"
       handle-as="json"
       on-response="handleResponse"
       on-error="handleErrorResponse"
       debounce-duration="300"
-      loading="{{loading}}"></iron-ajax>
+      loading="{{loading}}"></slr-ajax>
 
     <paper-dialog
       id="deleteModal"
