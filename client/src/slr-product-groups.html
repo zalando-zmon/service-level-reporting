@@ -1,10 +1,10 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../bower_components/iron-media-query/iron-media-query.html">
-<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
 <link rel="import" href="../bower_components/paper-dialog/paper-dialog.html">
 
 <link rel="import" href="./slr-fab.html">
 <link rel="import" href="./slr-product-group-card.html">
+<link rel="import" href="./slr-ajax.html">
 
 <dom-module id="slr-product-groups">
   <template>
@@ -42,7 +42,7 @@
       query="(max-width: 600px)"
       query-matches="{{small}}"></iron-media-query>
 
-    <iron-ajax
+    <slr-ajax
       id="ajax"
       url="[[selectedProductGroup.uri]]"
       method="DELETE"
@@ -50,7 +50,7 @@
       on-response="handleResponse"
       on-error="handleErrorResponse"
       debounce-duration="300"
-      loading={{loading}}></iron-ajax>
+      loading={{loading}}></slr-ajax>
 
     <paper-dialog id="delete">
       <h2>Delete Product Group</h2>

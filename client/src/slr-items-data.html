@@ -1,9 +1,10 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
-<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+
+<link rel="import" href="./slr-ajax.html">
 
 <dom-module id="slr-items-data">
   <template>
-    <iron-ajax
+    <slr-ajax
       auto="{{auto}}"
       id="ajax"
       url="{{url}}"
@@ -11,7 +12,7 @@
       handle-as="json"
       on-response="handleResponse"
       on-error="handleErrorResponse"
-      debounce-duration="300"></iron-ajax>
+      debounce-duration="300"></slr-ajax>
   </template>
 
   <script>

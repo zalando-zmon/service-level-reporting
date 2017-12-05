@@ -10,7 +10,6 @@
 <link rel="import" href="../bower_components/paper-tabs/paper-tabs.html">
 <link rel="import" href="../bower_components/iron-media-query/iron-media-query.html">
 <link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout.html">
-<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
 <link rel="import" href="../bower_components/paper-avatar/paper-avatar.html">
 <link rel="import" href="../bower_components/paper-menu-button/paper-menu-button.html">
 <link rel="import" href="../bower_components/paper-menu-button/paper-menu-button-animations.html">
@@ -25,6 +24,7 @@
 <link rel="import" href="./slr-notifications.html">
 <link rel="import" href="./slr-search.html">
 <link rel="import" href="./slr-items-data.html">
+<link rel="import" href="./slr-ajax.html">
 <link rel="import" href="./common-styles.html">
 
 <dom-module id="slr-app">
@@ -235,20 +235,20 @@
 
     <slr-notifications id="notif"></slr-notifications>
 
-    <iron-ajax
+    <slr-ajax
       id="ajax"
       url="/api/health"
       on-response="handleResponse"
       on-error="handleErrorResponse"
-      handle-as="json"></iron-ajax>
+      handle-as="json"></slr-ajax>
 
-    <iron-ajax
+    <slr-ajax
       auto
       id="sessionAjax"
       url="/api/session"
       last-response="{{session}}"
       on-error="handleErrorResponse"
-      handle-as="json"></iron-ajax>
+      handle-as="json"></slr-ajax>
 
   </template>
 
