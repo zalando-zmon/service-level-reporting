@@ -5,6 +5,20 @@
   <script>
     class SlrAjax extends window.customElements.get('iron-ajax') {
       static get is() { return 'slr-ajax' }
+
+      // intercept unauthorized requests
+      generateRequest() {
+        let request = super.generateRequest()
+        request.completes.catch((rejected) => {
+          let error = rejected.request.response.status
+          if (error === 401) {
+            return this.dispatchEvent(new CustomEvent('slr-authenticate',
+                                        {bubbles: true, composed: true})
+                                      )
+          }
+        })
+        return request
+      }
     }
 
     window.customElements.define(SlrAjax.is, SlrAjax)
