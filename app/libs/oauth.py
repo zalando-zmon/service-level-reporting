@@ -134,7 +134,7 @@ def fetch_token_info(token_info_url, token):
 
     logger.info("... Getting token from %s", token_info_url)
 
-    token_request = session.get(token_info_url, params={'access_token': token}, timeout=5)
+    token_request = session.get(token_info_url, headers={'Authorization': 'Bearer {}'.format(token)}, timeout=2)
 
     logger.debug("... Token info (%d): %s", token_request.status_code, token_request.text)
 
