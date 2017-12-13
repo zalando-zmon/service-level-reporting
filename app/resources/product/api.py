@@ -29,7 +29,17 @@ class ProductResource(ResourceHandler):
         if 'name' in kwargs:
             filters['slug'] = slugger(kwargs['name'])
 
+        if 'q' in kwargs:
+            filters['q'] = slugger(kwargs['q'])
+
         return filters
+
+    def get_filtered_query(self, query: BaseQuery, **kwargs) -> BaseQuery:
+        """Filter query using query parameters"""
+        if 'q' in kwargs:
+            return query.filter(Product.slug.ilike('%{}%'.format(kwargs['q'])))
+
+        return super().get_filtered_query(query, **kwargs)
 
     def get_query(self, **kwargs) -> BaseQuery:
         q = Product.query

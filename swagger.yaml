@@ -3,6 +3,9 @@ swagger: "2.0"
 info:
   title: ZMON service level reporting
   version: "0.3"
+  description: Service level reporting is a tool built around ZMON to generate Service Level reports
+  contact:
+    name: team-eagleeye
 
 basePath: /api
 
@@ -406,6 +409,11 @@ parameters:
     in: query
     description: Pagination page size limit.
 
+  Query:
+    name: q
+    type: string
+    in: query
+    description: A query string used in fuzzy filtering.
 
 paths:
   /:
@@ -458,6 +466,7 @@ paths:
           description: Filter product groups by name.
         - $ref: '#/parameters/Limit'
         - $ref: '#/parameters/Offset'
+        - $ref: '#/parameters/Query'
       responses:
         200:
           description: List of Product Groups
@@ -565,6 +574,7 @@ paths:
           description: Filter by product group name.
         - $ref: '#/parameters/Limit'
         - $ref: '#/parameters/Offset'
+        - $ref: '#/parameters/Query'
       responses:
         200:
           description: List of Products
