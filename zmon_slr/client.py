@@ -26,10 +26,15 @@ class Client:
         self.PRODUCT_GROUPS = api['product_groups_uri']
         self.PRODUCTS = api['products_uri']
 
-    def product_list(self, name: str=None, product_group_name: str=None, limit: int=100) -> List[dict]:
+    def product_list(self, name: str=None, product_group_name: str=None, limit: int=100, q: str=None) -> List[dict]:
         params = {} if not name else {'name': name}
+
+        if q:
+            params['q'] = q
+
         if product_group_name:
             params['product_group'] = product_group_name
+
         if limit:
             params['page_size'] = limit
 
@@ -62,8 +67,12 @@ class Client:
 
         return res.json()
 
-    def product_group_list(self, name=None) -> List[dict]:
+    def product_group_list(self, name: str=None, q: str=None) -> List[dict]:
         params = {} if not name else {'name': name}
+
+        if q:
+            params['q'] = q
+
         res = self.session.get(self.PRODUCT_GROUPS, params=params)
         res.raise_for_status()
 
