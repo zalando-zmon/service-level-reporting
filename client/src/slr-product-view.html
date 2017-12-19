@@ -208,6 +208,7 @@
                 </paper-listbox>
               </paper-dropdown-menu>
               <input
+                id="productGroupUri"
                 type="text"
                 name="product_group_uri"
                 hidden
@@ -522,6 +523,7 @@
         this.set('method', 'POST')
         this.set('action', '/api/products')
         this.$.productForm.reset()
+        this.$.productGroupUri.value = this.$.selectList.selected;
 
         // manually reset invalid state since iron-form does not support
         // reset() yet... (as of 07.2017)
