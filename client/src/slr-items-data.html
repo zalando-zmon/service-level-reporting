@@ -78,13 +78,12 @@
       }
 
       searchChanged() {
-        if (this.params && this.params.name) {
-          this.set('params.name', null)
-          delete this.params.name
+        if (this.params && this.params.q) {
+          this.set('params.q', null)
         }
 
         if (this.search) {
-          this.set('params.name', this.search)
+          this.set('params.q', this.search)
         }
 
         this.resetCol()
@@ -103,7 +102,6 @@
 
       resetCol() {
         this.set('page', 0)
-        this.set('items', [])
       }
 
       handleResponse(e) {
