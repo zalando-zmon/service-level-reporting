@@ -47,11 +47,12 @@
           },
           params: {
             type: Object,
-            value: {}
+            value: {},
+            computed: 'computeParams(page, pageSize)'
           },
           page: {
             type: Number,
-            value: 0
+            value: 1
           },
           pageSize: {
             type: Number,
@@ -77,6 +78,10 @@
         }
       }
 
+      computeParams(page, page_size) {
+        return { page, page_size }
+      }
+
       searchChanged() {
         if (this.params && this.params.q) {
           this.set('params.q', null)
@@ -86,22 +91,31 @@
           this.set('params.q', this.search)
         }
 
-        this.resetCol()
+        this.resetPage()
         this.incPage()
       }
 
       incPage() {
-        if (this.page > 1 && this.page * this.pageSize >= this.totalItems) {
+        if (this.page <= 1 && this.totalItems === 0) {
+          this.fetch()
+          return
+        }
+
+        if (this.page * this.pageSize >= this.totalItems) {
           return
         }
         this.set('page', this.page+1)
-        this.set('params.page', this.page)
-        this.set('params.page_size', this.pageSize)
         this.fetch()
       }
 
+      resetPage() {
+        this.set('page', 1)
+      }
+
       resetCol() {
-        this.set('page', 0)
+        this.set('items', [])
+        this.resetPage()
+        this.fetch()
       }
 
       handleResponse(e) {
