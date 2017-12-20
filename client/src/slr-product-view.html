@@ -88,22 +88,17 @@
       query-matches="{{small}}"></iron-media-query>
 
     <slr-ajax
-      id="ajax"
+      id="productAjax"
       url="/api/products"
       params="{{params}}"
       loading="{{loading}}"
-      handle-as="json"
-      last-response="{{products}}"
-      on-error="handleErrorResponse"
-      debounce-duration="300"></slr-ajax>
+      on-response="handleResponse"></slr-ajax>
 
-    <slr-ajax
-      id="productGroupsAjax"
+    <slr-items-data
+      id="productGroupsData"
       url="/api/product-groups"
       loading="{{loading}}"
-      handle-as="json"
-      last-response="{{productGroups}}"
-      debounce-duration="300"></slr-ajax>
+      items="{{productGroups}}"></slr-items-data>
 
     <slr-ajax
       auto
@@ -410,7 +405,7 @@
       routeDataChanged(slug, visible) {
         if (slug && visible && this.route.prefix === '/products' && this.route.path) {
           this.set('slug', slug)
-          this.$.ajax.generateRequest()
+          this.$.productAjax.generateRequest()
         } else {
           this.set('slug', null)
           this.set('opened', false)
@@ -431,7 +426,11 @@
         this.$.productForm.addEventListener('iron-form-response', (e) => this.onResponse(e))
         this.$.objectiveView.addEventListener('slr-objective-submitted', (e) => this.onObjectiveSubmit(e))
         this.$.indicatorView.addEventListener('slr-indicator-submitted', (e) => this.onIndicatorSubmit(e))
-        this.$.productGroupsAjax.generateRequest()
+        this.$.productGroupsData.fetch()
+      }
+
+      handleResponse(e) {
+        this.set('item', e.detail.response.data.pop())
       }
 
       onClose(e) {
