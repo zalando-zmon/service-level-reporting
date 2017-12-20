@@ -221,7 +221,7 @@
      }
 
       itemChanged() {
-        if (!this.item.name) {
+        if (this.item && !this.item.name) {
           this.set('editMode', true)
         }
       }

@@ -4,6 +4,8 @@
 <link rel="import" href="../bower_components/iron-icons/iron-icons.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 
+<link rel="imports" href="./slr-ajax.html">
+
 <dom-module id="slr-product-card">
   <template>
     <style include="common-styles">
@@ -48,6 +50,15 @@
       }
     </style>
 
+    <slr-ajax
+      auto
+      id="ajax"
+      url="[[item.product_group_uri]]"
+      handle-as="json"
+      last-response="{{productGroup}}"
+      debounce-duration="300"
+      loading="{{loading}}"></slr-ajax>
+
     <paper-card>
       <div class="card-content">
         <div class="header">
@@ -68,39 +79,26 @@
       static get properties() {
         return {
           item: {
-            type: Object
+            type: Object,
+            value: {}
           },
-          productGroups: {
-            type: Array,
-          },
-          productGroupSlug: {
-            type: String,
+          productGroup: {
+            type: Object,
+            value: {}
           },
           reportUrl: {
             type: String,
-            value: '/slr/'
+            computed: 'computeReportUrl(item, productGroup)'
           }
         }
       }
 
-      static get observers() {
-        return [ 'slugsChanged(item.slug, productGroups.*)' ]
-      }
-
-      slugsChanged(slug, productGroups) {
-        let productGroupSlug = this.getProductGroupSlug(productGroups.value)
-        this.set('reportUrl', `/slr/${productGroupSlug}/${slug}/`)
-      }
-
-      getProductGroupSlug(productGroups) {
-        if (productGroups) {
-          let ix = this.productGroups.findIndex( (pg) => pg.uri === this.item.product_group_uri )
-          if (ix > -1) {
-            return this.productGroups[ix].slug
-          }
+      computeReportUrl(item, productGroup) {
+        if (item && item.slug && productGroup && productGroup.slug) {
+          return `/slr/${productGroup.slug}/${item.slug}`
         }
-        return ''
       }
+
     }
 
     window.customElements.define(SlrProductCard.is, SlrProductCard)

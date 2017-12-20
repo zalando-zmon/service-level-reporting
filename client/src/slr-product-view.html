@@ -11,6 +11,7 @@
 <link rel="import" href="../bower_components/iron-media-query/iron-media-query.html">
 <link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
 
+<link rel="import" href="./slr-ajax.html">
 <link rel="import" href="./slr-items-data.html">
 <link rel="import" href="./slr-dialog.html">
 <link rel="import" href="./slr-objective-view.html">
@@ -86,15 +87,32 @@
       query="(max-width: 600px)"
       query-matches="{{small}}"></iron-media-query>
 
-    <iron-ajax
+    <slr-ajax
       id="ajax"
       url="/api/products"
       params="{{params}}"
       loading="{{loading}}"
       handle-as="json"
-      on-response="handleResponse"
+      last-response="{{products}}"
       on-error="handleErrorResponse"
-      debounce-duration="300"></iron-ajax>
+      debounce-duration="300"></slr-ajax>
+
+    <slr-ajax
+      id="productGroupsAjax"
+      url="/api/product-groups"
+      loading="{{loading}}"
+      handle-as="json"
+      last-response="{{productGroups}}"
+      debounce-duration="300"></slr-ajax>
+
+    <slr-ajax
+      auto
+      id="productGroupAjax"
+      url="[[item.product_group_uri]]"
+      loading="{{loading}}"
+      handle-as="json"
+      last-response="{{selectedProductGroup}}"
+      debounce-duration="300"></slr-ajax>
 
     <slr-items-data
       auto
@@ -194,18 +212,18 @@
                 always-float-label
                 disabled="{{!editMode}}"
                 required noink no-animations>
-                <paper-listbox
-                  id="selectList"
-                  slot="dropdown-content"
-                  selected="{{item.product_group_uri}}"
-                  attr-for-selected="uri">
-                  <template
-                    is="dom-repeat"
-                    items="{{productGroups}}"
-                    as="pg">
-                    <paper-item uri$="{{pg.uri}}">{{pg.name}}</paper-item>
-                  </template>
-                </paper-listbox>
+                  <paper-listbox
+                    id="selectList"
+                    slot="dropdown-content"
+                    selected="{{item.product_group_uri}}"
+                    attr-for-selected="uri">
+                    <template
+                      is="dom-repeat"
+                      items="{{productGroups}}"
+                      as="pg">
+                      <paper-item uri$="{{pg.uri}}">{{pg.name}}</paper-item>
+                    </template>
+                  </paper-listbox>
               </paper-dropdown-menu>
               <input
                 id="productGroupUri"
@@ -356,6 +374,9 @@
             type: Boolean,
             value: false
           },
+          selectedProductGroup: {
+            type: Object
+          },
           selectedObjective: {
             type: Object,
           },
@@ -410,6 +431,7 @@
         this.$.productForm.addEventListener('iron-form-response', (e) => this.onResponse(e))
         this.$.objectiveView.addEventListener('slr-objective-submitted', (e) => this.onObjectiveSubmit(e))
         this.$.indicatorView.addEventListener('slr-indicator-submitted', (e) => this.onIndicatorSubmit(e))
+        this.$.productGroupsAjax.generateRequest()
       }
 
       onClose(e) {
@@ -488,34 +510,6 @@
 
         if (this.item.product_sli_uri) {
           this.$.indicatorsData.fetch()
-        }
-      }
-
-      handleResponse(e) {
-        try {
-          let res = e.detail.response
-          this.set('item', e.detail.response.data.pop())
-        } catch(e) {
-          console.error('Error loading Product', e)
-          this.notify("Can't Load Product")
-        }
-      }
-
-      handleErrorResponse(e) {
-        try {
-          if (e.detail.request.xhr.response.status === 401) {
-            return this.dispatchEvent(
-              new CustomEvent('slr-authenticate',
-              {bubbles: true, composed: true}))
-          } else {
-            this.notify("Can't load Product",
-              () => this.$.ajax.generateRequest(),
-              5000,
-              e.detail.request.xhr.response.detail
-            )
-          }
-        } catch(e) {
-          this.notify("Can't load Product", () => this.$.ajax.generateRequest())
         }
       }
 
