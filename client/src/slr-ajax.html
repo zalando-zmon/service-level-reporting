@@ -8,12 +8,6 @@
 
       static get properties() {
         return {
-          _boundHandleResponse: {
-            type: Function,
-            value: function() {
-              return this.handleResponse.bind(this)
-            }
-          },
           _boundHandleError: {
             type: Function,
             value: function() {
@@ -27,35 +21,10 @@
       generateRequest() {
         let request = super.generateRequest()
         request.completes.then(
-          this._boundHandleResponse,
+          () => {},
           this._boundHandleError.bind(this, request)
-          // (rejected) => {
-          //   console.log('rejected', rejected)
-          //   let error = rejected.request.response.status
-          //   if (error === 401) {
-          //     return this.dispatchEvent(new CustomEvent('slr-authenticate',
-          //                               {bubbles: true, composed: true}))
-          //   }
-          // }
         )
         return request
-      }
-
-      handleResponse(request) {
-        let r = request.response.data
-        if (request === this.lastRequest) {
-          this._setLastResponse(r);
-          this._setLastError(null);
-          this._setLoading(false);
-        }
-        this.fire('response', request, {
-          bubbles: this.bubbles,
-          composed: true
-        });
-        this.fire('iron-ajax-response', request, {
-          bubbles: this.bubbles,
-          composed: true
-        });
       }
 
       handleError(request, error) {
