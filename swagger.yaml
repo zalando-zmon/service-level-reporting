@@ -129,6 +129,10 @@ definitions:
         type: string
         readOnly: true
         description: Product Group name.
+      product_group_slug:
+        type: string
+        readOnly: true
+        description: Product Group slug.
       username:
         type: string
         readOnly: true
