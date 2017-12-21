@@ -30,8 +30,8 @@
           },
           items: {
             type: Array,
-            value: null,
-            notify: true
+            notify: true,
+            value: () => []
           },
           search: {
             type: String,
@@ -47,12 +47,12 @@
           },
           params: {
             type: Object,
-            value: {},
+            value: () => { return {}},
             computed: 'computeParams(page, pageSize)'
           },
           page: {
             type: Number,
-            value: 1
+            value: () => { return 1 }
           },
           pageSize: {
             type: Number,
@@ -64,8 +64,8 @@
           },
           totalItems: {
             type: Number,
-            value: 0,
-            notify: true
+            notify: true,
+            value: 0
           },
           fetchAttempts: {
             type: Number,
@@ -79,7 +79,7 @@
       }
 
       computeParams(page, page_size) {
-        return { page, page_size }
+        return Object.assign(this.params, { page, page_size })
       }
 
       searchChanged() {
@@ -90,9 +90,8 @@
         if (this.search) {
           this.set('params.q', this.search)
         }
-
-        this.resetPage()
-        this.incPage()
+        console.log('reset')
+        this.resetCol()
       }
 
       incPage() {
