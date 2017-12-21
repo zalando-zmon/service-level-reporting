@@ -108,6 +108,7 @@ class ProductResource(ResourceHandler):
 
         # extra fields
         resource['product_group_name'] = obj.product_group.name
+        resource['product_group_slug'] = obj.product_group.slug
 
         # Links
         base_uri = resource['uri'] + '/'
