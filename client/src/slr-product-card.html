@@ -4,8 +4,6 @@
 <link rel="import" href="../bower_components/iron-icons/iron-icons.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 
-<link rel="imports" href="./slr-ajax.html">
-
 <dom-module id="slr-product-card">
   <template>
     <style include="common-styles">
@@ -50,15 +48,6 @@
       }
     </style>
 
-    <slr-ajax
-      auto
-      id="ajax"
-      url="[[item.product_group_uri]]"
-      handle-as="json"
-      last-response="{{productGroup}}"
-      debounce-duration="300"
-      loading="{{loading}}"></slr-ajax>
-
     <paper-card>
       <div class="card-content">
         <div class="header">
@@ -88,14 +77,14 @@
           },
           reportUrl: {
             type: String,
-            computed: 'computeReportUrl(item, productGroup)'
+            computed: 'computeReportUrl(item.slug, item.product_group_slug)'
           }
         }
       }
 
-      computeReportUrl(item, productGroup) {
-        if (item && item.slug && productGroup && productGroup.slug) {
-          return `/slr/${productGroup.slug}/${item.slug}`
+      computeReportUrl(slug, product_group_slug) {
+        if (slug && product_group_slug) {
+          return `/slr/${product_group_slug}/${slug}`
         }
       }
 
