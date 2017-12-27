@@ -30,7 +30,8 @@
     "iron-flex-layout": "^2.0.0",
     "iron-media-query": "^2.0.0",
     "paper-avatar": "Abe90/paper-avatar#^1.0.4",
-    "web-animations-js": "^2.3.1"
+    "web-animations-js": "^2.3.1",
+    "paper-dropdown": "https://github.com/elauria/paper-dropdown.git#^2.0.1"
   },
   "devDependencies": {
     "web-component-tester": "^6.0.0-prerelease.5",

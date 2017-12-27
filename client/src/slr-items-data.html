@@ -84,13 +84,13 @@
 
       searchChanged() {
         if (this.params && this.params.q) {
-          this.set('params.q', null)
+          delete this.params.q
         }
 
         if (this.search) {
           this.set('params.q', this.search)
         }
-        console.log('reset')
+
         this.resetCol()
       }
 

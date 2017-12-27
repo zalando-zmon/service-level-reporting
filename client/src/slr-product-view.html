@@ -2,7 +2,7 @@
 <link rel="import" href="../bower_components/app-route/app-route.html">
 <link rel="import" href="../bower_components/paper-input/paper-input.html">
 <link rel="import" href="../bower_components/paper-item/paper-item.html">
-<link rel="import" href="../bower_components/paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="../bower_components/paper-dropdown/paper-dropdown.html">
 <link rel="import" href="../bower_components/paper-listbox/paper-listbox.html">
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
@@ -34,10 +34,6 @@
 
       paper-item {
         opacity: 0.66;
-      }
-
-      paper-dropdown-menu {
-        width: 100%;
       }
 
       paper-item:hover {
@@ -97,6 +93,7 @@
     <slr-items-data
       id="productGroupsData"
       url="/api/product-groups"
+      search="[[productGroupsSearch]]"
       loading="{{loading}}"
       items="{{productGroups}}"></slr-items-data>
 
@@ -106,7 +103,7 @@
       url="[[item.product_group_uri]]"
       loading="{{loading}}"
       handle-as="json"
-      last-response="{{selectedProductGroup}}"
+      on-response="handleProductGroupResponse"
       debounce-duration="300"></slr-ajax>
 
     <slr-items-data
@@ -201,31 +198,24 @@
                 disabled="{{!editMode}}"
                 value="{{item.name}}"
                 required></paper-input>
-              <paper-dropdown-menu
-                id="productGroup"
-                label="Product Group"
-                always-float-label
-                disabled="{{!editMode}}"
-                required noink no-animations>
-                  <paper-listbox
-                    id="selectList"
-                    slot="dropdown-content"
-                    selected="{{item.product_group_uri}}"
-                    attr-for-selected="uri">
+                <paper-dropdown
+                  id="productGroup"
+                  name="product_group_uri"
+                  class="paper-dropdown"
+                  label="Product Group"
+                  value="{{productGroupUri}}"
+                  disabled="{{!editMode}}"
+                  searchable="true"
+                  persist-on-close="true"
+                  required
+                  search-text="{{productGroupsSearch}}">
                     <template
                       is="dom-repeat"
                       items="{{productGroups}}"
                       as="pg">
-                      <paper-item uri$="{{pg.uri}}">{{pg.name}}</paper-item>
+                      <paper-item value$="{{pg.uri}}">{{pg.name}}</paper-item>
                     </template>
-                  </paper-listbox>
-              </paper-dropdown-menu>
-              <input
-                id="productGroupUri"
-                type="text"
-                name="product_group_uri"
-                hidden
-                value="[[item.product_group_uri]]"></input>
+                </paper-dropdown>
               <paper-input
                 id="email"
                 type="email"
@@ -309,7 +299,15 @@
           },
           productGroups: {
             type: Array,
+            observer: 'productGroupsChanged',
             value: []
+          },
+          productGroupUri: {
+            type: String
+          },
+          productGroupsSearch: {
+            type: String,
+            notify: true
           },
           objectives: {
             type: Array,
@@ -412,10 +410,17 @@
         }
       }
 
+      productGroupsChanged() {
+        // re-set product group uri after collection updates
+        // solves issue when searching for a product group and canceling after
+        this.set('productGroupUri', this.item.product_group_uri)
+      }
+
       itemChanged() {
         if (this.slug && this.item && this.item.slug) {
           this.set('opened', true)
         }
+        this.set('productGroupUri', this.item.product_group_uri)
       }
 
       ready() {
@@ -431,6 +436,10 @@
 
       handleResponse(e) {
         this.set('item', e.detail.response.data.pop())
+      }
+
+      handleProductGroupResponse(e) {
+        this.push('productGroups', e.detail.response)
       }
 
       onClose(e) {
@@ -515,16 +524,13 @@
       initForm() {
         this.set('method', 'POST')
         this.set('action', '/api/products')
+        this.set('productGroupsSearch', '')
         this.$.productForm.reset()
-        this.$.productGroupUri.value = this.$.selectList.selected;
 
         // manually reset invalid state since iron-form does not support
         // reset() yet... (as of 07.2017)
         this.$.name.$.input.invalid = false
-        let input = this.$.productGroup
-                        .$.menuButton.querySelector('paper-input')
-                        .$.input
-        input.invalid = false
+        this.$.productGroup.invalid = false
       }
 
       cancel() {
