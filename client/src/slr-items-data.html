@@ -160,6 +160,8 @@
         this.set('fetchAttempts', this.fetchAttempts+1)
         Promise.all([ajax.completes]).then( (reqs) => {
           this.fetchAttempts = 0;
+        }, () => {
+          // nothing to do here. Errors already handled at handleErrorResponse()
         })
       }
 

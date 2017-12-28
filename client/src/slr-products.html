@@ -155,7 +155,7 @@
       }
 
       onOpen(e) {
-        this.$.fab.hide()
+        this.$.fab.visible = false
       }
 
       onClose(e) {
@@ -169,7 +169,7 @@
 
       addProduct() {
         this.$.view.new()
-        this.$.fab.hide()
+        this.$.fab.visible = false
       }
 
       computeFilter(str) {
