@@ -22,8 +22,30 @@
     <script>
       suite('slr-products', function() {
         var element;
+        var server;
+        var responseHeaders = {
+          json: { 'Content-Type': 'application/json' }
+        };
 
         setup(function() {
+          server = sinon.fakeServer.create()
+          server.respondWith(
+            'GET',
+            /\/products.*/, [
+              200,
+              responseHeaders.json,
+              '{"data":[{"name":"product test 2", "uri":"/product2","slug":"product2"},{"name":"product test","slug":"product","uri":"/product"},{"name":"product test 3","slug":"product3","uri":"/product3"}],"_meta":{"count":3}}'
+            ]
+          );
+          server.respondWith(
+            'GET',
+            /\/product-groups.*/, [
+              200,
+              responseHeaders.json,
+              '{"data":[{"name":"product group 1", "uri":"/product-group/1","slug":"pg1"}],"_meta":{"count":1}}'
+            ]
+          );
+
           element = fixture('products')
           element.products = [
             { title: 'product 3', description: 'this is the 3rd product' },
@@ -31,6 +53,10 @@
             { title: 'product 2', description: 'this is the 2nd product' }
           ]
         })
+
+        teardown(function() {
+          server.restore();
+        });
 
         test('items should be displayed', function(done) {
           flush(function() {

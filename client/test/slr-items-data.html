@@ -43,7 +43,7 @@
             /\/products.*/, [
               200,
               responseHeaders.json,
-              '{"data":[{"name":"product test 2", "uri":"/product2","slug":"product2"},{"name":"product test","slug":"product","uri":"/product"},{"name":"product test 3","slug":"product3","uri":"/product3"}]}'
+              '{"data":[{"name":"product test 2", "uri":"/product2","slug":"product2"},{"name":"product test","slug":"product","uri":"/product"},{"name":"product test 3","slug":"product3","uri":"/product3"}],"_meta":{"count":3}}'
             ]
           );
           element = fixture('itemsData')
@@ -72,28 +72,6 @@
           })
         })
 
-        test('found item by id', function(done) {
-          element.slug = 'product'
-          element.fetch()
-          server.respond()
-          flush(function() {
-            assert.equal(element.item.name, "product test")
-            done()
-          })
-        })
-
-        test('notified of item not found', function(done) {
-          element.addEventListener('slr-notify', function(e) {
-            assert.equal(e.detail.message, "Item not found")
-            done()
-          })
-          element.fetch()
-          server.respond()
-          flush(function() {
-            element.slug = 'productX'
-          })
-        })
-
         test('items are sorted', function(done) {
           element.fetch()
           server.respond()
@@ -101,18 +79,6 @@
             assert.equal(element.items[0].slug, 'product')
             assert.equal(element.items[1].slug, 'product2')
             assert.equal(element.items[2].slug, 'product3')
-            done()
-          })
-        })
-
-        test('items are filtered', function(done) {
-          flush(function() {
-            element.search = 'product2'
-            server.respond()
-            flush(function() {
-              assert.equal(element.items.length, 1)
-              done()
-            })
             done()
           })
         })

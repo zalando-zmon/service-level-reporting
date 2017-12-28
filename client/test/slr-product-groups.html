@@ -22,17 +22,27 @@
     <script>
       suite('slr-product-groups', function() {
         var element;
+        var server;
+        var responseHeaders = {
+          json: { 'Content-Type': 'application/json' }
+        };
 
         setup(function() {
+          server = sinon.fakeServer.create()
+
+          server.respondWith(
+            'GET',
+            /\/product-groups.*/, [
+              200,
+              responseHeaders.json,
+              '{"data":[{"name":"product group 1", "uri":"/product-group/1","slug":"pg1"},{"name":"product group 2", "uri":"/product-group/2","slug":"pg2"},{"name":"product group 3", "uri":"/product-group/3","slug":"pg3"}],"_meta":{"count":1}}'
+            ]
+          );
+
           element = fixture('productGroups')
         })
 
         test('items should be displayed', function(done) {
-          element.productGroups = [
-            { name: 'product group 3', department: 'tech' },
-            { name: 'product group 1', department: 'tech' },
-            { name: 'product group 2', department: 'tech' }
-          ]
           flush(function() {
             var items = Polymer.dom(element.root).querySelectorAll('.productGroup');
             assert.equal(element.productGroups.length, items.length)
