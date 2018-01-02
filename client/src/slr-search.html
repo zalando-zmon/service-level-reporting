@@ -43,7 +43,7 @@
         class="searchInput"
         placeholder="product name"
         autofocus="true"
-        value="{{searchStr}}">
+        value="{{_searchStr}}">
         <paper-icon-button
           icon="search"
           slot="prefix"></paper-icon-button>
@@ -79,7 +79,19 @@
             type: String,
             notify: true
           },
+          _searchStr: {
+            type: String,
+            observer: '_searchStrChanged'
+          }
         }
+      }
+
+      _searchStrChanged() {
+        this._debounceJob = Polymer.Debouncer.debounce(
+          this._debounceJob,
+          Polymer.Async.timeOut.after(300), () => {
+            this.set('searchStr', this._searchStr)
+          })
       }
 
       onEsc(e) {
