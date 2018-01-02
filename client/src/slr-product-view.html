@@ -431,7 +431,7 @@
         this.$.productForm.addEventListener('iron-form-response', (e) => this.onResponse(e))
         this.$.objectiveView.addEventListener('slr-objective-submitted', (e) => this.onObjectiveSubmit(e))
         this.$.indicatorView.addEventListener('slr-indicator-submitted', (e) => this.onIndicatorSubmit(e))
-        this.$.productGroupsData.fetch()
+        this.$.productGroupsData.resetCol()
       }
 
       handleResponse(e) {
