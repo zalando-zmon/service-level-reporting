@@ -327,7 +327,7 @@
         this.addEventListener('slr-authenticate', (n) => this.showAuth())
         this.addEventListener('slr-notify', (n) => this.$.notif.open(n.detail))
         this.addEventListener('slr-error', () => this.showError())
-        this.$.products.addEventListener('product-groups-fetch', () => this.$.productGroups.fetch())
+        this.$.products.addEventListener('product-groups-fetch', () => this.$.productGroups.resetCol())
         this.$.searchSmall.addEventListener('search-closed', () => this.$.searchBar.hidden = true)
       }
 
