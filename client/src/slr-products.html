@@ -131,6 +131,8 @@
 
       routeChanged(route, visible) {
         if (visible && route.prefix === '/products') {
+          // update collections when user opens products view
+          this.$.productsData.fetch()
           this.dispatchEvent(new CustomEvent('product-groups-fetch'))
         }
       }

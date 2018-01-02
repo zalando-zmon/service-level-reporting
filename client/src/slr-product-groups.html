@@ -126,6 +126,17 @@
         }
       }
 
+      static get observers() { return [
+        'routeChanged(route, visible)',
+      ]}
+
+      routeChanged(route, visible) {
+        if (visible && route.prefix === '/product-groups') {
+          // update collections when user opens products view
+          this.$.productGroupsData.fetch()
+        }
+      }
+
       ready() {
         super.ready()
         this.addEventListener('product-group-cancel', (e) => this.onCancel(e))
@@ -176,6 +187,10 @@
         if (this.selectedProductGroup.uri) {
           this.$.ajax.generateRequest()
         }
+      }
+
+      fetch() {
+        this.$.productGroupsData.fetch()
       }
 
       handleResponse() {
