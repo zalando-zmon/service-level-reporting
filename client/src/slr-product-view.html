@@ -330,7 +330,8 @@
           opened: {
             type: Boolean,
             value: false,
-            notify: true
+            notify: true,
+            observer: 'openedChanged'
           },
           objectiveViewOpened: {
             type: Boolean
@@ -396,6 +397,13 @@
         }
       }
 
+      openedChanged(opened) {
+        // update list of product groups when view is opened
+        if (this.opened) {
+          this.$.productGroupsData.resetCol()
+        }
+      }
+
       static get observers() {
         return [ 'routeDataChanged(routeData.slug, visible)' ]
       }
@@ -417,9 +425,6 @@
       }
 
       itemChanged() {
-        if (this.slug && this.item && this.item.slug) {
-          this.set('opened', true)
-        }
         this.set('productGroupUri', this.item.product_group_uri)
       }
 
@@ -431,11 +436,11 @@
         this.$.productForm.addEventListener('iron-form-response', (e) => this.onResponse(e))
         this.$.objectiveView.addEventListener('slr-objective-submitted', (e) => this.onObjectiveSubmit(e))
         this.$.indicatorView.addEventListener('slr-indicator-submitted', (e) => this.onIndicatorSubmit(e))
-        this.$.productGroupsData.resetCol()
       }
 
       handleResponse(e) {
         this.set('item', e.detail.response.data.pop())
+        this.set('opened', true)
       }
 
       handleProductGroupResponse(e) {
