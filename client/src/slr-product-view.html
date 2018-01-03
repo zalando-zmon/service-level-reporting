@@ -152,7 +152,7 @@
       opened="{{deleteModalOpened}}">
       <h2>Delete Product</h2>
       <p>Are you sure you want to delete "{{item.name}}"?</p>
-      <div class="buttons">
+      <div class="buttons" hidden$="[[editMode]]">
         <paper-button dialog-dismiss>Cancel</paper-button>
         <paper-button dialog-confirm on-click="deleteConfirm">Delete</paper-button>
       </div></paper-dialog>
