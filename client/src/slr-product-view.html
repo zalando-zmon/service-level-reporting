@@ -444,7 +444,11 @@
       }
 
       handleProductGroupResponse(e) {
-        this.push('productGroups', e.detail.response)
+        let r = e.detail.response
+        let present = this.productGroups.find((pg) => { return pg.slug === r.slug })
+        if (!present) {
+          this.push('productGroups', r)
+        }
       }
 
       onClose(e) {
