@@ -72,17 +72,6 @@
           })
         })
 
-        test('items are sorted', function(done) {
-          element.fetch()
-          server.respond()
-          flush(function() {
-            assert.equal(element.items[0].slug, 'product')
-            assert.equal(element.items[1].slug, 'product2')
-            assert.equal(element.items[2].slug, 'product3')
-            done()
-          })
-        })
-
       })
     </script>
   </body>
