@@ -10,6 +10,7 @@
 <link rel="import" href="../bower_components/paper-tabs/paper-tabs.html">
 <link rel="import" href="../bower_components/iron-media-query/iron-media-query.html">
 <link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
 <link rel="import" href="../bower_components/paper-avatar/paper-avatar.html">
 <link rel="import" href="../bower_components/paper-menu-button/paper-menu-button.html">
 <link rel="import" href="../bower_components/paper-menu-button/paper-menu-button-animations.html">
@@ -224,12 +225,12 @@
 
     <slr-notifications id="notif"></slr-notifications>
 
-    <slr-ajax
+    <iron-ajax
       id="ajax"
       url="/api/health"
       on-response="handleResponse"
       on-error="handleErrorResponse"
-      handle-as="json"></slr-ajax>
+      handle-as="json"></iron-ajax>
 
     <slr-ajax
       auto
