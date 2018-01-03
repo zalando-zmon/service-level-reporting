@@ -126,6 +126,16 @@
         }
       }
 
+      static get observers() { return [
+        'routeChanged(route, visible)',
+      ]}
+
+      routeChanged(route, visible) {
+        if (visible && route.prefix === '/product-groups') {
+          this.$.productGroupsData.resetCol()
+        }
+      }
+
       ready() {
         super.ready()
         this.addEventListener('product-group-cancel', (e) => this.onCancel(e))
@@ -176,6 +186,10 @@
         if (this.selectedProductGroup.uri) {
           this.$.ajax.generateRequest()
         }
+      }
+
+      resetCol() {
+        this.$.productGroupsData.resetCol()
       }
 
       handleResponse() {

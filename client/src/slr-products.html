@@ -1,6 +1,6 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../bower_components/iron-media-query/iron-media-query.html">
-<link rel="import" href="../bower_components/iron-scroll-threshold/iron-scroll-threshold.html"
+<link rel="import" href="../bower_components/iron-scroll-threshold/iron-scroll-threshold.html">
 
 <link rel="import" href="./slr-fab.html">
 <link rel="import" href="./slr-items-data.html">
@@ -130,7 +130,13 @@
       ]}
 
       routeChanged(route, visible) {
-        if (visible && route.prefix === '/products') {
+        if (!visible || route.prefix !== '/products') {
+          return
+        }
+
+        if (route.path === "" || route.path === '/' || this.$.productsData.totalItems === 0) {
+          // update collections when user opens products view
+          this.$.productsData.resetCol()
           this.dispatchEvent(new CustomEvent('product-groups-fetch'))
         }
       }
