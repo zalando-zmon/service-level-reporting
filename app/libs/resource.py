@@ -211,6 +211,10 @@ class ResourceHandler:
 
             if field == 'slug' and 'name' in body:
                 fields['slug'] = slugger(body['name'])
+                if fields['slug'] == '':
+                    raise ProblemException(
+                        title='Invalid resource name',
+                        detail='Resource name is invalid. Should include at least one character!')
             else:
                 fields[field] = body.get(field)
 
