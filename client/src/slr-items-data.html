@@ -1,17 +1,21 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
 
+<link rel="import" href="./slr-ajax.html">
+
 <dom-module id="slr-items-data">
   <template>
-    <iron-ajax
+    <slr-ajax
       auto="{{auto}}"
       id="ajax"
       url="{{url}}"
+      params="{{params}}"
       loading="{{loading}}"
       handle-as="json"
       on-response="handleResponse"
       on-error="handleErrorResponse"
-      debounce-duration="300"></iron-ajax>
+      reject-with-request="true"
+      debounce-duration="300"></slr-ajax>
   </template>
 
   <script>
@@ -20,35 +24,18 @@
 
       static get properties() {
         return {
-          item: {
-            type: Object,
-            notify: true
-          },
           itemType: {
             type: String,
             value: 'Item'
           },
-          idName: {
-            type: String,
-            value: 'slug'
-          },
-          slug: {
-            type: String,
-            observer: 'slugChanged'
-          },
           items: {
             type: Array,
-            value: null,
-            notify: true
+            notify: true,
+            value: () => []
           },
           search: {
             type: String,
             observer: 'searchChanged'
-          },
-          filteredItems: {
-            type: Array,
-            value: null,
-            notify: true
           },
           loading: {
             type: Boolean,
@@ -57,6 +44,28 @@
           },
           url: {
             type: String
+          },
+          params: {
+            type: Object,
+            value: () => { return {}},
+            computed: 'computeParams(page, pageSize, search)'
+          },
+          page: {
+            type: Number,
+            value: () => { return 0 }
+          },
+          pageSize: {
+            type: Number,
+            value: 100
+          },
+          paginationEnabled: {
+            type: Boolean,
+            value: false
+          },
+          totalItems: {
+            type: Number,
+            notify: true,
+            value: 0
           },
           fetchAttempts: {
             type: Number,
@@ -69,25 +78,43 @@
         }
       }
 
-      static get observers() {
-        return [
-          'itemsChanged(items.*)'
-        ]
-      }
+      computeParams(page, page_size, q) {
+        let params = { page: page+1, page_size }
 
-      itemsChanged() {
-        this.set('filteredItems', this.filter())
+        if (q) {
+          params.q = q
+        }
+
+        return params
       }
 
       searchChanged() {
-        this.set('filteredItems', this.filter())
+        this.resetCol()
+      }
+
+      incPage() {
+        if ((this.page+1) * this.pageSize >= this.totalItems) {
+          return
+        }
+        this.set('page', this.page+1)
+        this.fetch()
+      }
+
+      resetCol() {
+        this.set('items', [])
+        this.set('page', 0)
+        this.fetch()
       }
 
       handleResponse(e) {
         try {
-          this.set('items', e.detail.response.data)
-          this.sort()
-          this.set('filteredItems', this.filter())
+          let res = e.detail.response
+          if (this.paginationEnabled) {
+            this.set('items', this.items.concat(res.data))
+          } else {
+            this.set('items', res.data)
+          }
+          this.set('totalItems', res._meta.count)
         } catch(e) {
           console.error('Error loading ' + this.itemType, e)
           this.notify("Can't Load "+ this.itemType, () => this.fetch())
@@ -121,71 +148,15 @@
         let ajax = this.$.ajax.generateRequest();
         this.set('fetchAttempts', this.fetchAttempts+1)
         Promise.all([ajax.completes]).then( (reqs) => {
-          this.set('items', reqs[0].response.data)
           this.fetchAttempts = 0;
-          if (this.slug && this.items.length) {
-            this.findAndSetItem()
-          }
+        }, () => {
+          // nothing to do here. Errors already handled at handleErrorResponse()
         })
       }
 
-      slugChanged() {
-        if (!this.slug) {
-          return
-        }
-
-        if (!this.items) {
-          return this.fetch()
-        }
-
-        if (this.items.length === 0 && this.fetchAttempts === 0) {
-          return this.fetch()
-        }
-
-        if (this.items.length) {
-          this.findAndSetItem()
-        }
-      }
-
-      findAndSetItem() {
-        if (!this.slug) {
-          return this.set('item', null)
-        }
-        let ix = this.items.findIndex( (p) => ''+p[this.idName] === ''+this.slug)
-        if (ix > -1) {
-          this.set('item', this.items[ix])
-        } else {
-          this.notify(this.itemType + ' not found')
-          this.set('item', null)
-        }
-      }
-
-      filter() {
-        if (!this.items) {
-          return
-        }
-
-        let items = this.items.filter( (item) => {
-
-          // add new items {}
-          if (!item.uri || !this.search) {
-            return true
-          }
-
-          let content = []
-          for (var key in item) {
-            if (item[key] && item[key].toLowerCase)
-            content.push(item[key].toLowerCase())
-          }
-          return (content.join('').indexOf(this.search.toLowerCase()) != -1)
-        })
-        return items
-      }
-
-      sort() {
-        let sorted = [].concat(this.items.sort( (a, b) =>
-                                                  this.favoriteSort(a, b)))
-        this.set('items', sorted)
+      sort(items) {
+        let sorted = [].concat(items.sort( (a, b) => this.favoriteSort(a, b)))
+        return sorted
       }
 
       favoriteSort(a, b) {

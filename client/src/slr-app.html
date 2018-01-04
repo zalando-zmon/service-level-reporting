@@ -24,7 +24,7 @@
 <link rel="import" href="./slr-reports.html">
 <link rel="import" href="./slr-notifications.html">
 <link rel="import" href="./slr-search.html">
-<link rel="import" href="./slr-items-data.html">
+<link rel="import" href="./slr-ajax.html">
 <link rel="import" href="./common-styles.html">
 
 <dom-module id="slr-app">
@@ -126,15 +126,6 @@
       query="(max-width: 600px)"
       query-matches="{{small}}"></iron-media-query>
 
-    <slr-items-data
-      id="productGroupsData"
-      items="{{productGroups}}"
-      filtered-items="{{filteredProductGroups}}"
-      url="/api/product-groups"
-      search="[[searchStr]]"
-      item-type="Product Group"
-      loading="{{loading}}"></slr-items-data>
-
     <app-header
       reveals
       class="main-header"
@@ -210,7 +201,7 @@
         name="product-groups"
         route="{{subroute}}"
         loading="{{loading}}"
-        product-groups="{{filteredProductGroups}}"
+        product-groups="{{productGroups}}"
         search-str="{{searchStr}}"></slr-product-groups>
 
       <slr-products
@@ -218,7 +209,6 @@
         name="products"
         route="{{subroute}}"
         loading="{{loading}}"
-        product-groups="{{productGroups}}"
         search-str="{{searchStr}}"></slr-products>
 
       <slr-slr name="slr" route="{{subroute}}"></slr-slr>
@@ -242,13 +232,12 @@
       on-error="handleErrorResponse"
       handle-as="json"></iron-ajax>
 
-    <iron-ajax
+    <slr-ajax
       auto
       id="sessionAjax"
       url="/api/session"
-      last-response="{{session}}"
-      on-error="handleErrorResponse"
-      handle-as="json"></iron-ajax>
+      handle-as="json"
+      last-response="{{session}}"></slr-ajax>
 
   </template>
 
@@ -339,8 +328,7 @@
         this.addEventListener('slr-authenticate', (n) => this.showAuth())
         this.addEventListener('slr-notify', (n) => this.$.notif.open(n.detail))
         this.addEventListener('slr-error', () => this.showError())
-        this.$.productGroups.addEventListener('product-groups-fetch', () => this.$.productGroupsData.fetch())
-        this.$.products.addEventListener('product-groups-fetch', () => this.$.productGroupsData.fetch())
+        this.$.products.addEventListener('product-groups-fetch', () => this.$.productGroups.resetCol())
         this.$.searchSmall.addEventListener('search-closed', () => this.$.searchBar.hidden = true)
       }
 

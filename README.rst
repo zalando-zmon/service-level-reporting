@@ -24,7 +24,7 @@ Prepare the database
 
 .. code-block:: bash
 
-    $ docker run -d -p 5432:5432 postgres:9.5
+    $ docker run --name slo-pg -d -p 5432:5432 postgres:9.5
     $ echo 'CREATE DATABASE slr' | psql -h localhost -U postgres
     $ export DATABASE_URI=postgresql://postgres@localhost/slr
     $ export KAIROSDB_URL=https://kairosdb.example.org

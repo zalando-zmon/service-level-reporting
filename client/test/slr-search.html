@@ -29,7 +29,7 @@
 
         test('search is empty after closed', function(done) {
           element.closeSearch()
-          assert.equal(element.searchStr, '')
+          assert.equal(element._searchStr, '')
           assert.equal(element.searchMode, false)
           done()
         })

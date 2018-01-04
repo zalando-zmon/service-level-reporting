@@ -137,6 +137,18 @@ def product_group_list(obj):
     print(json.dumps(res, indent=4))
 
 
+@product_group.command('search')
+@click.argument('query')
+@click.pass_obj
+def product_group_search(obj, query):
+    """Search for all product groups with name matching the query"""
+    client = get_client(obj)
+
+    pgs = client.product_group_list(q=query)
+
+    print(json.dumps(pgs, indent=4))
+
+
 @product_group.command('get')
 @click.argument('name')
 @click.pass_obj
@@ -225,6 +237,18 @@ def product_list(obj, product_group_name):
     print(json.dumps(res, indent=4))
 
 
+@product.command('search')
+@click.argument('query')
+@click.pass_obj
+def product_search(obj, query):
+    """Search for all products with name matching the query"""
+    client = get_client(obj)
+
+    pgs = client.product_list(q=query)
+
+    print(json.dumps(pgs, indent=4))
+
+
 @product.command('get')
 @click.argument('name')
 @click.pass_obj
@@ -235,7 +259,7 @@ def product_get(obj, name):
     p = client.product_list(name=name)
 
     if not p:
-        fatal_error('Product does not exist')
+        fatal_error('Product {} does not exist'.format(name))
 
     print(json.dumps(p[0], indent=4))
 

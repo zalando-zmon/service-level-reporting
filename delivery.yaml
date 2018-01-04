@@ -9,7 +9,7 @@ build_steps:
   - desc: "Install build dependencies"
     cmd: |
       apt-get install -y --no-install-recommends software-properties-common
-      add-apt-repository -y ppa:fkrull/deadsnakes
+      add-apt-repository -y ppa:deadsnakes/ppa
       apt-get update
       apt-get install -q -y --no-install-recommends \
         python3.6 \

@@ -68,39 +68,26 @@
       static get properties() {
         return {
           item: {
-            type: Object
+            type: Object,
+            value: {}
           },
-          productGroups: {
-            type: Array,
-          },
-          productGroupSlug: {
-            type: String,
+          productGroup: {
+            type: Object,
+            value: {}
           },
           reportUrl: {
             type: String,
-            value: '/slr/'
+            computed: 'computeReportUrl(item.slug, item.product_group_slug)'
           }
         }
       }
 
-      static get observers() {
-        return [ 'slugsChanged(item.slug, productGroups.*)' ]
-      }
-
-      slugsChanged(slug, productGroups) {
-        let productGroupSlug = this.getProductGroupSlug(productGroups.value)
-        this.set('reportUrl', `/slr/${productGroupSlug}/${slug}/`)
-      }
-
-      getProductGroupSlug(productGroups) {
-        if (productGroups) {
-          let ix = this.productGroups.findIndex( (pg) => pg.uri === this.item.product_group_uri )
-          if (ix > -1) {
-            return this.productGroups[ix].slug
-          }
+      computeReportUrl(slug, product_group_slug) {
+        if (slug && product_group_slug) {
+          return `/slr/${product_group_slug}/${slug}`
         }
-        return ''
       }
+
     }
 
     window.customElements.define(SlrProductCard.is, SlrProductCard)

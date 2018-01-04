@@ -1,5 +1,6 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../bower_components/iron-media-query/iron-media-query.html">
+<link rel="import" href="../bower_components/iron-scroll-threshold/iron-scroll-threshold.html">
 
 <link rel="import" href="./slr-fab.html">
 <link rel="import" href="./slr-items-data.html">
@@ -44,19 +45,16 @@
 
     <slr-items-data
       id="productsData"
-      slug="{{selectedSlug}}"
-      item="{{selectedProduct}}"
       items="{{products}}"
-      filtered-items="{{filteredProducts}}"
       search="[[searchStr]]"
       url="/api/products"
       item-type="Product"
+      pagination-enabled="true"
+      params="[[params]]"
       loading="{{loading}}"></slr-items-data>
 
     <slr-product-view
       id="view"
-      item="{{selectedProduct}}"
-      slug="{{selectedSlug}}"
       products="{{products}}"
       product-groups="{{productGroups}}"
       opened="{{viewIsOpen}}"
@@ -64,18 +62,23 @@
       route="{{route}}"
       visible="{{visible}}"></slr-product-view>
 
-    <div class="flex-grid-thirds" small-layout$="{{small}}" id="list">
-      <template is="dom-repeat" items="[[filteredProducts]]">
-        <div class="col product" small-layout$="{{small}}">
-          <a href="/products/[[item.slug]]">
-            <slr-product-card
-              hidden$="[[!item.name]]"
-              product-groups="[[productGroups]]"
-              item="[[item]]"></slr-product-card>
-          </a>
-        </div>
-      </template>
-    </div>
+    <iron-scroll-threshold
+      id="scroll"
+      scroll-target="document"
+      lower-threshold="500"
+      on-lower-threshold="onLowerScrollThreshold">
+      <div class="flex-grid-thirds" small-layout$="{{small}}" id="list">
+        <template is="dom-repeat" items="[[products]]">
+          <div class="col product" small-layout$="{{small}}">
+            <a href="/products/[[item.slug]]">
+              <slr-product-card
+                hidden$="[[!item.name]]"
+                item="[[item]]"></slr-product-card>
+            </a>
+          </div>
+        </template>
+      </div>
+    </iron-scroll-threshold>
 
     <slr-fab
       id="fab"
@@ -115,14 +118,9 @@
           searchStr: {
             type: String
           },
-          filteredProducts: {
-            type: Array
-          },
-          selectedProduct: {
-            type: Object
-          },
-          selectedSlug: {
-            type: String
+          params: {
+            type: Object,
+            value: {}
           }
         }
       }
@@ -132,8 +130,13 @@
       ]}
 
       routeChanged(route, visible) {
-        if (visible && route.prefix === '/products') {
-          this.$.productsData.fetch()
+        if (!visible || route.prefix !== '/products') {
+          return
+        }
+
+        if (route.path === "" || route.path === '/' || this.$.productsData.totalItems === 0) {
+          // update collections when user opens products view
+          this.$.productsData.resetCol()
           this.dispatchEvent(new CustomEvent('product-groups-fetch'))
         }
       }
@@ -147,13 +150,8 @@
       }
 
       onSubmit(e) {
-        this.set('selectedProduct', null)
-        if (e.detail.item && e.detail.item.slug) {
-          this.set('selectedSlug', e.detail.item.slug)
-        } else {
-          this.set('selectedSlug', null)
-        }
-        this.$.productsData.fetch()
+        this.$.productsData.resetCol()
+        this.$.productsData.incPage()
       }
 
       onCancel(e) {
@@ -163,17 +161,21 @@
       }
 
       onOpen(e) {
-        this.$.fab.hide()
+        this.$.fab.visible = false
       }
 
       onClose(e) {
-        this.set('selectedSlug', null)
         this.$.fab.show()
+      }
+
+      onLowerScrollThreshold() {
+        this.$.productsData.incPage()
+        this.$.scroll.clearTriggers()
       }
 
       addProduct() {
         this.$.view.new()
-        this.$.fab.hide()
+        this.$.fab.visible = false
       }
 
       computeFilter(str) {

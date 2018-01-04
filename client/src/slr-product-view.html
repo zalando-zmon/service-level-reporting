@@ -2,7 +2,7 @@
 <link rel="import" href="../bower_components/app-route/app-route.html">
 <link rel="import" href="../bower_components/paper-input/paper-input.html">
 <link rel="import" href="../bower_components/paper-item/paper-item.html">
-<link rel="import" href="../bower_components/paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="../bower_components/paper-dropdown/paper-dropdown.html">
 <link rel="import" href="../bower_components/paper-listbox/paper-listbox.html">
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
@@ -10,6 +10,7 @@
 <link rel="import" href="../bower_components/iron-form/iron-form.html">
 <link rel="import" href="../bower_components/iron-media-query/iron-media-query.html">
 
+<link rel="import" href="./slr-ajax.html">
 <link rel="import" href="./slr-items-data.html">
 <link rel="import" href="./slr-dialog.html">
 <link rel="import" href="./slr-objective-view.html">
@@ -32,10 +33,6 @@
 
       paper-item {
         opacity: 0.66;
-      }
-
-      paper-dropdown-menu {
-        width: 100%;
       }
 
       paper-item:hover {
@@ -85,12 +82,33 @@
       query="(max-width: 600px)"
       query-matches="{{small}}"></iron-media-query>
 
+    <slr-ajax
+      id="productAjax"
+      url="/api/products"
+      params="{{params}}"
+      loading="{{loading}}"
+      on-response="handleResponse"></slr-ajax>
+
+    <slr-items-data
+      id="productGroupsData"
+      url="/api/product-groups"
+      search="[[productGroupsSearch]]"
+      loading="{{loading}}"
+      items="{{productGroups}}"></slr-items-data>
+
+    <slr-ajax
+      auto
+      id="productGroupAjax"
+      url="[[item.product_group_uri]]"
+      loading="{{loading}}"
+      handle-as="json"
+      on-response="handleProductGroupResponse"
+      debounce-duration="300"></slr-ajax>
+
     <slr-items-data
       auto
       id="objectivesData"
       id-name="id"
-      slug="{{selectedObjectiveId}}"
-      item="{{selectedObjective}}"
       items="{{objectives}}"
       url="[[item.product_slo_uri]]"
       item-type="Objective"
@@ -100,8 +118,6 @@
       auto="true"
       id="indicatorsData"
       id-name="name"
-      slug="{{selectedIndicatorId}}"
-      item="{{selectedIndicator}}"
       items="{{indicators}}"
       url="[[item.product_sli_uri]]"
       item-type="Indicator"
@@ -110,9 +126,9 @@
     <slr-objective-view
       id="objectiveView"
       item="{{selectedObjective}}"
-      product="{{item}}"
-      objectives="{{objectives}}"
-      indicators="{{indicators}}"
+      product="[[item]]"
+      objectives="[[objectives]]"
+      indicators="[[indicators]]"
       loading="{{loading}}"
       route="{{subroute}}"
       route-data="{{routeData}}"
@@ -181,30 +197,24 @@
                 disabled="{{!editMode}}"
                 value="{{item.name}}"
                 required></paper-input>
-              <paper-dropdown-menu
-                id="productGroup"
-                label="Product Group"
-                always-float-label
-                disabled="{{!editMode}}"
-                required noink no-animations>
-                <paper-listbox
-                  id="selectList"
-                  slot="dropdown-content"
-                  selected="{{item.product_group_uri}}"
-                  attr-for-selected="uri">
-                  <template
-                    is="dom-repeat"
-                    items="{{productGroups}}"
-                    as="pg">
-                    <paper-item uri$="{{pg.uri}}">{{pg.name}}</paper-item>
-                  </template>
-                </paper-listbox>
-              </paper-dropdown-menu>
-              <input
-                type="text"
-                name="product_group_uri"
-                hidden
-                value="[[item.product_group_uri]]"></input>
+                <paper-dropdown
+                  id="productGroup"
+                  name="product_group_uri"
+                  class="paper-dropdown"
+                  label="Product Group"
+                  value="{{productGroupUri}}"
+                  disabled="{{!editMode}}"
+                  searchable="true"
+                  persist-on-close="true"
+                  required
+                  search-text="{{productGroupsSearch}}">
+                    <template
+                      is="dom-repeat"
+                      items="{{productGroups}}"
+                      as="pg">
+                      <paper-item value$="{{pg.uri}}">{{pg.name}}</paper-item>
+                    </template>
+                </paper-dropdown>
               <paper-input
                 id="email"
                 type="email"
@@ -279,12 +289,24 @@
             type: String,
             notify: true
           },
+          params: {
+            type: Object,
+            computed: 'computeParams(slug)'
+          },
           products: {
             type: Array
           },
           productGroups: {
             type: Array,
+            observer: 'productGroupsChanged',
             value: []
+          },
+          productGroupUri: {
+            type: String
+          },
+          productGroupsSearch: {
+            type: String,
+            notify: true
           },
           objectives: {
             type: Array,
@@ -307,7 +329,8 @@
           opened: {
             type: Boolean,
             value: false,
-            notify: true
+            notify: true,
+            observer: 'openedChanged'
           },
           objectiveViewOpened: {
             type: Boolean
@@ -344,17 +367,14 @@
             type: Boolean,
             value: false
           },
+          selectedProductGroup: {
+            type: Object
+          },
           selectedObjective: {
             type: Object,
           },
-          selectedObjectiveId: {
-            type: String
-          },
           selectedIndicator: {
             type: Object
-          },
-          selectedIndicatorId: {
-            type: String
           },
           objectiveViewOpened: {
             type: Boolean
@@ -370,6 +390,19 @@
         return uri ? uri : '/api/products'
       }
 
+      computeParams(slug) {
+        return {
+          name: slug
+        }
+      }
+
+      openedChanged(opened) {
+        // update list of product groups when view is opened
+        if (this.opened) {
+          this.$.productGroupsData.resetCol()
+        }
+      }
+
       static get observers() {
         return [ 'routeDataChanged(routeData.slug, visible)' ]
       }
@@ -377,16 +410,21 @@
       routeDataChanged(slug, visible) {
         if (slug && visible && this.route.prefix === '/products' && this.route.path) {
           this.set('slug', slug)
+          this.$.productAjax.generateRequest()
         } else {
           this.set('slug', null)
           this.set('opened', false)
         }
       }
 
+      productGroupsChanged() {
+        // re-set product group uri after collection updates
+        // solves issue when searching for a product group and canceling after
+        this.set('productGroupUri', this.item.product_group_uri)
+      }
+
       itemChanged() {
-        if (this.slug && this.item && this.item.slug) {
-          this.set('opened', true)
-        }
+        this.set('productGroupUri', this.item.product_group_uri)
       }
 
       ready() {
@@ -397,6 +435,19 @@
         this.$.productForm.addEventListener('iron-form-response', (e) => this.onResponse(e))
         this.$.objectiveView.addEventListener('slr-objective-submitted', (e) => this.onObjectiveSubmit(e))
         this.$.indicatorView.addEventListener('slr-indicator-submitted', (e) => this.onIndicatorSubmit(e))
+      }
+
+      handleResponse(e) {
+        this.set('item', e.detail.response.data.pop())
+        this.set('opened', true)
+      }
+
+      handleProductGroupResponse(e) {
+        let r = e.detail.response
+        let present = this.productGroups.find((pg) => { return pg.slug === r.slug })
+        if (!present) {
+          this.push('productGroups', r)
+        }
       }
 
       onClose(e) {
@@ -461,20 +512,10 @@
       }
 
       onObjectiveSubmit(e) {
-        if (e.detail.item && e.detail.item.id) {
-          this.set('selectedObjectiveId', e.detail.item.id)
-        } else {
-          this.set('selectedObjectiveId', null)
-        }
         this.$.objectivesData.fetch()
       }
 
       onIndicatorSubmit(e) {
-        if (e.detail.item && e.detail.item.name) {
-          this.set('selectedIndicatorId', e.detail.item.name)
-        } else {
-          this.set('selectedIndicatorId', null)
-        }
         this.$.indicatorsData.fetch()
       }
 
@@ -491,15 +532,13 @@
       initForm() {
         this.set('method', 'POST')
         this.set('action', '/api/products')
+        this.set('productGroupsSearch', '')
         this.$.productForm.reset()
 
         // manually reset invalid state since iron-form does not support
         // reset() yet... (as of 07.2017)
         this.$.name.$.input.invalid = false
-        let input = this.$.productGroup
-                        .$.menuButton.querySelector('paper-input')
-                        .$.input
-        input.invalid = false
+        this.$.productGroup.invalid = false
       }
 
       cancel() {
@@ -522,24 +561,22 @@
       }
 
       openObjectiveView(e) {
-        this.set('selectedObjectiveId', e.model.objective.id)
+        this.set('selectedObjective', e.model.objective)
         this.$.objectiveView.open()
       }
 
       openIndicatorView(e) {
-        this.set('selectedIndicatorId', e.model.indicator.name)
+        this.set('selectedIndicator', e.model.indicator)
         this.$.indicatorView.open()
       }
 
       addObjective() {
         this.set('selectedObjective', {})
-        this.set('selectedObjectiveId', null)
         this.$.objectiveView.new()
       }
 
       addIndicator() {
         this.set('selectedIndicator', { "source": {} })
-        this.set('selectedIndicatorId', null)
         this.$.indicatorView.new()
       }
 

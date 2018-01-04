@@ -1,0 +1,58 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+
+<dom-module id="slr-ajax">
+  <script>
+    class SlrAjax extends window.customElements.get('iron-ajax') {
+      static get is() { return 'slr-ajax' }
+
+      static get properties() {
+        return {
+          _boundHandleError: {
+            type: Function,
+            value: function() {
+              return this.handleError.bind(this)
+            }
+          }
+        }
+      }
+
+      // intercept unauthorized requests
+      generateRequest() {
+        let request = super.generateRequest()
+        request.completes.then(
+          () => {},
+          this._boundHandleError.bind(this, request)
+        )
+        return request
+      }
+
+      handleError(request, error) {
+        if (this.verbose) {
+          Polymer.Base._error(error);
+        }
+
+        if (request.xhr.status === 401) {
+          this.fire('slr-authenticate', {
+            bubbles: this.bubbles,
+            composed: true
+          })
+        }
+
+        if (request === this.lastRequest) {
+          this._setLastError({
+            request: request,
+            error: error,
+            status: request.xhr.status,
+            statusText: request.xhr.statusText,
+            response: request.xhr.response
+          });
+          this._setLastResponse(null);
+          this._setLoading(false);
+        }
+      }
+    }
+
+    window.customElements.define(SlrAjax.is, SlrAjax)
+  </script>
+</dom-module>
