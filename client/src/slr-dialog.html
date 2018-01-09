@@ -26,9 +26,22 @@
         };
       }
 
+      paper-dialog paper-dialog-scrollable {
+        height: 100%;
+      }
+
       paper-dialog {
-        max-width: var(--app-content-max-width);
-        min-width: 500px;
+        /* max-width: var(--app-content-max-width);
+        min-width: 500px; */
+        position: fixed;
+        top: 20vh;
+        bottom: 20vh;
+        left: 15vw;
+        right: 15vw;
+        margin: 0;
+        padding: 0;
+        min-width: 300px;
+        min-height: 300px;
       }
 
       paper-dialog[small-layout] {
@@ -55,7 +68,6 @@
 
       .flex-vertical {
         @apply --layout-vertical;
-        @apply --layout-wrap;
       }
 
       .flex-equal-justified {
@@ -63,13 +75,19 @@
         @apply --layout-justified;
       }
 
-      .flexchild {
+      .flexchild-vertical {
         @apply --layout-flex;
+      }
+
+      .scrollable-container {
+        margin: 0;
+        padding: 0;
       }
 
       paper-fab {
         margin-top: 60px;
         margin-right: 5%;
+        z-index: 1;
       }
 
       .spinner {
@@ -91,14 +109,16 @@
       id="dialog"
       opened="{{opened}}"
       class="flex-vertical"
-      entry-animation="scale-up-animation"
+      entry-animation="fade-in-animation"
       exit-animation="fade-out-animation"
       no-cancel-on-outside-click="{{editMode}}"
-      no-cancel-on-esc-key="{{editMode}}">
+      no-cancel-on-esc-key="{{editMode}}"
+      on-iron-overlay-opened="_disableDocumentScrolling"
+      on-iron-overlay-closed="_restoreDocumentScrolling">
 
       <app-toolbar class="flex-horizontal flex-equal-justified">
         <slot name="close"></slot>
-        <div class="flexchild">{{title}}</div>
+        <div class="flexchild-vertical">{{title}}</div>
         <paper-fab
           icon="create"
           title="edit"
@@ -118,9 +138,11 @@
           <slot name="toolbar"></slot>
       </app-toolbar>
 
-      <paper-dialog-scrollable class="flexchild">
-        <slot></slot>
-      </paper-dialog-scrollable>
+      <div class="flexchild-vertical scrollable-container">
+        <paper-dialog-scrollable>
+          <slot></slot>
+        </paper-dialog-scrollable>
+      </div>
 
       <div class="buttons" hidden$="{{loading}}">
         <slot name="actions"></slot>
@@ -231,6 +253,14 @@
       // so we center() every time that may happen
       center() {
         setTimeout(() => { this.$.dialog.center() }, 500)
+      }
+
+      _disableDocumentScrolling(e) {
+        document.body.style.overflow = 'hidden';
+      }
+
+      _restoreDocumentScrolling(e) {
+        document.body.style.overflow = '';
       }
     }
 
