@@ -200,9 +200,11 @@
       }
 
       handleResponse() {
+        let _pg = this.selectedProductGroup
+        let ix = this.productGroups.findIndex((pg) => pg.slug === _pg.slug)
+        this.splice('productGroups', ix, 1)
         this.set('selectedProductGroup', null)
         this.notify('Deleted Product Group.')
-        this.$.productGroupsData.resetCol()
       }
 
       handleErrorResponse(e) {
