@@ -87,7 +87,7 @@
       url="/api/products"
       params="{{params}}"
       loading="{{loading}}"
-      on-response="handleResponse"></slr-ajax>
+      on-response="handleProductResponse"></slr-ajax>
 
     <slr-items-data
       id="productGroupsData"
@@ -283,18 +283,15 @@
         return {
           item: {
             type: Object,
+            notify: true,
             observer: 'itemChanged'
           },
           slug: {
-            type: String,
-            notify: true
+            type: String
           },
           params: {
             type: Object,
             computed: 'computeParams(slug)'
-          },
-          products: {
-            type: Array
           },
           productGroups: {
             type: Array,
@@ -407,13 +404,10 @@
         return [ 'routeDataChanged(routeData.slug, visible)' ]
       }
 
-      routeDataChanged(slug, visible) {
+      routeDataChanged(slug, visible)  {
         if (slug && visible && this.route.prefix === '/products' && this.route.path) {
           this.set('slug', slug)
           this.$.productAjax.generateRequest()
-        } else {
-          this.set('slug', null)
-          this.set('opened', false)
         }
       }
 
@@ -437,9 +431,11 @@
         this.$.indicatorView.addEventListener('slr-indicator-submitted', (e) => this.onIndicatorSubmit(e))
       }
 
-      handleResponse(e) {
-        this.set('item', e.detail.response.data.pop())
+      handleProductResponse(e) {
+        let item = e.detail.response.data.pop()
+        this.set('item', item)
         this.set('opened', true)
+        this.set('routeData.slug', item.slug)
       }
 
       handleProductGroupResponse(e) {
@@ -488,26 +484,31 @@
       }
 
       onResponse(e) {
-        this.set('loading', false)
-        if (e.detail.response && e.detail.response.slug) {
-          this.set('item.slug', e.detail.response.slug)
-        }
-
-        this.dispatchEvent(new CustomEvent('product-submit',
-          { detail: { item: e.detail.response }, bubbles: true, composed: true }))
-
-        let method = this.$.productForm.request.method
         let m = { 'POST': 'Added', 'PUT': 'Updated', 'DELETE': 'Deleted' }
-        this.notify(`${m[method]} Product.`)
+        let method = this.$.productForm.request.method
+        let newItem = e.detail.response
+        let oldItem = this.item
+
+        this.set('loading', false)
+        this.set('editMode', false)
+
+        if (method === 'POST' || method === 'PUT') {
+          let action = method === 'POST' ? 'add' : 'update'
+          this.dispatchEvent(new CustomEvent('product-' + action,
+            { detail: { item: newItem, old_slug: oldItem.slug },
+              bubbles: true, composed: true }))
+          this.set('routeData.slug', newItem.slug)
+        }
 
         if (method === 'DELETE') {
+          this.dispatchEvent(new CustomEvent('product-delete',
+            { detail: { item: oldItem },
+              bubbles: true, composed: true }))
           this.set('opened', false)
           this.set('routeData.slug', null)
-        } else {
-          this.set('editMode', false)
-          this.set('routeData.slug', e.detail.response.slug)
-          this.set('item', e.detail.response)
         }
+
+        this.notify(`${m[method]} Product.`)
         this.initForm()
       }
 
@@ -560,6 +561,10 @@
         this.$.productForm.submit()
       }
 
+      open() {
+        this.set('opened', true)
+      }
+
       openObjectiveView(e) {
         this.set('selectedObjective', e.model.objective)
         this.$.objectiveView.open()
@@ -591,7 +596,6 @@
 
       new() {
         this.set('item', {})
-        this.push('products', this.item)
         this.set('objectives', [])
         this.set('indicators', [])
         this.set('opened', true)
