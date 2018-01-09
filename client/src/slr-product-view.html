@@ -296,7 +296,7 @@
           productGroups: {
             type: Array,
             observer: 'productGroupsChanged',
-            value: []
+            value: () => []
           },
           productGroupUri: {
             type: String
@@ -307,11 +307,11 @@
           },
           objectives: {
             type: Array,
-            value: []
+            value: () => []
           },
           indicators: {
             type: Array,
-            value: []
+            value: () => []
           },
           route: {
             type: Object
@@ -594,10 +594,14 @@
         this.$.productForm.submit()
       }
 
-      new() {
+      reset() {
         this.set('item', {})
         this.set('objectives', [])
         this.set('indicators', [])
+      }
+
+      new() {
+        this.reset()
         this.set('opened', true)
         this.set('editMode', true)
       }
@@ -607,7 +611,7 @@
           this.cancel()
         }
         this.set('opened', false)
-        this.set('routeData.slug', '')
+        this.reset()
       }
 
       notify(message, action, duration, detail) {

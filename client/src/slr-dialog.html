@@ -143,12 +143,14 @@
           item: {
             type: Object,
             notify: true,
+            value: () => {},
             observer: 'itemChanged'
           },
           // save copy to reset form since iron-form
           // and paper-input have issues
           _item: {
-            type: Object
+            type: Object,
+            value: () => {}
           },
           opened: {
             type: Boolean,

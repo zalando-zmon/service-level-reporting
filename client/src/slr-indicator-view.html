@@ -93,13 +93,16 @@
       static get properties() {
         return {
           product: {
-            type: Object
+            type: Object,
+            value: () => {}
           },
           indicators: {
-            type: Array
+            type: Array,
+            value: () => []
           },
           item: {
-            type: Object
+            type: Object,
+            value: () => {}
           },
           opened: {
             type: Boolean,
