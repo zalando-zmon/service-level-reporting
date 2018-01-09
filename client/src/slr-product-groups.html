@@ -142,6 +142,7 @@
         this.addEventListener('product-group-edit', (e) => this.onEdit(e))
         this.addEventListener('product-group-delete', (e) => this.onDelete(e))
         this.addEventListener('product-group-submit', (e) => this.onSubmit(e))
+        this.$.productGroupsData.addEventListener('items-data-error', (e) => this.onProductGroupsDataError(e))
       }
 
       onCancel(e) {
@@ -165,6 +166,12 @@
       onSubmit(e) {
         this.set('selectedProductGroup', null)
         this.$.fab.show()
+      }
+
+      onProductGroupsDataError(e) {
+        let message = e.detail.message
+        let action = () => { this.$.productGroupsData.fetch() }
+        this.notify("Can't load Product Groups", action, message)
       }
 
       onLowerScrollThreshold() {
@@ -207,7 +214,7 @@
             )
           } else {
             this.notify("Can't delete Product Group",
-              () => this.$.ajax.generateRequest(), 5000,
+              () => this.$.ajax.generateRequest(),
               e.detail.request.xhr.response.detail)
           }
         } catch(e) {
@@ -216,10 +223,10 @@
         }
       }
 
-      notify(message, action, duration, detail) {
+      notify(message, action, detail, duration = 5000) {
         this.dispatchEvent(
           new CustomEvent('slr-notify', {
-            detail: { message, action, duration, detail },
+            detail: { message, action, detail, duration },
             bubbles: true,
             composed: true
           })

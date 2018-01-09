@@ -155,6 +155,7 @@
         this.addEventListener('product-delete', (e) => this.onDelete(e))
         this.addEventListener('slr-dialog-opened', (e) => this.onOpen(e))
         this.addEventListener('slr-dialog-closed', (e) => this.onClose(e))
+        this.$.productsData.addEventListener('items-data-error', (e) => this.onProductsDataError(e))
       }
 
       onAdd(e) {
@@ -188,9 +189,25 @@
         this.$.scroll.clearTriggers()
       }
 
+      onProductsDataError(e) {
+        let message = e.detail.message
+        let action = () => { this.$.productsData.fetch() }
+        this.notify("Can't load Products", action, message)
+      }
+
       addProduct() {
         this.$.view.new()
         this.$.fab.visible = false
+      }
+
+      notify(message, action, detail, duration = 5000) {
+        this.dispatchEvent(
+          new CustomEvent('slr-notify', {
+            detail: { message, action, detail, duration },
+            bubbles: true,
+            composed: true
+          })
+        )
       }
     }
 

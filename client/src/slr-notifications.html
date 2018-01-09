@@ -64,7 +64,7 @@
         }
       }
 
-      open({message, action, duration, detail}) {
+      open({message, action, detail, duration}) {
         this.$.more.hidden = true
         this.detail = null
         this.$.toast.close()

@@ -116,23 +116,15 @@
           }
           this.set('totalItems', res._meta.count)
         } catch(e) {
-          console.error('Error loading ' + this.itemType, e)
-          this.notify("Can't Load "+ this.itemType, () => this.fetch())
+          this.dispatchErrorEvent("Can't parse Server response")
         }
       }
 
       handleErrorResponse(e) {
-        try {
-          if (e.detail.request.xhr.response.status === 401) {
-            return this.dispatchEvent(
-              new CustomEvent('slr-authenticate',
-              {bubbles: true, composed: true}))
-          } else {
-            this.notify("Can't load " + this.itemType,
-              () => this.fetch(), 5000, e.detail.request.xhr.response.detail)
-          }
-        } catch(e) {
-          this.notify("Can't load " + this.itemType, () => this.fetch())
+        if (e.detail.request.xhr.response && e.detail.request.xhr.response.detail) {
+          this.dispatchErrorEvent(e.detail.request.xhr.response.detail)
+        } else {
+          this.dispatchErrorEvent()
         }
       }
 
@@ -142,7 +134,7 @@
         }
 
         if (this.fetchAttempts > 3) {
-          return this.notify("Can't load " + this.itemType, () => this.fetch, 0)
+          return this.dispatchErrorEvent("Maximum fetch attempts exceeded")
         }
 
         let ajax = this.$.ajax.generateRequest();
@@ -179,11 +171,10 @@
         return 0
       }
 
-      notify(message, action, duration, detail) {
+      dispatchErrorEvent(message) {
         this.dispatchEvent(
-          new CustomEvent('slr-notify', {
-            detail: { message, action, duration, detail },
-            bubbles: true,
+          new CustomEvent('items-data-error', {
+            detail: { message },
             composed: true
           })
         )
