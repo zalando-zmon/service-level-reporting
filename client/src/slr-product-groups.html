@@ -208,21 +208,8 @@
       }
 
       handleErrorResponse(e) {
-        try {
-          if (e.detail.request.xhr.response.status === 401) {
-            return this.dispatchEvent(
-              new CustomEvent('slr-authenticate',
-              {bubbles: true, composed: true})
-            )
-          } else {
-            this.notify("Can't delete Product Group",
-              () => this.$.ajax.generateRequest(),
-              e.detail.request.xhr.response.detail)
-          }
-        } catch(e) {
-          this.notify("Can't delete Product Group",
-            () => this.$.ajax.generateRequest())
-        }
+        let action = () => this.$.ajax.generateRequest()
+        this.notify("Can't delete Product Group", action)
       }
 
       notify(message, action, detail, duration = 5000) {

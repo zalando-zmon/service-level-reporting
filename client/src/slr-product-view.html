@@ -459,8 +459,7 @@
 
       handleProductGroupErrorResponse(e) {
         let action = () => { this.$.productGroupAjax.generateRequest() }
-        let message = e.detail.request.xhr.response.detail
-        this.notify("Can't load Product Group", action, message)
+        this.notify("Can't load Product Group", action)
       }
 
       onClose(e) {
