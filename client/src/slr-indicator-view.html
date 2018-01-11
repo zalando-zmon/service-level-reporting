@@ -1,6 +1,7 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../bower_components/iron-form/iron-form.html">
 <link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/paper-input/paper-input-container.html">
 <link rel="import" href="../bower_components/paper-input/paper-textarea.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 
@@ -15,11 +16,46 @@
         text-align: left;
       }
 
-      paper-dialog {
-        max-width: var(--app-content-max-width);
-        min-width: 500px;
-        max-height: 80%;
+      paper-listbox {
+        padding: 0;
       }
+
+      iron-form {
+        height: 100%;
+      }
+
+      form {
+        height: 100%;
+        overflow: hidden;
+        @apply --layout-vertical;
+      }
+
+      .container {
+        @apply --layout-vertical;
+        flex: 1;
+        margin-bottom: 0;
+      }
+
+      .textarea {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+      }
+
+      .textarea:disabled {
+        color: gray;
+      }
+
+      paper-input-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      }
+
     </style>
 
     <paper-dialog
@@ -58,32 +94,44 @@
           autofocus>Save</paper-button>
       </div>
 
-      <iron-form id="form" headers="[[headers]]">
-        <form class="form" method="[[method]]" action="[[action]]">
-          <paper-input  type="text"
-                        id="name"
-                        name="name"
-                        label="Name" always-float-label
-                        autofocus="true"
-                        disabled="[[!editMode]]"
-                        value="{{item.name}}"
-                        required></paper-input>
-          <paper-input  type="text"
-                        id="unit"
-                        name="unit"
-                        label="Unit" always-float-label
-                        disabled="[[!editMode]]"
-                        value="{{item.unit}}"
-                        required></paper-input>
-          <paper-textarea type="text"
-                          id="source"
-                          label="Source" always-float-label
-                          value="{{source}}"
+      <div class="container">
+        <iron-form id="form" headers="[[headers]]">
+          <form class="form" method="[[method]]" action="[[action]]">
+            <paper-input  type="text"
+                          id="name"
+                          name="name"
+                          label="Name" always-float-label
+                          autofocus="true"
                           disabled="[[!editMode]]"
-                          invalid="[[!isValidJson]]"
+                          value="{{item.name}}"
                           required></paper-input>
-        </form>
-      </iron-form>
+            <paper-input  type="text"
+                          id="unit"
+                          name="unit"
+                          label="Unit" always-float-label
+                          disabled="[[!editMode]]"
+                          value="{{item.unit}}"
+                          required></paper-input>
+            <paper-input-container id="inputContainer"
+                                   disabled$="[[!editMode]]"
+                                   invalid="[[!isValidJson]]"
+                                   always-float-label
+                                   required>
+              <label slot="label">Source</label>
+              <iron-autogrow-textarea slot="input"
+                                      id="source"
+                                      value="{{source}}"
+                                      class="textarea paper-input-input"></iron-autogrow-textarea>
+            </paper-input-container>
+            <input type="text"
+                   value="[[source]]"
+                   name="source"
+                   disabled$="[[!editMode]]"
+                   invalid="[[!isValidJson]]"
+                   required></input>
+          </form>
+        </iron-form>
+      </div>
     </slr-dialog>
   </template>
   <script>
@@ -183,6 +231,7 @@
         this.$.form.addEventListener('iron-form-presubmit', (e) => this.onPresubmit(e))
         this.$.form.addEventListener('iron-form-error', (e) => this.onError(e))
         this.$.form.addEventListener('iron-form-response', (e) => this.onResponse(e))
+        this.setTextareaHeight()
       }
 
       onClosed(e) {
@@ -277,7 +326,7 @@
           try {
             json = JSON.parse(this.$.source.value)
           } catch(e) {
-            console.error('Error parsing "source" as JSON')
+            this.set('isValidJson', false)
           }
         }
         return json
@@ -304,9 +353,6 @@
         // reset() yet... (as of 07.2017)
         this.$.name.$.input.invalid = false
         this.$.unit.$.input.invalid = false
-        this.$.source.invalid = false
-        this.$.source.shadowRoot
-          .querySelector('iron-autogrow-textarea').invalid = false
       }
 
       cancel() {
@@ -325,6 +371,16 @@
       deleteConfirm() {
         this.set('method', 'DELETE')
         this.$.form.submit()
+      }
+
+      // FIXME
+      // set textarea to full height, since no mixin is provided
+      setTextareaHeight() {
+        let inputContainer = this.$.inputContainer
+        if (inputContainer && inputContainer.shadowRoot) {
+          let inputWrapper = inputContainer.shadowRoot.querySelector('.input-wrapper')
+          inputWrapper.style.height = '100%'
+        }
       }
 
       notify(message, action, detail, duration = 5000) {

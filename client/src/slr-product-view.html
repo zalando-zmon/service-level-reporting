@@ -49,21 +49,44 @@
         display: block;
       }
 
+      paper-listbox {
+        padding: 0;
+      }
+
+      iron-form {
+        @apply --layout-vertical;
+        height: 100%;
+      }
+
+      form {
+        @apply --layout-vertical;
+        flex: 1;
+      }
+
+      paper-dialog-scrollable {
+        margin-top: 10px;
+        flex: 1;
+      }
+
       .container {
-        display: flex;
-        flex-wrap: wrap;
+        @apply --layout-vertical;
+        flex: 1;
       }
 
-      .column {
-        width: 50%;
-      }
-
-      .inputs {
-        width: 100%;
+      .lists {
+        @apply --layout-horizontal;
+        flex: 1;
       }
 
       .container[small-layout] {
         flex-flow: column;
+      }
+
+      .column {
+         height: 100%;
+         flex: 1;
+         display: flex;
+         flex-direction: column;
       }
 
       .column[small-layout] {
@@ -167,18 +190,21 @@
       edit-mode="{{editMode}}"
       loading="{{loading}}"
       trigger-events>
+
       <div slot="close">
         <paper-icon-button
           icon="close"
           title="close"
           on-click="close"></paper-icon-button>
       </div>
+
       <div slot="toolbar" hidden="{{!editMode}}">
         <paper-icon-button
           icon="delete"
           hidden$="{{!item.uri}}"
           on-click="delete"></paper-icon-button>
       </div>
+
       <div slot="actions" hidden$="{{!editMode}}">
         <paper-button
           on-click="cancel">Cancel</paper-button>
@@ -187,9 +213,11 @@
           autofocus>Save</paper-button>
       </div>
 
-      <iron-form id="form" headers="[[headers]]">
-        <form class="form" method="[[method]]" action="[[action]]">
-          <div class="container" small-layout$="[[small]]">
+
+      <div class="container flex-vertical" small-layout$="[[small]]">
+        <iron-form id="form" headers="[[headers]]">
+          <form method="[[method]]" action="[[action]]">
+
             <div class="inputs">
               <paper-input
                 id="name"
@@ -230,54 +258,67 @@
                   <iron-icon slot="prefix" icon="mail"></iron-icon>
               </paper-input>
             </div>
-            <div class="column" hidden$="[[!item.uri]]" small-layout$="[[small]]">
-              <iron-label>Objectives</iron-label>
-              <paper-icon-button
-                icon="add"
-                hidden$="[[!editMode]]"
-                on-click="addObjective"></paper-icon-button>
-              <paper-listbox
-                id="objectivesList"
-                disabled$="[[!objectives.length]]"
-                slot="dropdown-content">
-                <template
-                  is="dom-repeat"
-                  items="{{objectives}}"
-                  as="objective">
-                  <a href="/products/[[item.slug]]/slo/[[objective.id]]" on-click="openObjectiveView">
-                    <paper-item>{{objective.title}}</paper-item>
-                  </a>
-                </template>
-                <paper-item disabled class="no-items" hidden="[[objectives.length]]">No objectives...</paper-item>
-              </paper-listbox>
+
+            <div class="lists">
+              <div class="column" hidden$="[[!item.uri]]" small-layout$="[[small]]">
+                <div>
+                  <iron-label>Objectives</iron-label>
+                  <paper-icon-button
+                    icon="add"
+                    hidden$="[[!editMode]]"
+                    on-click="addObjective"></paper-icon-button>
+                </div>
+                <paper-dialog-scrollable>
+                  <paper-listbox
+                    id="objectivesList"
+                    disabled$="[[!objectives.length]]">
+                    <template
+                      is="dom-repeat"
+                      items="{{objectives}}"
+                      as="objective">
+                      <a href="/products/[[item.slug]]/slo/[[objective.id]]" on-click="openObjectiveView">
+                        <paper-item>{{objective.title}}</paper-item>
+                      </a>
+                    </template>
+                    <paper-item disabled class="no-items" hidden="[[objectives.length]]">No objectives...</paper-item>
+                  </paper-listbox>
+                </paper-dialog-scrollable>
+              </div>
+
+              <div class="column" hidden$="[[!item.uri]]" small-layout$="[[small]]">
+                <div>
+                  <iron-label>Indicators</iron-label>
+                  <paper-icon-button
+                    icon="add"
+                    hidden$="[[!editMode]]"
+                    on-click="addIndicator"></paper-icon-button>
+                </div>
+
+                <paper-dialog-scrollable>
+                  <paper-listbox
+                    id="indicatorsList"
+                    disabled$="[[!indicators.length]]">
+                    <template
+                      is="dom-repeat"
+                      items="{{indicators}}"
+                      as="indicator">
+                      <a href="/products/[[item.slug]]/sli/[[indicator.name]]" on-click="openIndicatorView">
+                        <paper-item>{{indicator.name}}</paper-item>
+                      </a>
+                    </template>
+                    <paper-item disabled class="no-items" hidden="[[indicators.length]]">No indicators...</paper-item>
+                  </paper-listbox>
+                </paper-dialog-scrollable>
+              </div>
             </div>
-            <div class="column" hidden$="[[!item.uri]]" small-layout$="[[small]]">
-              <iron-label>Indicators</iron-label>
-              <paper-icon-button
-                icon="add"
-                hidden$="[[!editMode]]"
-                on-click="addIndicator"></paper-icon-button>
-              <paper-listbox
-                id="indicatorsList"
-                disabled$="[[!indicators.length]]"
-                slot="dropdown-content">
-                <template
-                  is="dom-repeat"
-                  items="{{indicators}}"
-                  as="indicator">
-                  <a href="/products/[[item.slug]]/sli/[[indicator.name]]" on-click="openIndicatorView">
-                    <paper-item>{{indicator.name}}</paper-item>
-                  </a>
-                </template>
-                <paper-item disabled class="no-items" hidden="[[indicators.length]]">No indicators...</paper-item>
-              </paper-listbox>
-            </div>
-          </div>
-        </form>
-      </iron-form>
+
+          </form>
+        </iron-form>
+      </div>
     </slr-dialog>
 
   </template>
+
   <script>
     class SlrProductView extends Polymer.Element {
       static get is() { return 'slr-product-view' }
@@ -529,11 +570,11 @@
       }
 
       onObjectiveSubmit(e) {
-        this.$.objectivesData.fetch()
+        this.$.objectivesData.resetCol()
       }
 
       onIndicatorSubmit(e) {
-        this.$.indicatorsData.fetch()
+        this.$.indicatorsData.resetCol()
       }
 
       onProductGroupsDataError(e) {

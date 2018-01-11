@@ -16,6 +16,26 @@
         @apply --slr-content;
         text-align: left;
       }
+
+      paper-listbox {
+        padding: 0;
+      }
+
+      paper-dialog-scrollable {
+        margin-top: 10px;
+        flex: 1;
+      }
+
+      .container {
+        @apply --layout-vertical;
+        flex: 1;
+      }
+
+      .targets {
+        @apply --layout-vertical;
+        flex: 1;
+      }
+
     </style>
 
     <slr-ajax
@@ -64,55 +84,61 @@
           autofocus>Save</paper-button>
       </div>
 
-      <iron-form id="form" headers="[[headers]]">
-        <form class="form" method="[[method]]" action="[[action]]">
-          <paper-input
-            type="text"
-            id="title"
-            name="title"
-            label="Title" always-float-label
-            autofocus="true"
-            disabled="[[!editMode]]"
-            value="{{item.title}}"
-            required></paper-input>
-          <paper-input
-            type="text"
-            id="description"
-            name="description"
-            label="Description" always-float-label
-            disabled="[[!editMode]]"
-            value="{{item.description}}"
-            required></paper-input>
-        </form>
-      </iron-form>
-      <div hidden$="[[!item.uri]]">
-        <iron-label>Targets</iron-label>
-        <paper-icon-button
-          icon="add"
-          title="Add Target"
-          hidden$="[[!editMode]]"
-          on-click="addTarget"></paper-icon-button>
-        <ul>
-          <template
-            is="dom-repeat"
-            items="[[item.targets]]"
-            as="target">
-            <li>
-              <slr-target
-                uri="{{target}}"
-                objective="[[item]]"
-                targets="{{item.targets}}"
-                indicators="[[indicators]]"
-                edit-enabled="[[editMode]]"
-                allow-edit-mode="[[editMode]]"></slr-target>
-            </li>
-          </template>
-          <li hidden="[[item.targets.length]]">
-            <p class="no-items">No targets...</p>
-          </li>
-        </ul>
+      <div class="container">
+        <iron-form id="form" headers="[[headers]]">
+          <form class="form" method="[[method]]" action="[[action]]">
+            <paper-input
+              type="text"
+              id="title"
+              name="title"
+              label="Title" always-float-label
+              autofocus="true"
+              disabled="[[!editMode]]"
+              value="{{item.title}}"
+              required></paper-input>
+            <paper-input
+              type="text"
+              id="description"
+              name="description"
+              label="Description" always-float-label
+              disabled="[[!editMode]]"
+              value="{{item.description}}"
+              required></paper-input>
+          </form>
+        </iron-form>
+          <div class="targets" hidden$="[[!item.uri]]">
+            <div>
+              <iron-label>Targets</iron-label>
+              <paper-icon-button
+                icon="add"
+                title="Add Target"
+                hidden$="[[!editMode]]"
+                on-click="addTarget">
+              </paper-icon-button>
+            </div>
+            <paper-dialog-scrollable>
+              <ul>
+                <template
+                  is="dom-repeat"
+                  items="[[item.targets]]"
+                  as="target">
+                  <li>
+                    <slr-target
+                      uri="{{target}}"
+                      objective="[[item]]"
+                      targets="{{item.targets}}"
+                      indicators="[[indicators]]"
+                      edit-enabled="[[editMode]]"
+                      allow-edit-mode="[[editMode]]"></slr-target>
+                  </li>
+                </template>
+                <li hidden="[[item.targets.length]]">
+                  <p class="no-items">No targets...</p>
+                </li>
+              </ul>
+            </paper-dialog-scrollable>
+          </div>
       </div>
-
     </slr-dialog>
   </template>
   <script>
