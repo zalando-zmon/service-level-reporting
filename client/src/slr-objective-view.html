@@ -120,19 +120,19 @@
               <ul>
                 <template
                   is="dom-repeat"
-                  items="[[item.targets]]"
+                  items="[[targets]]"
                   as="target">
                   <li>
                     <slr-target
+                      id="target[[index]]"
                       uri="{{target}}"
                       objective="[[item]]"
-                      targets="{{item.targets}}"
                       indicators="[[indicators]]"
-                      edit-enabled="[[editMode]]"
-                      allow-edit-mode="[[editMode]]"></slr-target>
+                      allow-edit-mode="[[editMode]]"
+                      edit-enabled="[[editMode]]"></slr-target>
                   </li>
                 </template>
-                <li hidden="[[item.targets.length]]">
+                <li hidden="[[targets.length]]">
                   <p class="no-items">No targets...</p>
                 </li>
               </ul>
@@ -163,6 +163,11 @@
             type: Object,
             value: () => {}
           },
+          targets: {
+            type: Array,
+            computed: 'computeTargets(item.targets)',
+            value: () => []
+          },
           opened: {
             type: Boolean,
             notify: true
@@ -177,7 +182,7 @@
           },
           action: {
             type: String,
-            computed: 'computedAction(item.uri, product.uri)'
+            computed: 'computeAction(item.uri, product.uri)'
           },
           headers: {
             type: Object,
@@ -206,8 +211,13 @@
         }
       }
 
-      computedAction(itemUri, productUri) {
+      computeAction(itemUri, productUri) {
         return itemUri ? itemUri : productUri + '/slo'
+      }
+
+      computeTargets(targets) {
+        console.log('new targets', targets)
+        return targets
       }
 
       ready() {
@@ -216,6 +226,7 @@
         this.$.form.addEventListener('iron-form-presubmit', (e) => this.onPresubmit(e))
         this.$.form.addEventListener('iron-form-error', (e) => this.onError(e))
         this.$.form.addEventListener('iron-form-response', (e) => this.onResponse(e))
+        this.addEventListener('target-removed', (e) => this.onTargetRemoved(e))
       }
 
       onClosed(e) {
@@ -292,7 +303,15 @@
         }
       }
 
-      submit() {
+      onTargetRemoved(e) {
+        let uri = e.detail.uri
+        let ix = this.targets.findIndex((t) => t === uri)
+        if (ix > -1) {
+          this.splice('targets', ix, 1)
+        }
+      }
+
+      submit(e) {
         if (!this.$.form.validate()) {
           return
         }
@@ -305,7 +324,7 @@
       }
 
       addTarget() {
-        this.push('item.targets', '')
+        this.push('targets', '')
       }
 
       open() {

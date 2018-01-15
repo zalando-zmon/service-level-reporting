@@ -150,10 +150,6 @@
             type: Array,
             value: () => []
           },
-          targets: {
-            type: Array,
-            value: () => []
-          },
           editMode: {
             type: Boolean,
             value: false
@@ -284,10 +280,10 @@
       }
 
       removeItem() {
-        let ix = this.targets.findIndex((t) => t === this.uri)
-        if (ix > -1) {
-          this.splice('targets', ix, 1)
-        }
+        this.dispatchEvent(
+          new CustomEvent('target-removed', {
+            detail: { uri: this.item.uri }, bubbles:true, composed: true })
+        )
       }
 
       computedAction(itemUri, objectiveUri) {
