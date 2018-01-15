@@ -121,14 +121,16 @@
               <iron-autogrow-textarea slot="input"
                                       id="source"
                                       value="{{source}}"
+                                      required
                                       class="textarea paper-input-input"></iron-autogrow-textarea>
             </paper-input-container>
-            <input type="text"
-                   value="[[source]]"
-                   name="source"
-                   disabled$="[[!editMode]]"
-                   invalid="[[!isValidJson]]"
-                   required></input>
+            <paper-input  type="text"
+                          id="_source"
+                          value="[[source]]"
+                          name="source"
+                          invalid="[[!isValidJson]]"
+                          hidden
+                          required></paper-input>
           </form>
         </iron-form>
       </div>
