@@ -19,10 +19,6 @@
         margin-bottom: 15px;
       }
 
-      paper-card {
-        width: 100%;
-      }
-
       .container {
         display: flex;
         flex-flow: row;
@@ -79,8 +75,9 @@
                       is="dom-repeat"
                       items="{{indicators}}"
                       as="indicator">
-                      <paper-item uri$="{{indicator.uri}}">[[indicator.name]]</paper-item>
+                      <paper-item uri$="[[indicator.uri]]">[[indicator.name]]</paper-item>
                     </template>
+                    <p hidden="[[indicators.length]]">No indicators found. Please add an indicator first.</p>
                   </paper-listbox>
                 </paper-dropdown-menu>
                 <input
@@ -143,18 +140,19 @@
           },
           item: {
             type: Object,
-            value: {}
+            value: () => {}
           },
           objective: {
-            type: Object
+            type: Object,
+            value: () => {}
           },
           indicators: {
             type: Array,
-            value: []
+            value: () => []
           },
           targets: {
             type: Array,
-            value: []
+            value: () => []
           },
           editMode: {
             type: Boolean,
@@ -307,18 +305,13 @@
 
       handleErrorResponse(e) {
         try {
-          if (e.detail.request.xhr.response.status === 401) {
-            return this.dispatchEvent(
-              new CustomEvent('slr-authenticate',
-              {bubbles: true, composed: true}))
-          } else {
-            this.notify("Error loading Target",
-              () => this.$.ajax.generateRequest(), 5000,
-              e.detail.request.xhr.response.detail)
-          }
+          this.notify("Error loading Target",
+            () => this.$.ajax.generateRequest(),
+            e.detail.request.xhr.response.detail)
         } catch(e) {
           this.notify("Error loading Target.",
-          () => this.$.ajax.generateRequest())
+            () => this.$.ajax.generateRequest(),
+            "Can't parse Server response")
         }
       }
 
@@ -350,10 +343,10 @@
         }
       }
 
-      notify(message, action, duration, detail) {
+      notify(message, action, detail, duration = 5000) {
         this.dispatchEvent(
           new CustomEvent('slr-notify', {
-            detail: { message, action, duration, detail },
+            detail: { message, action, detail, duration },
             bubbles: true,
             composed: true
           })

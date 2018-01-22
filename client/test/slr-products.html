@@ -70,7 +70,6 @@
           flush(function() {
             var view = Polymer.dom(element.root).querySelectorAll('#view')
             element.addProduct()
-            assert.equal(element.products.length, 4)
             assert.equal(element.viewIsOpen, true)
             done()
           })

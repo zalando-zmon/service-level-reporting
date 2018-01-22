@@ -55,7 +55,7 @@
 
     <slr-product-view
       id="view"
-      products="{{products}}"
+      item="{{selectedProduct}}"
       product-groups="{{productGroups}}"
       opened="{{viewIsOpen}}"
       loading="{{loading}}"
@@ -68,12 +68,12 @@
       lower-threshold="500"
       on-lower-threshold="onLowerScrollThreshold">
       <div class="flex-grid-thirds" small-layout$="{{small}}" id="list">
-        <template is="dom-repeat" items="[[products]]">
+        <template is="dom-repeat" items="{{products}}">
           <div class="col product" small-layout$="{{small}}">
             <a href="/products/[[item.slug]]">
               <slr-product-card
                 hidden$="[[!item.name]]"
-                item="[[item]]"></slr-product-card>
+                item="{{item}}"></slr-product-card>
             </a>
           </div>
         </template>
@@ -95,10 +95,16 @@
         return {
           products: {
             type: Array,
-            value: []
+            notify: true,
+            value: () => []
           },
           productGroups: {
-            type: Array
+            type: Array,
+            value: () => []
+          },
+          selectedProduct: {
+            type: Object,
+            value: () => {}
           },
           route: {
             type: Object
@@ -120,7 +126,7 @@
           },
           params: {
             type: Object,
-            value: {}
+            value: () => {}
           }
         }
       }
@@ -138,26 +144,36 @@
           // update collections when user opens products view
           this.$.productsData.resetCol()
           this.dispatchEvent(new CustomEvent('product-groups-fetch'))
+          return
         }
       }
 
       ready() {
         super.ready()
-        this.addEventListener('product-submit', (e) => this.onSubmit(e))
-        this.addEventListener('product-cancel', (e) => this.onCancel(e))
+        this.addEventListener('product-add', (e) => this.onAdd(e))
+        this.addEventListener('product-update', (e) => this.onUpdate(e))
+        this.addEventListener('product-delete', (e) => this.onDelete(e))
         this.addEventListener('slr-dialog-opened', (e) => this.onOpen(e))
         this.addEventListener('slr-dialog-closed', (e) => this.onClose(e))
+        this.$.productsData.addEventListener('items-data-error', (e) => this.onProductsDataError(e))
       }
 
-      onSubmit(e) {
-        this.$.productsData.resetCol()
-        this.$.productsData.incPage()
+      onAdd(e) {
+        let item = e.detail.item
+        this.push('products', item)
       }
 
-      onCancel(e) {
-        if (!e.detail.item.name) {
-          this.pop('products')
-        }
+      onUpdate(e) {
+        let oldSlug = e.detail.old_slug
+        let item = e.detail.item
+        let ix = this.products.findIndex((p) => p.slug === oldSlug)
+        this.splice('products', ix, 1, item)
+      }
+
+      onDelete(e) {
+        let deletedItem = e.detail.item
+        let ix = this.products.findIndex((p) => p.slug === deletedItem.slug)
+        this.splice('products', ix, 1)
       }
 
       onOpen(e) {
@@ -173,13 +189,25 @@
         this.$.scroll.clearTriggers()
       }
 
+      onProductsDataError(e) {
+        let message = e.detail.message
+        let action = () => { this.$.productsData.fetch() }
+        this.notify("Can't load Products", action, message)
+      }
+
       addProduct() {
         this.$.view.new()
         this.$.fab.visible = false
       }
 
-      computeFilter(str) {
-        return SlrUtils.filterCollection(str)
+      notify(message, action, detail, duration = 5000) {
+        this.dispatchEvent(
+          new CustomEvent('slr-notify', {
+            detail: { message, action, detail, duration },
+            bubbles: true,
+            composed: true
+          })
+        )
       }
     }
 

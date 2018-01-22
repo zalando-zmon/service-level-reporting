@@ -177,7 +177,7 @@
            this.dispatchEvent(new CustomEvent('slr-authenticate', {bubbles: true, composed: true}))
          } else {
            this.notify(`Can't ${m[method]} Product Group.`,
-             () => this.$.form.submit(), 5000,
+             () => this.$.form.submit(),
              e.detail.request.xhr.response.detail)
          }
        } catch(e) {
@@ -279,10 +279,10 @@
         this.set('item', Object.assign({}, this._item))
       }
 
-      notify(message, action, duration, detail) {
+      notify(message, action, detail, duration = 5000) {
         this.dispatchEvent(
           new CustomEvent('slr-notify', {
-            detail: { message, action, duration, detail },
+            detail: { message, action, detail, duration },
             bubbles: true,
             composed: true
           })

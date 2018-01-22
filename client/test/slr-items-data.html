@@ -54,8 +54,8 @@
         });
 
         test('notified of server failure', function(done) {
-          element.addEventListener('slr-notify', function(event) {
-            assert.equal(event.detail.message, "Can't load Item")
+          element.addEventListener('items-data-error', function(event) {
+            assert.equal(event.detail.message, undefined)
             done()
           })
           element.url = '/error'

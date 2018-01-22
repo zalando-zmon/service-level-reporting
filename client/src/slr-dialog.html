@@ -29,6 +29,15 @@
       paper-dialog {
         max-width: var(--app-content-max-width);
         min-width: 500px;
+        position: fixed;
+        top: 12vh;
+        bottom: 20vh;
+        left: 15vw;
+        right: 15vw;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
       }
 
       paper-dialog[small-layout] {
@@ -55,7 +64,6 @@
 
       .flex-vertical {
         @apply --layout-vertical;
-        @apply --layout-wrap;
       }
 
       .flex-equal-justified {
@@ -63,13 +71,15 @@
         @apply --layout-justified;
       }
 
-      .flexchild {
+      .flexchild-vertical {
         @apply --layout-flex;
+        overflow: hidden;
       }
 
       paper-fab {
         margin-top: 60px;
         margin-right: 5%;
+        z-index: 1;
       }
 
       .spinner {
@@ -91,14 +101,16 @@
       id="dialog"
       opened="{{opened}}"
       class="flex-vertical"
-      entry-animation="scale-up-animation"
+      entry-animation="fade-in-animation"
       exit-animation="fade-out-animation"
       no-cancel-on-outside-click="{{editMode}}"
-      no-cancel-on-esc-key="{{editMode}}">
+      no-cancel-on-esc-key="{{editMode}}"
+      on-iron-overlay-opened="_disableDocumentScrolling"
+      on-iron-overlay-closed="_restoreDocumentScrolling">
 
       <app-toolbar class="flex-horizontal flex-equal-justified">
         <slot name="close"></slot>
-        <div class="flexchild">{{title}}</div>
+        <div class="flexchild-vertical">{{title}}</div>
         <paper-fab
           icon="create"
           title="edit"
@@ -118,9 +130,7 @@
           <slot name="toolbar"></slot>
       </app-toolbar>
 
-      <paper-dialog-scrollable class="flexchild">
-        <slot></slot>
-      </paper-dialog-scrollable>
+      <slot></slot>
 
       <div class="buttons" hidden$="{{loading}}">
         <slot name="actions"></slot>
@@ -143,12 +153,14 @@
           item: {
             type: Object,
             notify: true,
+            value: () => {},
             observer: 'itemChanged'
           },
           // save copy to reset form since iron-form
           // and paper-input have issues
           _item: {
-            type: Object
+            type: Object,
+            value: () => {}
           },
           opened: {
             type: Boolean,
@@ -229,6 +241,14 @@
       // so we center() every time that may happen
       center() {
         setTimeout(() => { this.$.dialog.center() }, 500)
+      }
+
+      _disableDocumentScrolling(e) {
+        document.body.style.overflow = 'hidden';
+      }
+
+      _restoreDocumentScrolling(e) {
+        document.body.style.overflow = '';
       }
     }
 
