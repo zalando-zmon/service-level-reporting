@@ -120,19 +120,19 @@
               <ul>
                 <template
                   is="dom-repeat"
-                  items="[[targets]]"
+                  items="[[item.targets]]"
                   as="target">
                   <li>
                     <slr-target
-                      id="target[[index]]"
+                      class="target"
                       uri="{{target}}"
                       objective="[[item]]"
                       indicators="[[indicators]]"
-                      allow-edit-mode="[[editMode]]"
-                      edit-enabled="[[editMode]]"></slr-target>
+                      edit-mode="[[editMode]]"
+                      loading="{{loading}}"></slr-target>
                   </li>
                 </template>
-                <li hidden="[[targets.length]]">
+                <li hidden="[[item.targets.length]]">
                   <p class="no-items">No targets...</p>
                 </li>
               </ul>
@@ -162,11 +162,6 @@
           item: {
             type: Object,
             value: () => {}
-          },
-          targets: {
-            type: Array,
-            computed: 'computeTargets(item.targets)',
-            value: () => []
           },
           opened: {
             type: Boolean,
@@ -215,18 +210,12 @@
         return itemUri ? itemUri : productUri + '/slo'
       }
 
-      computeTargets(targets) {
-        console.log('new targets', targets)
-        return targets
-      }
-
       ready() {
         super.ready()
         this.$.objectiveModal.addEventListener('slr-dialog-closed', (e) => this.onClosed(e))
         this.$.form.addEventListener('iron-form-presubmit', (e) => this.onPresubmit(e))
         this.$.form.addEventListener('iron-form-error', (e) => this.onError(e))
         this.$.form.addEventListener('iron-form-response', (e) => this.onResponse(e))
-        this.addEventListener('target-removed', (e) => this.onTargetRemoved(e))
       }
 
       onClosed(e) {
@@ -303,19 +292,27 @@
         }
       }
 
-      onTargetRemoved(e) {
-        let uri = e.detail.uri
-        let ix = this.targets.findIndex((t) => t === uri)
-        if (ix > -1) {
-          this.splice('targets', ix, 1)
-        }
+      validateAllTargets() {
+        let valid = true
+        this.shadowRoot.querySelectorAll('.target:not([hidden])')
+          .forEach( (t) => valid = t.validate() && valid )
+        return valid
+      }
+
+      submitAllTargets(cb) {
+        let requests = []
+        this.shadowRoot.querySelectorAll('.target:not([ignore])')
+          .forEach( (t) => requests.push(t.submit()) )
+        return requests
       }
 
       submit(e) {
-        if (!this.$.form.validate()) {
+        if (!this.$.form.validate() || !this.validateAllTargets()) {
           return
         }
-        this.$.form.submit()
+        Promise
+          .all(this.submitAllTargets())
+          .then(() => this.$.form.submit())
       }
 
       new() {
@@ -324,7 +321,7 @@
       }
 
       addTarget() {
-        this.push('targets', '')
+        this.push('item.targets', '')
       }
 
       open() {
@@ -339,9 +336,17 @@
         if (!this.item.uri) {
           this.set('opened', false)
         }
+
         this.set('editMode', false)
         this.$.objectiveModal.reset()
         this.initForm()
+
+        let slrTargets = (this.shadowRoot.querySelectorAll('slr-target'))
+        slrTargets.forEach((t) => {
+          t.reset()
+        })
+
+        this.$.ajax.generateRequest()
       }
 
       initForm() {
