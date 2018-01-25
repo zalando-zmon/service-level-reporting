@@ -1,11 +1,9 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../bower_components/paper-card/paper-card.html">
-<link rel="import" href="../bower_components/paper-button/paper-button.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="../bower_components/iron-form/iron-form.html">
 <link rel="import" href="../bower_components/paper-listbox/paper-listbox.html">
 <link rel="import" href="../bower_components/paper-item/paper-item.html">
-<link rel="import" href="../bower_components/paper-item/paper-item-body.html">
 <link rel="import" href="../bower_components/paper-dropdown-menu/paper-dropdown-menu.html">
 <link rel="import" href="../bower_components/paper-input/paper-input.html">
 
@@ -47,17 +45,19 @@
 
     <slr-ajax
       id="ajax"
-      url="{{uri}}"
+      url="[[action]]"
+      method="[[method]]"
       handle-as="json"
       on-response="handleResponse"
       on-error="handleErrorResponse"
+      content-type="application/json"
       debounce-duration="300"
       loading="{{loading}}"></slr-ajax>
 
     <paper-card>
       <div class="card-content">
-        <iron-form id="targetForm" headers="[[headers]]">
-          <form class="form" method="[[method]]" action="[[action]]">
+        <iron-form id="targetForm">
+          <form class="form">
             <div class="container">
               <div class="inputs">
                 <paper-dropdown-menu
@@ -65,7 +65,9 @@
                   class="indicator"
                   always-float-label
                   disabled="{{!editMode}}"
-                  required noink no-animations>
+                  required
+                  noink
+                  no-animations>
                   <paper-listbox
                     id="selectList"
                     slot="dropdown-content"
@@ -75,7 +77,8 @@
                       is="dom-repeat"
                       items="{{indicators}}"
                       as="indicator">
-                      <paper-item uri$="[[indicator.uri]]">[[indicator.name]]</paper-item>
+                      <paper-item
+                        uri$="[[indicator.uri]]">[[indicator.name]]</paper-item>
                     </template>
                     <p hidden="[[indicators.length]]">No indicators found. Please add an indicator first.</p>
                   </paper-listbox>
@@ -85,26 +88,22 @@
                   name="sli_uri"
                   hidden
                   value="[[item.sli_uri]]"></input>
-                <paper-input  type="number"
-                              step="any"
-                              class="from"
-                              name="from"
-                              label="From" always-float-label
-                              disabled="[[!editMode]]"
-                              value="{{item.from}}"></paper-input>
-                <paper-input  type="number"
-                              step="any"
-                              class="to"
-                              name="to"
-                              label="To" always-float-label
-                              disabled="[[!editMode]]"
-                              value="{{item.to}}"></paper-input>
+                <paper-input
+                  type="number"
+                  step="any"
+                  class="from"
+                  label="From" always-float-label
+                  disabled="[[!editMode]]"
+                  value="{{item.from}}"></paper-input>
+                <paper-input
+                  type="number"
+                  step="any"
+                  class="to"
+                  label="To" always-float-label
+                  disabled="[[!editMode]]"
+                  value="{{item.to}}"></paper-input>
               </div>
-              <div class="actions" hidden$="[[!editEnabled]]">
-                <paper-icon-button
-                  icon="create"
-                  hidden$="[[editMode]]"
-                  on-click="edit"></paper-icon-button>
+              <div class="actions" hidden$="[[!editMode]]">
                 <paper-icon-button
                   icon="delete"
                   hidden$="[[!editMode]]"
@@ -115,14 +114,6 @@
         </iron-form>
       </div>
 
-      <div class="card-actions" hidden$="[[!editMode]]">
-        <div class="horizontal justified">
-          <paper-button
-            on-click="cancel">Cancel</paper-button>
-          <paper-button
-            on-click="submit"
-            autofocus>Save</paper-button>
-      </div>
     </paper-card>
 
   </template>
@@ -135,12 +126,23 @@
         return {
           uri: {
             type: String,
-            observer: 'uriChanged',
-            notify: true
+            observer: 'uriChanged'
           },
           item: {
             type: Object,
             value: () => {}
+          },
+          _item: {
+            type: Object,
+            value: () => {}
+          },
+          from: {
+            type: Number,
+            computed: 'computeFrom(item.from)'
+          },
+          to: {
+            type: Number,
+            computed: 'computeTo(item.to)'
           },
           objective: {
             type: Object,
@@ -150,144 +152,51 @@
             type: Array,
             value: () => []
           },
-          targets: {
-            type: Array,
-            value: () => []
-          },
           editMode: {
             type: Boolean,
             value: false
-          },
-          editEnabled: {
-            type: Boolean
-          },
-          allowEditMode: {
-            type: Boolean,
-            value: false
-          },
-          method: {
-            type: String,
-            value: 'POST'
           },
           action: {
             type: String,
             computed: 'computedAction(uri, objective.uri)'
           },
-          headers: {
-            type: Object,
-            value: {
-              'content-type': 'application/json'
-            }
+          method: {
+            type: String,
+            value: 'GET'
+          },
+          hidden: {
+            type: Boolean,
+            value: false,
+            reflectToAttribute: true
+          },
+          ignore: {
+            type: Boolean,
+            value: false,
+            reflectToAttribute: true
           },
           loading: {
             type: Boolean,
             value: false
-          },
-          editIconIsVisible: {
-            type: Boolean,
-            computed: 'computeEditIconIsVisible(allowEditMode, editMode)'
           }
         }
       }
 
-      computeEditIconIsVisible(allowed, editMode) {
-        if (allowed && !editMode) {
-          return true
-        }
-        return false
-      }
-
       uriChanged() {
-        this.fetch()
-      }
-
-      fetch()  {
         if (this.uri) {
-          this.$.ajax.generateRequest()
+          this.fetch()
+          this.set('method', 'PUT')
         } else {
           this.set('item', {})
+          this.set('method', 'POST')
         }
       }
 
-      ready() {
-        super.ready()
-
-        this.$.targetForm.addEventListener('iron-form-presubmit', (e) => this.onPresubmit(e))
-        this.$.targetForm.addEventListener('iron-form-error', (e) => this.onError(e))
-        this.$.targetForm.addEventListener('iron-form-response', (e) => this.onResponse(e))
-
-        if (this.uri === '') {
-          this.set('editMode', true)
-        }
+      computeFrom(from) {
+        return parseFloat(from)
       }
 
-      onPresubmit(e) {
-        this.set('loading', true)
-        // change method to PUT if we are updating.
-        // we need the payload in the body, so we trick iron-form
-        // by using POST and changing to PUT right before submit (here)
-        if (this.item.uri && this.$.targetForm.request.method === 'POST') {
-          this.$.targetForm.request.method = 'PUT'
-        }
-
-        // Parse number input fields since iron-form converts them to String
-        if (this.$.targetForm.request.method !== 'DELETE') {
-          let { from, to } = this.$.targetForm.request.body
-          this.$.targetForm.request.body.from = parseFloat(from)
-          this.$.targetForm.request.body.to = parseFloat(to)
-        }
-
-        console.log('Form submitted:', this.$.targetForm.serializeForm())
-      }
-
-      onError(e) {
-        this.set('loading', false)
-        let method = this.$.targetForm.request.method || 'default'
-        let m = {
-          'POST': 'add',
-          'PUT': 'update',
-          'DELETE': 'delete',
-          'default': 'save'
-        }
-
-        this.notify(`Can't ${m[method]} Target.`, () =>
-                                                this.$.targetForm.submit())
-        this.initForm()
-
-        if (e.detail.request.xhr.response.status === 401) {
-          this.dispatchEvent(new CustomEvent('slr-authenticate', {bubbles: true, composed: true}))
-        }
-      }
-
-      onResponse(e) {
-        this.set('loading', false)
-        this.dispatchEvent(new CustomEvent('slr-target-submitted'))
-
-        let method = this.$.targetForm.request.method || 'default'
-        let m = {
-          'POST': 'added',
-          'PUT': 'updated',
-          'DELETE': 'deleted',
-          'default': 'saved'
-        }
-
-        this.notify(`Target ${m[method]}.`)
-        this.initForm()
-
-        if (method === 'DELETE') {
-          this.removeItem()
-        } else {
-          this.set('editMode', false)
-          this.set('item', e.detail.response)
-          this.set('uri', this.item.uri)
-        }
-      }
-
-      removeItem() {
-        let ix = this.targets.findIndex((t) => t === this.uri)
-        if (ix > -1) {
-          this.splice('targets', ix, 1)
-        }
+      computeTo(to) {
+        return parseFloat(to)
       }
 
       computedAction(itemUri, objectiveUri) {
@@ -295,67 +204,69 @@
       }
 
       handleResponse(e) {
-        try {
-          this.set('item', e.detail.response)
-        } catch(e) {
-          console.error('Error loading Target')
-          this.notify("Can't Load Target", () => this.$.ajax.generateRequest())
-        }
+        this.set('item', e.detail.response)
+        this.copyItem()
       }
 
       handleErrorResponse(e) {
+        let detail = null
+        let m = {
+          'POST': 'add',
+          'PUT': 'update',
+          'DELETE': 'delete',
+          'default': 'save'
+        }
+
         try {
-          this.notify("Error loading Target",
-            () => this.$.ajax.generateRequest(),
-            e.detail.request.xhr.response.detail)
+          detail = e.detail.request.xhr.response.detail
         } catch(e) {
-          this.notify("Error loading Target.",
-            () => this.$.ajax.generateRequest(),
-            "Can't parse Server response")
+          detail = "Can't parse Server response"
         }
-      }
 
-      submit() {
-        if (!this.$.targetForm.validate()) {
-          return
-        }
-        this.$.targetForm.submit()
-      }
-
-      edit() {
-        this.set('editMode', true)
-      }
-
-      delete() {
-        if (!this.item.uri) {
-          this.removeItem()
-        } else {
-          this.set('method', 'DELETE')
-          this.set('action', this.uri)
-          this.$.targetForm.submit()
-        }
-      }
-
-      cancel() {
-        this.set('editMode', false)
-        if (!this.item.uri) {
-          this.removeItem()
-        }
-      }
-
-      notify(message, action, detail, duration = 5000) {
         this.dispatchEvent(
           new CustomEvent('slr-notify', {
-            detail: { message, action, detail, duration },
+            detail: {
+              message: `Can't ${m[this.method]} Target.`,
+              action: () => this.$.ajax.generateRequest(),
+              detail
+            },
             bubbles: true,
             composed: true
           })
         )
       }
 
-      initForm() {
-        this.set('method', 'POST')
+      fetch()  {
+        this.set('method', 'GET')
+        this.$.ajax.generateRequest()
       }
+
+      validate() {
+        return this.$.targetForm.validate()
+      }
+
+      submit() {
+        let from = isNaN(this.from) ? null : this.from
+        let to = isNaN(this.to) ? null : this.to
+        this.$.ajax.body = Object.assign(this.item, { from, to })
+        return this.$.ajax.generateRequest().completes
+      }
+
+      delete() {
+        this.set('hidden', true)
+        this.$.ajax.method = 'DELETE'
+        this.set('ignore', this.uri ? false : true)
+      }
+
+      copyItem() {
+        this.set('_item', Object.assign({}, this.item))
+      }
+
+      reset() {
+        this.set('item', Object.assign({}, this._item))
+        this.set('hidden', false)
+      }
+
     }
 
     window.customElements.define(SlrTarget.is, SlrTarget)

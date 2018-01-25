@@ -124,12 +124,12 @@
                   as="target">
                   <li>
                     <slr-target
+                      class="target"
                       uri="{{target}}"
                       objective="[[item]]"
-                      targets="{{item.targets}}"
                       indicators="[[indicators]]"
-                      edit-enabled="[[editMode]]"
-                      allow-edit-mode="[[editMode]]"></slr-target>
+                      edit-mode="[[editMode]]"
+                      loading="{{loading}}"></slr-target>
                   </li>
                 </template>
                 <li hidden="[[item.targets.length]]">
@@ -177,7 +177,7 @@
           },
           action: {
             type: String,
-            computed: 'computedAction(item.uri, product.uri)'
+            computed: 'computeAction(item.uri, product.uri)'
           },
           headers: {
             type: Object,
@@ -206,7 +206,7 @@
         }
       }
 
-      computedAction(itemUri, productUri) {
+      computeAction(itemUri, productUri) {
         return itemUri ? itemUri : productUri + '/slo'
       }
 
@@ -292,11 +292,27 @@
         }
       }
 
-      submit() {
-        if (!this.$.form.validate()) {
+      validateAllTargets() {
+        let valid = true
+        this.shadowRoot.querySelectorAll('.target:not([hidden])')
+          .forEach( (t) => valid = t.validate() && valid )
+        return valid
+      }
+
+      submitAllTargets(cb) {
+        let requests = []
+        this.shadowRoot.querySelectorAll('.target:not([ignore])')
+          .forEach( (t) => requests.push(t.submit()) )
+        return requests
+      }
+
+      submit(e) {
+        if (!this.$.form.validate() || !this.validateAllTargets()) {
           return
         }
-        this.$.form.submit()
+        Promise
+          .all(this.submitAllTargets())
+          .then(() => this.$.form.submit())
       }
 
       new() {
@@ -320,9 +336,17 @@
         if (!this.item.uri) {
           this.set('opened', false)
         }
+
         this.set('editMode', false)
         this.$.objectiveModal.reset()
         this.initForm()
+
+        let slrTargets = (this.shadowRoot.querySelectorAll('slr-target'))
+        slrTargets.forEach((t) => {
+          t.reset()
+        })
+
+        this.$.ajax.generateRequest()
       }
 
       initForm() {

@@ -215,32 +215,22 @@
 
       itemChanged() {
         this.copyItem()
-        this.center()
       }
 
       itemPropsChanged(obj) {
         this.copyItem()
-        this.center()
       }
 
       toggleEditMode() {
         this.set('editMode', !this.editMode)
-        this.center()
       }
 
       reset() {
         this.set('item', Object.assign({}, this._item))
-        this.center()
       }
 
       copyItem() {
         this.set('_item', Object.assign({}, this.item))
-      }
-
-      // <paper-dialog> fails to center after its content changed size
-      // so we center() every time that may happen
-      center() {
-        setTimeout(() => { this.$.dialog.center() }, 500)
       }
 
       _disableDocumentScrolling(e) {
