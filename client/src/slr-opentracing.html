@@ -1,0 +1,49 @@
+<script src="/bower_components/opentracing-javascript-utils/test/opentracing-browser.min.js"></script>
+<script src="/bower_components/opentracing-javascript-utils/test/lightstep-tracer.js"></script>
+<script src="/bower_components/opentracing-javascript-utils/opentracing-javascript-utils.js"></script>
+
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
+<link rel="import" href="./slr-ajax.html">
+
+<dom-module id="slr-opentracing">
+  <template>
+    <slr-ajax auto
+              url="/config.json"
+              handle-as="json"
+              on-response="handleResponse"
+              debounce-duration="300"
+              loading="{{loading}}"></slr-ajax>
+  </template>
+  <script>
+    class SlrOpentracing extends Polymer.Element {
+      static get is() { return 'slr-opentracing' }
+
+      static get properties() {
+        return {
+          config: {
+            type: Object,
+            value: () => { return {} }
+          }
+        }
+      }
+
+      handleResponse(e) {
+        console.log('Got configuration:', e.detail.response)
+        this.set('config', e.detail.response)
+        this.init()
+      }
+
+      init() {
+        opentracingJavascriptUtils.initOpenTracing(this.config)
+          .then((e) => {
+            console.log('Opentracing Initialized with', this.config.name);
+          }).catch( (e) => {
+            console.log("Couldn't initialize Opentracing.", e)
+          })
+      }
+    }
+
+    window.customElements.define(SlrOpentracing.is, SlrOpentracing)
+  </script>
+</dom-module>
