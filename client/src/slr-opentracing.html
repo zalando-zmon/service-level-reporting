@@ -35,9 +35,9 @@
       }
 
       init() {
-        opentracingJavascriptUtils.initOpenTracing(this.config)
+        opentracingJavascriptUtils.initOpenTracing({ name: 'lightstep', config: {}})
           .then((e) => {
-            console.log('Opentracing Initialized with', this.config.name);
+            console.log('Opentracing Initialized', e);
           }).catch( (e) => {
             console.log("Couldn't initialize Opentracing.", e)
           })
