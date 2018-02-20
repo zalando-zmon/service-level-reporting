@@ -29,7 +29,7 @@
       }
 
       handleResponse(e) {
-        console.log('Got configuration:', e.detail.response)
+        console.log('config.json =', e.detail.response)
         this.set('config', e.detail.response)
         this.init()
       }
