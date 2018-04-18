@@ -112,7 +112,7 @@
           if (this.paginationEnabled) {
             this.set('items', this.items.concat(res.data))
           } else {
-            this.set('items', res.data)
+            this.set('items', this.sort(res.data))
           }
           this.set('totalItems', res._meta.count)
         } catch(e) {
