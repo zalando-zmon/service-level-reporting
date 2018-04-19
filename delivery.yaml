@@ -38,28 +38,19 @@ build_steps:
     cmd: |
       tox
 
-  - desc: "Build SLR backend"
-    cmd: |
-      docker build -f dockerfiles/Dockerfile -t registry-write.opensource.zalan.do/zmon/service-level-reports:#{CDP_BUILD_VERSION} .
-      docker build -f dockerfiles/Dockerfile -t registry-write.opensource.zalan.do/zmon/slr-production:#{CDP_BUILD_VERSION} .
-
-  - desc: "Build SLR frontend"
-    cmd: |
-      docker build -f dockerfiles/Dockerfile.frontend -t registry-write.opensource.zalan.do/zmon/service-level-reports-frontend:#{CDP_BUILD_VERSION} .
-
-  - desc: "Build SLR generator"
-    cmd: |
-      docker build -f dockerfiles/Dockerfile.generator -t registry-write.opensource.zalan.do/zmon/service-level-reports-generator:#{CDP_BUILD_VERSION} .
-
   # BUILD TEST IMAGES FROM PR - uncomment if test deployment is needed.
-  - desc: "Push Docker Image (test)"
+  - desc: "Build and Push Docker Image (unstable)"
     cmd: |
       IS_PR_BUILD=${CDP_PULL_REQUEST_NUMBER+"true"}
       if [[ ${IS_PR_BUILD} == "true" ]]
       then
-        docker push registry-write.opensource.zalan.do/zmon/service-level-reports:#{CDP_BUILD_VERSION}
-        docker push registry-write.opensource.zalan.do/zmon/service-level-reports-frontend:#{CDP_BUILD_VERSION}
-        docker push registry-write.opensource.zalan.do/zmon/service-level-reports-generator:#{CDP_BUILD_VERSION}
+        docker build -f dockerfiles/Dockerfile -t registry-write.opensource.zalan.do/zmon/service-level-reports-unstable:#{CDP_BUILD_VERSION} .
+        docker build -f dockerfiles/Dockerfile.frontend -t registry-write.opensource.zalan.do/zmon/service-level-reports-frontend-unstable:#{CDP_BUILD_VERSION} .
+        docker build -f dockerfiles/Dockerfile.generator -t registry-write.opensource.zalan.do/zmon/service-level-reports-generator-unstable:#{CDP_BUILD_VERSION} .
+
+        docker push registry-write.opensource.zalan.do/zmon/service-level-reports-unstable:#{CDP_BUILD_VERSION}
+        docker push registry-write.opensource.zalan.do/zmon/service-level-reports-frontend-unstable:#{CDP_BUILD_VERSION}
+        docker push registry-write.opensource.zalan.do/zmon/service-level-reports-generator-unstable:#{CDP_BUILD_VERSION}
       fi
 
   - desc: "Push Docker Image (if on master)"
@@ -67,12 +58,13 @@ build_steps:
       IS_PR_BUILD=${CDP_PULL_REQUEST_NUMBER+"true"}
       if [[ ${IS_PR_BUILD} != "true" ]]
       then
+        docker build -f dockerfiles/Dockerfile -t registry-write.opensource.zalan.do/zmon/service-level-reports:#{CDP_BUILD_VERSION} .
+        docker build -f dockerfiles/Dockerfile.frontend -t registry-write.opensource.zalan.do/zmon/service-level-reports-frontend:#{CDP_BUILD_VERSION} .
+        docker build -f dockerfiles/Dockerfile.generator -t registry-write.opensource.zalan.do/zmon/service-level-reports-generator:#{CDP_BUILD_VERSION} .
+
         docker push registry-write.opensource.zalan.do/zmon/service-level-reports:#{CDP_BUILD_VERSION}
         docker push registry-write.opensource.zalan.do/zmon/service-level-reports-frontend:#{CDP_BUILD_VERSION}
         docker push registry-write.opensource.zalan.do/zmon/service-level-reports-generator:#{CDP_BUILD_VERSION}
-
-        docker push registry-write.opensource.zalan.do/zmon/slr-production:#{CDP_BUILD_VERSION}
-
       else
         echo "Image not pushed because the build is not a push to master"
       fi
