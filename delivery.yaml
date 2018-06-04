@@ -14,7 +14,8 @@ build_steps:
       apt-get install -q -y --no-install-recommends \
         python3.6 \
         python3.6-dev \
-        python3-pip \
+        virtualenv \
+        python3-virtualenv \
         python3-setuptools \
         python3-wheel \
         gcc \
@@ -24,10 +25,11 @@ build_steps:
         tox
       update-alternatives --install /usr/bin/python python /usr/bin/python3.6 1
       update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 1
-      update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 
   - desc: "Install Python dependencies"
     cmd: |
+      virtualenv -p python3 --no-site-packages venv
+      source venv/bin/activate
       pip3 install --upgrade pip
       pip3 install -r requirements.txt
       pip3 install -U flake8
@@ -36,28 +38,19 @@ build_steps:
     cmd: |
       tox
 
-  - desc: "Build SLR backend"
-    cmd: |
-      docker build -f dockerfiles/Dockerfile -t registry-write.opensource.zalan.do/zmon/service-level-reports:#{CDP_BUILD_VERSION} .
-      docker build -f dockerfiles/Dockerfile -t registry-write.opensource.zalan.do/zmon/slr-production:#{CDP_BUILD_VERSION} .
-
-  - desc: "Build SLR frontend"
-    cmd: |
-      docker build -f dockerfiles/Dockerfile.frontend -t registry-write.opensource.zalan.do/zmon/service-level-reports-frontend:#{CDP_BUILD_VERSION} .
-
-  - desc: "Build SLR generator"
-    cmd: |
-      docker build -f dockerfiles/Dockerfile.generator -t registry-write.opensource.zalan.do/zmon/service-level-reports-generator:#{CDP_BUILD_VERSION} .
-
   # BUILD TEST IMAGES FROM PR - uncomment if test deployment is needed.
-  - desc: "Push Docker Image (test)"
+  - desc: "Build and Push Docker Image (unstable)"
     cmd: |
       IS_PR_BUILD=${CDP_PULL_REQUEST_NUMBER+"true"}
       if [[ ${IS_PR_BUILD} == "true" ]]
       then
-        docker push registry-write.opensource.zalan.do/zmon/service-level-reports:#{CDP_BUILD_VERSION}
-        docker push registry-write.opensource.zalan.do/zmon/service-level-reports-frontend:#{CDP_BUILD_VERSION}
-        docker push registry-write.opensource.zalan.do/zmon/service-level-reports-generator:#{CDP_BUILD_VERSION}
+        docker build -f dockerfiles/Dockerfile -t registry-write.opensource.zalan.do/zmon/service-level-reports-unstable:#{CDP_BUILD_VERSION} .
+        docker build -f dockerfiles/Dockerfile.frontend -t registry-write.opensource.zalan.do/zmon/service-level-reports-frontend-unstable:#{CDP_BUILD_VERSION} .
+        docker build -f dockerfiles/Dockerfile.generator -t registry-write.opensource.zalan.do/zmon/service-level-reports-generator-unstable:#{CDP_BUILD_VERSION} .
+
+        docker push registry-write.opensource.zalan.do/zmon/service-level-reports-unstable:#{CDP_BUILD_VERSION}
+        docker push registry-write.opensource.zalan.do/zmon/service-level-reports-frontend-unstable:#{CDP_BUILD_VERSION}
+        docker push registry-write.opensource.zalan.do/zmon/service-level-reports-generator-unstable:#{CDP_BUILD_VERSION}
       fi
 
   - desc: "Push Docker Image (if on master)"
@@ -65,12 +58,13 @@ build_steps:
       IS_PR_BUILD=${CDP_PULL_REQUEST_NUMBER+"true"}
       if [[ ${IS_PR_BUILD} != "true" ]]
       then
+        docker build -f dockerfiles/Dockerfile -t registry-write.opensource.zalan.do/zmon/service-level-reports:#{CDP_BUILD_VERSION} .
+        docker build -f dockerfiles/Dockerfile.frontend -t registry-write.opensource.zalan.do/zmon/service-level-reports-frontend:#{CDP_BUILD_VERSION} .
+        docker build -f dockerfiles/Dockerfile.generator -t registry-write.opensource.zalan.do/zmon/service-level-reports-generator:#{CDP_BUILD_VERSION} .
+
         docker push registry-write.opensource.zalan.do/zmon/service-level-reports:#{CDP_BUILD_VERSION}
         docker push registry-write.opensource.zalan.do/zmon/service-level-reports-frontend:#{CDP_BUILD_VERSION}
         docker push registry-write.opensource.zalan.do/zmon/service-level-reports-generator:#{CDP_BUILD_VERSION}
-
-        docker push registry-write.opensource.zalan.do/zmon/slr-production:#{CDP_BUILD_VERSION}
-
       else
         echo "Image not pushed because the build is not a push to master"
       fi
