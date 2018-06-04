@@ -1,0 +1,12 @@
+{
+  "name": 'lightstep',
+  "config": {
+    "xhr_instrumentation": true,
+    "access_token": '123421',
+    "component_name": 'something',
+    "collector_host": 'localhost',
+    "collector_port": 443,
+    "collector_encryption": '',
+    "verbosity": 1,
+  }
+}
