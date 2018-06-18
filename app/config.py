@@ -71,3 +71,6 @@ MAX_QUERY_TIME_SLICE = os.getenv('SLR_MAX_QUERY_TIME_SLICE', 1440)
 # Careful with high concurrency, as we might hit rate limits on ZMON
 UPDATER_CONCURRENCY = os.getenv('SLR_UPDATER_CONCURRENCY', 20)
 UPDATER_INTERVAL = os.getenv('SLR_UPDATER_INTERVAL', 600)
+
+# OPENTRACING
+OPENTRACING_TRACER = os.getenv('OPENTRACING_TRACER')

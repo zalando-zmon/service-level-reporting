@@ -1,6 +1,6 @@
 FROM registry.opensource.zalan.do/stups/python:latest
 
-RUN apt-get update && apt-get install -y libssl-dev gnuplot
+RUN apt-get update && apt-get install -y libssl-dev gnuplot libdpkg-perl
 
 RUN pip3 install -U setuptools clickclick jinja2 stups-zign awscli
 

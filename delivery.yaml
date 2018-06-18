@@ -1,70 +1,68 @@
-build_steps:
-  - desc: "Update"
-    cmd: apt-get update
+version: "2017-09-20"
 
-  - desc: "Install Docker"
-    cmd: |
-      curl -sSL https://delivery.cloud.zalando.com/utils/ensure-docker | sh
+pipeline:
+  - id: build
+    type: script
+    overlay: ci/python
+    commands:
 
-  - desc: "Install build dependencies"
-    cmd: |
-      apt-get install -y --no-install-recommends software-properties-common
-      add-apt-repository -y ppa:deadsnakes/ppa
-      apt-get update
-      apt-get install -q -y --no-install-recommends \
-        python3.6 \
-        python3.6-dev \
-        virtualenv \
-        python3-virtualenv \
-        python3-setuptools \
-        python3-wheel \
-        gcc \
-        libffi-dev \
-        libssl-dev \
-        libpq-dev \
-        tox
-      update-alternatives --install /usr/bin/python python /usr/bin/python3.6 1
-      update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 1
+      - desc: "Update"
+        cmd: apt-get update
 
-  - desc: "Install Python dependencies"
-    cmd: |
-      virtualenv -p python3 --no-site-packages venv
-      source venv/bin/activate
-      pip3 install --upgrade pip
-      pip3 install -r requirements.txt
-      pip3 install -U flake8
+      - desc: "Install build dependencies"
+        cmd: |
+          apt-get install -q -y --no-install-recommends \
+            virtualenv \
+            python3-virtualenv \
+            python3-setuptools \
+            python3-wheel \
+            gcc \
+            libffi-dev \
+            libssl-dev \
+            libpq-dev \
+            tox
+          update-alternatives --install /usr/bin/python python /usr/bin/python3.6 1
+          update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 1
 
-  - desc: "Tox"
-    cmd: |
-      tox
+      - desc: "Install Python dependencies"
+        cmd: |
+          virtualenv -p python3 --no-site-packages venv
+          source venv/bin/activate
+          pip3 install --upgrade pip
+          pip3 install -r requirements.txt
+          pip3 install -U flake8
 
-  # BUILD TEST IMAGES FROM PR - uncomment if test deployment is needed.
-  - desc: "Build and Push Docker Image (unstable)"
-    cmd: |
-      IS_PR_BUILD=${CDP_PULL_REQUEST_NUMBER+"true"}
-      if [[ ${IS_PR_BUILD} == "true" ]]
-      then
-        docker build -f dockerfiles/Dockerfile -t registry-write.opensource.zalan.do/zmon/service-level-reports-unstable:#{CDP_BUILD_VERSION} .
-        docker build -f dockerfiles/Dockerfile.frontend -t registry-write.opensource.zalan.do/zmon/service-level-reports-frontend-unstable:#{CDP_BUILD_VERSION} .
-        docker build -f dockerfiles/Dockerfile.generator -t registry-write.opensource.zalan.do/zmon/service-level-reports-generator-unstable:#{CDP_BUILD_VERSION} .
+      - desc: "Tox"
+        cmd: |
+          tox
 
-        docker push registry-write.opensource.zalan.do/zmon/service-level-reports-unstable:#{CDP_BUILD_VERSION}
-        docker push registry-write.opensource.zalan.do/zmon/service-level-reports-frontend-unstable:#{CDP_BUILD_VERSION}
-        docker push registry-write.opensource.zalan.do/zmon/service-level-reports-generator-unstable:#{CDP_BUILD_VERSION}
-      fi
+      # BUILD TEST IMAGES FROM PR - uncomment if test deployment is needed.
+      - desc: "Build and Push Docker Image (unstable)"
+        cmd: |
+          IS_PR_BUILD=${CDP_PULL_REQUEST_NUMBER+"true"}
+          if [[ ${IS_PR_BUILD} == "true" ]]
+          then
+            docker build -f dockerfiles/Dockerfile -t registry-write.opensource.zalan.do/zmon/service-level-reports-unstable:#{CDP_BUILD_VERSION} .
+            docker build -f dockerfiles/Dockerfile.frontend -t registry-write.opensource.zalan.do/zmon/service-level-reports-frontend-unstable:#{CDP_BUILD_VERSION} .
+            docker build -f dockerfiles/Dockerfile.generator -t registry-write.opensource.zalan.do/zmon/service-level-reports-generator-unstable:#{CDP_BUILD_VERSION} .
 
-  - desc: "Push Docker Image (if on master)"
-    cmd: |
-      IS_PR_BUILD=${CDP_PULL_REQUEST_NUMBER+"true"}
-      if [[ ${IS_PR_BUILD} != "true" ]]
-      then
-        docker build -f dockerfiles/Dockerfile -t registry-write.opensource.zalan.do/zmon/service-level-reports:#{CDP_BUILD_VERSION} .
-        docker build -f dockerfiles/Dockerfile.frontend -t registry-write.opensource.zalan.do/zmon/service-level-reports-frontend:#{CDP_BUILD_VERSION} .
-        docker build -f dockerfiles/Dockerfile.generator -t registry-write.opensource.zalan.do/zmon/service-level-reports-generator:#{CDP_BUILD_VERSION} .
+            docker push registry-write.opensource.zalan.do/zmon/service-level-reports-unstable:#{CDP_BUILD_VERSION}
+            docker push registry-write.opensource.zalan.do/zmon/service-level-reports-frontend-unstable:#{CDP_BUILD_VERSION}
+            docker push registry-write.opensource.zalan.do/zmon/service-level-reports-generator-unstable:#{CDP_BUILD_VERSION}
+          fi
 
-        docker push registry-write.opensource.zalan.do/zmon/service-level-reports:#{CDP_BUILD_VERSION}
-        docker push registry-write.opensource.zalan.do/zmon/service-level-reports-frontend:#{CDP_BUILD_VERSION}
-        docker push registry-write.opensource.zalan.do/zmon/service-level-reports-generator:#{CDP_BUILD_VERSION}
-      else
-        echo "Image not pushed because the build is not a push to master"
-      fi
+      - desc: "Push Docker Image (if on master)"
+        cmd: |
+          IS_PR_BUILD=${CDP_PULL_REQUEST_NUMBER+"true"}
+          if [[ ${IS_PR_BUILD} != "true" ]]
+          then
+            docker build -f dockerfiles/Dockerfile -t registry-write.opensource.zalan.do/zmon/service-level-reports:#{CDP_BUILD_VERSION} .
+            docker build -f dockerfiles/Dockerfile.frontend -t registry-write.opensource.zalan.do/zmon/service-level-reports-frontend:#{CDP_BUILD_VERSION} .
+            docker build -f dockerfiles/Dockerfile.generator -t registry-write.opensource.zalan.do/zmon/service-level-reports-generator:#{CDP_BUILD_VERSION} .
+
+            docker push registry-write.opensource.zalan.do/zmon/service-level-reports:#{CDP_BUILD_VERSION}
+            docker push registry-write.opensource.zalan.do/zmon/service-level-reports-frontend:#{CDP_BUILD_VERSION}
+            docker push registry-write.opensource.zalan.do/zmon/service-level-reports-generator:#{CDP_BUILD_VERSION}
+          else
+            echo "Image not pushed because the build is not a push to master"
+          fi
