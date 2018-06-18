@@ -7,6 +7,9 @@ from flask_sqlalchemy import BaseQuery, Pagination
 
 from connexion import ProblemException, request
 
+from opentracing.ext import tags as ot_tags
+from opentracing_utils import extract_span_from_flask_request, trace, extract_span_from_kwargs
+
 from app.extensions import db
 from app.libs.zmon import AGG_TYPES
 from app.libs.resource import ResourceHandler
@@ -186,8 +189,12 @@ class SLIValueResource(ResourceHandler):
 
 class SLIQueryResource(ResourceHandler):
     @classmethod
+    @trace(span_extractor=extract_span_from_flask_request, operation_name='indicator_query', pass_span=True,
+           tags={ot_tags.COMPONENT: 'flask'})
     def create(cls, **kwargs) -> Tuple:
         resource = cls()
+
+        resource.current_span = extract_span_from_kwargs(**kwargs)
 
         obj_id = int(kwargs.get('id'))
 
@@ -224,6 +231,10 @@ class SLIQueryResource(ResourceHandler):
     def query(self, obj: Indicator, duration: dict, **kwargs) -> int:
         start = duration.get('start')
         end = duration.get('end', 0)
+
+        self.current_span.set_tag('indicator', obj.name)
+        self.current_span.set_tag('product', obj.product.name)
+        self.current_span.log_kv({'query_start': start, 'query_end': end})
 
         # Query and insert IndicatorValue
         return update_indicator_values(obj, start, end)

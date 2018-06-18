@@ -1,4 +1,4 @@
-FROM registry.opensource.zalan.do/stups/node:7.7-cd47
+FROM registry.opensource.zalan.do/stups/node:latest
 
 RUN \
     apt-get update && \

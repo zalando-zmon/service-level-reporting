@@ -5,6 +5,8 @@ from flask_sqlalchemy import BaseQuery, Pagination
 
 from connexion import ProblemException, request
 
+from opentracing_utils import trace, extract_span_from_kwargs
+
 from app.extensions import db
 from app.libs.resource import ResourceHandler
 
@@ -55,7 +57,12 @@ class TargetResource(ResourceHandler):
     def get_object(self, obj_id: int, **kwargs) -> Target:
         return self.get_query(**kwargs).filter_by(id=obj_id).first_or_404()
 
+    @trace(operation_name='save_target', pass_span=True)
     def save_object(self, obj: Target, **kwargs) -> Target:
+        current_span = extract_span_from_kwargs(**kwargs)
+        current_span.log_kv({'objective_id': obj.objective_id})
+        current_span.log_kv({'indicator_id': obj.indicator_id})
+
         db.session.add(obj)
         db.session.commit()
 
