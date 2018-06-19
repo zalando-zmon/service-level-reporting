@@ -1,5 +1,7 @@
 import collections
 
+import opentracing
+
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
@@ -7,11 +9,13 @@ from connexion import ProblemException
 
 from sqlalchemy.sql import text
 
+from opentracing.ext import tags as ot_tags
+from opentracing_utils import extract_span_from_flask_request, trace, extract_span_from_kwargs
+
 from app.extensions import db
 from app.libs.resource import ResourceHandler
 
 from app.resources.product.models import Product
-# from app.resources.slo.models import Objective
 from app.resources.sli.models import Indicator
 
 
@@ -20,7 +24,11 @@ REPORT_TYPES = ('weekly', 'monthly', 'quarterly')
 
 class ReportResource(ResourceHandler):
     @classmethod
+    @trace(span_extractor=extract_span_from_flask_request, operation_name='resource_handler', pass_span=True,
+           tags={ot_tags.COMPONENT: 'flask', 'is_report': True})
     def get(cls, **kwargs) -> dict:
+        current_span = extract_span_from_kwargs(**kwargs)
+
         report_type = kwargs.get('report_type')
         if report_type not in REPORT_TYPES:
             raise ProblemException(
@@ -41,11 +49,17 @@ class ReportResource(ResourceHandler):
 
         unit = 'day' if report_type == 'weekly' else 'week'
 
+        current_span.set_tag('report_type', report_type)
+        current_span.set_tag('product_id', product_id)
+        current_span.set_tag('product', product.name)
+        current_span.set_tag('product_group', product.product_group.name)
+
         slo = []
         for objective in objectives:
             days = collections.defaultdict(dict)
 
             if not len(objective.targets):
+                current_span.log_kv({'objective_skipped': True, 'objective': objective.id})
                 continue
 
             q = text('''
@@ -73,27 +87,34 @@ class ReportResource(ResourceHandler):
                 'upper': float('inf')
             }
 
-            for obj in db.session.execute(q, params):
-                days[obj.day.isoformat()][obj.name] = {
-                    'max': obj.max, 'min': obj.min, 'avg': obj.avg, 'count': obj.count, 'breaches': obj.breaches,
-                    'sum': obj.sum, 'aggregation': obj.aggregation
-                }
+            # Instrument DB query to generate a product report!
+            db_query_span = opentracing.tracer.start_span(operation_name='report_db_query', child_of=current_span)
+            db_query_span.set_tag('objective', objective.id)
+            with db_query_span:
 
-            slo.append(
-                {
-                    'title': objective.title,
-                    'description': objective.description,
-                    'id': objective.id,
-                    'targets': [
-                        {
-                            'from': t.target_from, 'to': t.target_to, 'sli_name': t.indicator.name,
-                            'unit': t.indicator.unit, 'aggregation': t.indicator.aggregation
-                        }
-                        for t in objective.targets
-                    ],
-                    'days': days
-                }
-            )
+                for obj in db.session.execute(q, params):
+                    days[obj.day.isoformat()][obj.name] = {
+                        'max': obj.max, 'min': obj.min, 'avg': obj.avg, 'count': obj.count, 'breaches': obj.breaches,
+                        'sum': obj.sum, 'aggregation': obj.aggregation
+                    }
+
+                slo.append(
+                    {
+                        'title': objective.title,
+                        'description': objective.description,
+                        'id': objective.id,
+                        'targets': [
+                            {
+                                'from': t.target_from, 'to': t.target_to, 'sli_name': t.indicator.name,
+                                'unit': t.indicator.unit, 'aggregation': t.indicator.aggregation
+                            }
+                            for t in objective.targets
+                        ],
+                        'days': days
+                    }
+                )
+
+        current_span.log_kv({'report_objective_count': len(slo), 'objective_count': len(objectives)})
 
         return {
             'product_name': product.name,

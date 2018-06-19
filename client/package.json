@@ -33,6 +33,6 @@
   "homepage": "https://github.com/zalando-zmon/service-level-reporting#readme",
   "dependencies": {
     "bower": "^1.8.0",
-    "polymer-cli": "^1.1.0"
+    "polymer-cli": "^1.7.0"
   }
 }

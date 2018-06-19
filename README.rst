@@ -24,25 +24,25 @@ Prepare the database
 
 .. code-block:: bash
 
-    $ docker run --name slo-pg -d -p 5432:5432 postgres:9.5
-    $ echo 'CREATE DATABASE slr' | psql -h localhost -U postgres
-    $ export DATABASE_URI=postgresql://postgres@localhost/slr
-    $ export KAIROSDB_URL=https://kairosdb.example.org
+    docker run --name slo-pg -d -p 5432:5432 postgres:9.5
+    echo 'CREATE DATABASE slr' | psql -h localhost -U postgres
+    export DATABASE_URI=postgresql://postgres@localhost/slr
+    export KAIROSDB_URL=https://kairosdb.example.org
 
 Run migration
 
 .. code-block:: bash
 
-    $ export FLASK_APP=app/main.py
-    $ export SLR_LOCAL_ENV=true
-    $ pip3 install -r requirements.txt
-    $ flask db upgrade -d app/migrations/
+    export FLASK_APP=app/main.py
+    export SLR_LOCAL_ENV=true
+    pip3 install -r requirements.txt
+    flask db upgrade -d app/migrations/
 
 Run the server
 
 .. code-block:: bash
 
-    $ python -m app
+    python -m app
 
 
 Configuration parameters:

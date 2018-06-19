@@ -6,6 +6,9 @@ from flask_sqlalchemy import BaseQuery, Model, Pagination
 
 from connexion import NoContent, request, problem, ProblemException
 
+from opentracing.ext import tags as ot_tags
+from opentracing_utils import trace, extract_span_from_flask_request
+
 from app.config import API_DEFAULT_PAGE_SIZE
 from app.utils import slugger
 
@@ -30,6 +33,8 @@ class ResourceHandler:
     # HANDLERS
     ####################################################################################################################
     @classmethod
+    @trace(span_extractor=extract_span_from_flask_request, operation_name='resource_handler',
+           tags={ot_tags.COMPONENT: 'flask'})
     def list(cls, **kwargs) -> Union[dict, Tuple]:
         resource = cls()
 
@@ -41,8 +46,6 @@ class ResourceHandler:
         if filter_kwargs:
             query = resource.get_filtered_query(query, **filter_kwargs)
 
-        total_count = query.count()
-
         # Limit query
         paginated = resource.get_limited_query(query, **kwargs)
 
@@ -52,10 +55,14 @@ class ResourceHandler:
         # Transform objects to resources
         resources = [resource.build_resource(obj, **kwargs) for obj in objs]
 
+        total_count = query.count()
+
         # Return list response (mainly add _meta & data)
         return resource.build_list_response(resources, paginated, total_count, **kwargs)
 
     @classmethod
+    @trace(span_extractor=extract_span_from_flask_request, operation_name='resource_handler',
+           tags={ot_tags.COMPONENT: 'flask'})
     def get(cls, **kwargs) -> Union[dict, Tuple]:
         resource = cls()
 
@@ -68,6 +75,8 @@ class ResourceHandler:
         return resource.build_resource(obj, **kwargs)
 
     @classmethod
+    @trace(span_extractor=extract_span_from_flask_request, operation_name='resource_handler',
+           tags={ot_tags.COMPONENT: 'flask'})
     def create(cls, **kwargs) -> Union[dict, Tuple]:
         resource = cls()
 
@@ -91,6 +100,8 @@ class ResourceHandler:
         return resource.build_resource(obj, **kwargs), 201
 
     @classmethod
+    @trace(span_extractor=extract_span_from_flask_request, operation_name='resource_handler',
+           tags={ot_tags.COMPONENT: 'flask'})
     def update(cls, **kwargs) -> Union[dict, Tuple]:
         resource = cls()
 
@@ -112,6 +123,8 @@ class ResourceHandler:
         return resource.build_resource(obj, **kwargs)
 
     @classmethod
+    @trace(span_extractor=extract_span_from_flask_request, operation_name='resource_handler',
+           tags={ot_tags.COMPONENT: 'flask'})
     def delete(cls, **kwargs) -> Union[dict, Tuple]:
         resource = cls()
 

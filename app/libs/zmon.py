@@ -58,7 +58,7 @@ def query_sli(sli_name: str, sli_source: dict, start: int, end: Optional[int]) -
 
     # TODO: make this part smarter.
     # If we fail with 500 then may be consider graceful retries with smaller intervals!
-    response = session.post(KAIROSDB_URL + '/api/v1/datapoints/query', json=q)
+    response = session.post(KAIROSDB_URL + '/api/v1/datapoints/query', json=q, timeout=55)
     response.raise_for_status()
 
     data = response.json()

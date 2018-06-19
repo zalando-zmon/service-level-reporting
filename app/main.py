@@ -8,16 +8,19 @@ import gevent
 import flask
 import connexion
 
+from opentracing_utils import trace_flask, trace_requests, init_opentracing_tracer, trace_sqlalchemy
+trace_requests()  # noqa
+
 from app import SERVER
 from app.config import RUN_UPDATER, UPDATER_INTERVAL, APP_SESSION_SECRET
-from app.config import CACHE_TYPE, CACHE_THRESHOLD
+from app.config import CACHE_TYPE, CACHE_THRESHOLD, OPENTRACING_TRACER
 
 from app.libs.oauth import verify_oauth_with_session
 from app.utils import DecimalEncoder
 
 from app.extensions import db, migrate, cache, session, limiter, oauth
 
-from app.libs.resolver import get_resource_handler
+from app.libs.resolver import get_resource_handler, get_operation_name
 from app.resources.sli.updater import update_all_indicators
 
 # Models
@@ -43,6 +46,8 @@ def create_app(*args, **kwargs):
 
     app = connexion_app.app
 
+    init_opentracing_tracer(OPENTRACING_TRACER)
+
     register_extensions(app)
     register_middleware(app)
     register_routes(connexion_app)
@@ -63,6 +68,9 @@ def register_extensions(app: flask.Flask) -> None:
     limiter.init_app(app)
     session.init_app(app)
     oauth.init_app(app)
+
+    trace_flask(app, operation_name=get_operation_name)
+    trace_sqlalchemy()
 
 
 def register_middleware(app: flask.Flask) -> None:
