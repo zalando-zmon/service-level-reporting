@@ -34,7 +34,7 @@
     "paper-dropdown": "https://github.com/elauria/paper-dropdown.git#^2.0.1",
     "iron-autogrow-textarea": "^2.1.0",
     "opentracing-javascript-utils": "https://github.com/zalando-zmon/opentracing-javascript-utils.git",
-    "lightstep-tracer-javascript": "https://github.com/lightstep/lightstep-tracer-javascript.git#^0.20.3"
+    "lightstep-overlay": "https://github.com/lightstep/lightstep-overlay.git"
   },
   "devDependencies": {
     "web-component-tester": "^6.0.0-prerelease.5",

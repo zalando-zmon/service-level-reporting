@@ -1,6 +1,6 @@
 <script src="/bower_components/opentracing-javascript-utils/test/opentracing-browser.min.js"></script>
-<script src="/bower_components/lightstep-tracer-javascript/dist/lightstep-tracer.js"></script>
 <script src="/bower_components/opentracing-javascript-utils/opentracing-javascript-utils.js"></script>
+<script src="/bower_components/lightstep-overlay/dist/lightstep-overlay.min.js"></script>
 
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 
@@ -29,15 +29,15 @@
       }
 
       handleResponse(e) {
-        console.log('config.json =', e.detail.response)
         this.set('config', e.detail.response)
         this.init()
       }
 
       init() {
         opentracingJavascriptUtils.initOpenTracing(this.config)
-          .then((e) => {
-            console.log('Opentracing Initialized', e);
+          .then((tracer) => {
+            LightStepOverlay(tracer)
+            console.log('Opentracing Initialized', tracer);
           }).catch( (e) => {
             console.log("Couldn't initialize Opentracing.", e)
           })
