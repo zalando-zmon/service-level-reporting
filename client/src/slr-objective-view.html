@@ -120,19 +120,28 @@
               <ul>
                 <template
                   is="dom-repeat"
-                  items="[[item.targets]]"
+                  items="{{targets}}"
                   as="target">
                   <li>
                     <slr-target
                       class="target"
-                      uri="{{target}}"
+                      uri="{{target.uri}}"
                       objective="[[item]]"
                       indicators="[[indicators]]"
                       edit-mode="[[editMode]]"
-                      loading="{{loading}}"></slr-target>
+                      loading="{{loading}}"
+                      hidden$="{{target.hidden}}"
+                      ignore$="{{target.ignore}}">
+                        <div slot="actions">
+                            <paper-icon-button
+                              icon="delete"
+                              hidden$="[[!editMode]]"
+                              on-click="hideTargetToDelete"></paper-icon-button>
+                        </div>
+                    </slr-target>
                   </li>
                 </template>
-                <li hidden="[[item.targets.length]]">
+                <li hidden="[[targets.length]]">
                   <p class="no-items">No targets...</p>
                 </li>
               </ul>
@@ -162,6 +171,11 @@
           item: {
             type: Object,
             value: () => {}
+          },
+          targets: {
+            type: Array,
+            value: () => [],
+            computed: 'computeTargets(item.targets)'
           },
           opened: {
             type: Boolean,
@@ -208,6 +222,10 @@
 
       computeAction(itemUri, productUri) {
         return itemUri ? itemUri : productUri + '/slo'
+      }
+
+      computeTargets(targets = []) {
+        return targets.map((uri) => { return { uri } })
       }
 
       ready() {
@@ -301,6 +319,8 @@
 
       submitAllTargets(cb) {
         let requests = []
+        this.shadowRoot.querySelectorAll('.target[hidden]')
+          .forEach( (t) => t.$.ajax.method = 'DELETE' )
         this.shadowRoot.querySelectorAll('.target:not([ignore])')
           .forEach( (t) => requests.push(t.submit()) )
         return requests
@@ -321,7 +341,7 @@
       }
 
       addTarget() {
-        this.push('item.targets', '')
+        this.push('targets', { uri: null })
       }
 
       open() {
@@ -366,6 +386,14 @@
       deleteConfirm() {
         this.set('method', 'DELETE')
         this.$.form.submit()
+      }
+
+      hideTargetToDelete(e) {
+        let i = e.model.index
+        this.set('targets.'+i+'.hidden', true)
+        if (!this.targets[i].uri) {
+          this.set('targets.'+i+'.ignore', true)
+        }
       }
 
       handleResponse(e) {

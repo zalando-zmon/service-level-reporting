@@ -103,12 +103,7 @@
                   disabled="[[!editMode]]"
                   value="{{item.to}}"></paper-input>
               </div>
-              <div class="actions" hidden$="[[!editMode]]">
-                <paper-icon-button
-                  icon="delete"
-                  hidden$="[[!editMode]]"
-                  on-click="delete"></paper-icon-button>
-              </div>
+              <slot name="actions" class="actions"></slot>
             </div>
           </form>
         </iron-form>
@@ -250,12 +245,6 @@
         let to = isNaN(this.to) ? null : this.to
         this.$.ajax.body = Object.assign(this.item, { from, to })
         return this.$.ajax.generateRequest().completes
-      }
-
-      delete() {
-        this.set('hidden', true)
-        this.$.ajax.method = 'DELETE'
-        this.set('ignore', this.uri ? false : true)
       }
 
       copyItem() {
