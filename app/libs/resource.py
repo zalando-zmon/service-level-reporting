@@ -1,3 +1,5 @@
+import logging
+
 from typing import List, Union, Tuple, Optional
 from urllib.parse import urljoin, urlencode
 
@@ -15,7 +17,9 @@ from app.utils import slugger
 from .authorization import get_authorization
 
 
-READ_ONLY_FIELDS = ('created', 'updated', 'username')
+READ_ONLY_FIELDS = ('created', 'updated', 'username', 'is_deleted')
+
+logger = logging.getLogger(__name__)
 
 
 ########################################################################################################################
@@ -136,6 +140,9 @@ class ResourceHandler:
         resource.authorization.delete(obj, **kwargs)
 
         resource.delete_object(obj, **kwargs)
+
+        user = request.user if hasattr(request, 'user') else None
+        logger.info('Resource deleted: user={} resource={}'.format(user, obj))
 
         return NoContent, 204
 

@@ -34,6 +34,8 @@ def update_all_indicators(app: Flask):
 
     for indicator in Indicator.query.all():
         try:
+            if indicator.is_deleted is True:
+                continue
             updater_pool.spawn(update_indicator, app, indicator)
         except Exception:
             logger.exception('Updater: Failed to spawn indicator updater!')

@@ -8,11 +8,13 @@ import gevent
 import flask
 import connexion
 
+from datetime import datetime
+
 from opentracing_utils import trace_flask, trace_requests, init_opentracing_tracer, trace_sqlalchemy
 trace_requests()  # noqa
 
 from app import SERVER
-from app.config import RUN_UPDATER, UPDATER_INTERVAL, APP_SESSION_SECRET
+from app.config import RUN_UPDATER, UPDATER_INTERVAL, APP_SESSION_SECRET, MAX_RETENTION_DAYS
 from app.config import CACHE_TYPE, CACHE_THRESHOLD, OPENTRACING_TRACER
 
 from app.libs.oauth import verify_oauth_with_session
@@ -22,6 +24,7 @@ from app.extensions import db, migrate, cache, session, limiter, oauth
 
 from app.libs.resolver import get_resource_handler, get_operation_name
 from app.resources.sli.updater import update_all_indicators
+from app.resources.sli.retention import cleanup_sli, apply_retention
 
 # Models
 from app.resources import ProductGroup, Product, Target, Objective, Indicator, IndicatorValue  # noqa
@@ -115,10 +118,28 @@ def run_updater(app: flask.Flask, once=False):
             logger.info('Terminating updater in response to KeyboardInterrupt!')
 
 
+def run_cleanup(app: flask.Flask):
+    with app.app_context():
+        t_start = datetime.utcnow()
+
+        logger.info('Cleaning up SLIs')
+        cleanup_sli(app)
+        logger.info('Cleaning up SLIs done')
+
+        logger.info('Applying retention: {} days'.format(MAX_RETENTION_DAYS))
+        apply_retention(app)
+        logger.info('Applying retention done')
+
+        duration = datetime.utcnow() - t_start
+        logger.info('Finished cleanup/retention in {} minutes'.format(duration.seconds / 60))
+
+
 def run():
     argp = argparse.ArgumentParser(description='Service level reports application')
     argp.add_argument('--with-updater', dest='with_updater', action='store_true', help='Run server with updater!')
     argp.add_argument('-u', '--updater-only', dest='updater', action='store_true', help='Run the updater only!')
+    argp.add_argument('-c', '--cleanup-only', dest='cleanup', action='store_true',
+                      help='Run the cleanup/retention only!')
     argp.add_argument(
         '-o', '--once', dest='once', action='store_true',
         help='Make sure the updater runs once and exits! Only works if --updater-only is used, ignored otherwise')
@@ -127,7 +148,9 @@ def run():
 
     connexion_app = create_app(connexion_app=True)
 
-    if not args.updater:
+    if args.cleanup:
+        run_cleanup(connexion_app.app)
+    elif not args.updater:
         if args.with_updater or RUN_UPDATER:
             logger.info('Running SLI updater ...')
             gevent.spawn(run_updater, connexion_app.app)
