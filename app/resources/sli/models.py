@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy import false
 
 from app.extensions import db
 
@@ -12,6 +13,7 @@ class Indicator(db.Model):
     source = db.Column(db.JSON(), nullable=False)
     unit = db.Column(db.String(20), nullable=False, default='')
     aggregation = db.Column(db.String(80), default='average')
+    is_deleted = db.Column(db.Boolean(), default=False, index=True, server_default=false())
 
     product_id = db.Column(db.Integer(), db.ForeignKey('product.id'), nullable=False)
 
@@ -25,14 +27,14 @@ class Indicator(db.Model):
     updated = db.Column(db.DateTime(), onupdate=datetime.utcnow, default=datetime.utcnow)
 
     __table_args__ = (
-        db.UniqueConstraint('name', 'product_id', name='indicator_name_product_id_key'),
+        db.UniqueConstraint('name', 'product_id', 'is_deleted', name='indicator_name_product_id_key'),
     )
 
     def get_owner(self):
         return self.product.product_group.name
 
     def __repr__(self):
-        return '<SLI {} | {}>'.format(self.product.name, self.name)
+        return '<SLI {} | {} | {}>'.format(self.product.name, self.name, self.source)
 
 
 class IndicatorValue(db.Model):
@@ -41,7 +43,10 @@ class IndicatorValue(db.Model):
     timestamp = db.Column(db.DateTime(), nullable=False)
     value = db.Column(db.Numeric(), nullable=False)
 
-    indicator_id = db.Column(db.Integer(), db.ForeignKey('indicator.id', ondelete='CASCADE'), nullable=False)
+    indicator_id = db.Column(
+        db.Integer(),
+        db.ForeignKey('indicator.id', ondelete='CASCADE'),
+        nullable=False, index=True)
 
     __table_args__ = (
         db.PrimaryKeyConstraint('timestamp', 'indicator_id', name='indicatorvalue_timestamp_indicator_id_pkey'),

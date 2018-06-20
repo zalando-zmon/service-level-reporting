@@ -7,6 +7,7 @@ from connexion import ProblemException, request
 
 from app.extensions import db
 from app.libs.resource import ResourceHandler, READ_ONLY_FIELDS
+from app.libs.authorization import Authorization
 
 from app.resources.product.models import Product
 from app.resources.product.api import ProductResource
@@ -16,6 +17,10 @@ from .models import Objective
 
 class SLOResource(ResourceHandler):
     model_fields = ('title', 'description', 'username', 'created', 'updated')
+
+    @property
+    def authorization(self):
+        return Authorization()
 
     @staticmethod
     def get_uri_from_id(obj_id: Union[str, int], **kwargs) -> str:

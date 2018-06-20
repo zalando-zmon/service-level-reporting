@@ -9,6 +9,7 @@ from opentracing_utils import trace, extract_span_from_kwargs
 
 from app.extensions import db
 from app.libs.resource import ResourceHandler
+from app.libs.authorization import Authorization
 
 from app.resources.slo.models import Objective
 from app.resources.sli.models import Indicator
@@ -19,6 +20,10 @@ from .models import Target
 
 class TargetResource(ResourceHandler):
     model_fields = ('username', 'created', 'updated')
+
+    @property
+    def authorization(self):
+        return Authorization()
 
     @staticmethod
     def get_uri_from_id(obj_id: Union[str, int], **kwargs) -> str:
@@ -46,7 +51,7 @@ class TargetResource(ResourceHandler):
         fields['objective_id'] = target_objective.id
 
         indicator_id = self.get_id_from_uri(target['sli_uri'])
-        indicator = Indicator.query.filter_by(product_id=product_id, id=indicator_id).first_or_404()
+        indicator = Indicator.query.filter_by(product_id=product_id, id=indicator_id, is_deleted=False).first_or_404()
         fields['indicator_id'] = indicator.id
 
         return Target(**fields)
@@ -90,7 +95,7 @@ class TargetResource(ResourceHandler):
         indicator_id = self.get_id_from_uri(target['sli_uri'])
         if obj.indicator_id != indicator_id:
             target_sli = (
-                Indicator.query.filter_by(product_id=product_id, id=indicator_id).first_or_404()
+                Indicator.query.filter_by(product_id=product_id, id=indicator_id, is_deleted=False).first_or_404()
             )
             obj.indicator_id = target_sli.id
 
