@@ -1,4 +1,4 @@
-<script src="/bower_components/opentracing-javascript-utils/dist/opentracing-javascript-utils.min.js"></script>
+<script src="/bower_components/opentracing-javascript-utils/dist/opentracing-javascript-utils.js"></script>
 <script src="/bower_components/lightstep-overlay/dist/lightstep-overlay.min.js"></script>
 
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
@@ -8,7 +8,7 @@
 <dom-module id="slr-opentracing">
   <template>
     <slr-ajax auto
-              url="/config/config.json"
+              url="config.json"
               handle-as="json"
               on-response="handleResponse"
               debounce-duration="300"
@@ -35,7 +35,7 @@
       init() {
         opentracingJavascriptUtils.initOpenTracing(this.config)
           .then((tracer) => {
-            LightStepOverlay(tracer)
+            // LightStepOverlay(tracer)
             console.log('Opentracing Initialized', tracer);
           }).catch( (e) => {
             console.log("Couldn't initialize Opentracing.", e)
