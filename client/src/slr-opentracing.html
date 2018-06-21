@@ -34,9 +34,9 @@
 
       init() {
         opentracingJavascriptUtils.initOpenTracing(this.config)
-          .then((tracer) => {
-            LightStepOverlay(tracer)
-            console.log('Opentracing Initialized', tracer);
+          .then((t) => {
+            LightStepOverlay(opentracingJavascriptUtils.getCustomTracer())
+            console.log('Opentracing Initialized', t);
           }).catch( (e) => {
             console.log("Couldn't initialize Opentracing.", e)
           })
