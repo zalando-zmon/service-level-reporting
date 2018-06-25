@@ -32,8 +32,9 @@
   },
   "homepage": "https://github.com/zalando-zmon/service-level-reporting#readme",
   "dependencies": {
-    "bower": "^1.8.0",
+    "bower": "^1.8.4",
     "opentracing-javascript-utils": "^1.0.3",
+    "opentracing": "^0.14.1",
     "polymer-cli": "^1.7.0"
   }
 }

@@ -15,6 +15,7 @@
   "sources": [
     "src/*",
     "assets/images/*",
+    "node_modules/opentracing/dist/opentracing-browser.min.js",
     "config.json",
     "bower.json"
   ],
