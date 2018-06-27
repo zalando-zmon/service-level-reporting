@@ -8,7 +8,6 @@
     <slr-ajax auto
               sync
               url="/config.json"
-              handle-as="json"
               on-response="handleResponse"
               debounce-duration="300"
               loading="{{loading}}"></slr-ajax>
@@ -27,8 +26,12 @@
       }
 
       handleResponse(e) {
-        this.set('config', e.detail.response)
-        this.init()
+        try {
+          this.set('config', JSON.parse(e.detail.response))
+          this.init()
+        } catch(e) {
+          console.error('Failed to parse Opentracing configuration', e)
+        }
       }
 
       init() {
