@@ -21,6 +21,11 @@
           config: {
             type: Object,
             value: () => { return {} }
+          },
+          initialized: {
+            type: Boolean,
+            value: false,
+            notify: true
           }
         }
       }
@@ -37,8 +42,10 @@
       init() {
         opentracingJavascriptUtils.initOpenTracing(this.config)
           .then((t) => {
+            this.set('initialized', true)
             console.log('Opentracing Initialized', t);
           }).catch( (e) => {
+            this.set('initialized', true)
             console.log("Couldn't initialize Opentracing.", e)
           })
       }

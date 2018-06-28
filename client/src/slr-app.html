@@ -18,6 +18,7 @@
 <link rel="import" href="../bower_components/paper-listbox/paper-listbox.html">
 <link rel="import" href="../bower_components/paper-item/paper-item.html">
 
+<link rel="import" href="./slr-opentracing.html">
 <link rel="import" href="./slr-product-groups.html">
 <link rel="import" href="./slr-products.html">
 <link rel="import" href="./slr-slr.html">
@@ -25,7 +26,6 @@
 <link rel="import" href="./slr-notifications.html">
 <link rel="import" href="./slr-search.html">
 <link rel="import" href="./slr-ajax.html">
-<link rel="import" href="./slr-opentracing.html">
 <link rel="import" href="./common-styles.html">
 
 <dom-module id="slr-app">
@@ -116,7 +116,7 @@
 
     </style>
 
-    <slr-opentracing></slr-opentracing>
+    <slr-opentracing initialized="{{initd}}"></slr-opentracing>
 
     <app-location route="{{route}}"></app-location>
     <app-route
@@ -199,30 +199,34 @@
       attr-for-selected="name"
       selected-attribute="visible">
 
-      <slr-product-groups
-        id="productGroups"
-        name="product-groups"
-        route="{{subroute}}"
-        loading="{{loading}}"
-        product-groups="{{productGroups}}"
-        search-str="{{searchStr}}"></slr-product-groups>
+      <template is="dom-if" if="{{initd}}">
 
-      <slr-products
-        id="products"
-        name="products"
-        route="{{subroute}}"
-        loading="{{loading}}"
-        search-str="{{searchStr}}"></slr-products>
+        <slr-product-groups
+          id="productGroups"
+          name="product-groups"
+          route="{{subroute}}"
+          loading="{{loading}}"
+          product-groups="{{productGroups}}"
+          search-str="{{searchStr}}"></slr-product-groups>
 
-      <slr-slr name="slr" route="{{subroute}}"></slr-slr>
+        <slr-products
+          id="products"
+          name="products"
+          route="{{subroute}}"
+          loading="{{loading}}"
+          search-str="{{searchStr}}"></slr-products>
 
-      <slr-reports name="reports"></slr-reports>
+        <slr-slr name="slr" route="{{subroute}}"></slr-slr>
 
-      <slr-auth name="auth"></slr-auth>
+        <slr-reports name="reports"></slr-reports>
 
-      <slr-404 name="404"></slr-404>
+        <slr-auth name="auth"></slr-auth>
 
-      <slr-error name="error"></slr-error>
+        <slr-404 name="404"></slr-404>
+
+        <slr-error name="error"></slr-error>
+
+      </template>
 
     </iron-pages>
 
@@ -258,6 +262,10 @@
           },
           routeData: {
             type: Object
+          },
+          initd: {
+            type: Boolean,
+            value: false
           },
           loading: {
             type: Boolean,
@@ -332,7 +340,6 @@
         this.addEventListener('slr-authenticate', (n) => this.showAuth())
         this.addEventListener('slr-notify', (n) => this.$.notif.open(n.detail))
         this.addEventListener('slr-error', () => this.showError())
-        this.$.products.addEventListener('product-groups-fetch', () => this.$.productGroups.resetCol())
         this.$.searchSmall.addEventListener('search-closed', () => this.$.searchBar.hidden = true)
       }
 
