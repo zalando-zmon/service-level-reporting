@@ -1,0 +1,56 @@
+<script src="/bower_components/opentracing-javascript-utils/dist/opentracing-javascript-utils.js"></script>
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
+<link rel="import" href="./slr-ajax.html">
+
+<dom-module id="slr-opentracing">
+  <template>
+    <slr-ajax auto
+              sync
+              url="/config.json"
+              on-response="handleResponse"
+              debounce-duration="300"
+              loading="{{loading}}"></slr-ajax>
+  </template>
+  <script>
+    class SlrOpentracing extends Polymer.Element {
+      static get is() { return 'slr-opentracing' }
+
+      static get properties() {
+        return {
+          config: {
+            type: Object,
+            value: () => { return {} }
+          },
+          initialized: {
+            type: Boolean,
+            value: false,
+            notify: true
+          }
+        }
+      }
+
+      handleResponse(e) {
+        try {
+          this.set('config', JSON.parse(e.detail.response))
+          this.init()
+        } catch(e) {
+          console.error('Failed to parse Opentracing configuration', e)
+        }
+      }
+
+      init() {
+        opentracingJavascriptUtils.initOpenTracing(this.config)
+          .then((t) => {
+            this.set('initialized', true)
+            console.log('Opentracing Initialized', t);
+          }).catch( (e) => {
+            this.set('initialized', true)
+            console.log("Couldn't initialize Opentracing.", e)
+          })
+      }
+    }
+
+    window.customElements.define(SlrOpentracing.is, SlrOpentracing)
+  </script>
+</dom-module>

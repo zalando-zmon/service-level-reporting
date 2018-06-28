@@ -143,8 +143,6 @@
         if (route.path === "" || route.path === '/' || this.$.productsData.totalItems === 0) {
           // update collections when user opens products view
           this.$.productsData.resetCol()
-          this.dispatchEvent(new CustomEvent('product-groups-fetch'))
-          return
         }
       }
 
