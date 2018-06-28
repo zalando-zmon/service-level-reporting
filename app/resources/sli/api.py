@@ -147,6 +147,7 @@ class SLIResource(ResourceHandler):
 
 class SLIValueResource(ResourceHandler):
     model_fields = ('timestamp', 'value',)
+    skip_count = True
 
     def get_query(self, id: int, **kwargs) -> BaseQuery:
         Indicator.query.filter_by(id=id, is_deleted=False).first_or_404()

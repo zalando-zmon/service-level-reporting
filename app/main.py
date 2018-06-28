@@ -21,6 +21,7 @@ from app.libs.oauth import verify_oauth_with_session
 from app.utils import DecimalEncoder
 
 from app.extensions import db, migrate, cache, session, limiter, oauth
+from app.extensions import sqlalchemy_skip_span
 
 from app.libs.resolver import get_resource_handler, get_operation_name
 from app.resources.sli.updater import update_all_indicators
@@ -28,7 +29,7 @@ from app.resources.sli.retention import cleanup_sli, apply_retention
 
 # Models
 from app.resources import ProductGroup, Product, Target, Objective, Indicator, IndicatorValue  # noqa
-from app.routes import ROUTES, process_request, rate_limit_exceeded
+from app.routes import ROUTES, process_request, rate_limit_exceeded, request_skip_span
 
 import connexion.decorators.security
 import connexion.operation
@@ -72,8 +73,8 @@ def register_extensions(app: flask.Flask) -> None:
     session.init_app(app)
     oauth.init_app(app)
 
-    trace_flask(app, operation_name=get_operation_name)
-    trace_sqlalchemy()
+    trace_flask(app, operation_name=get_operation_name, skip_span=request_skip_span)
+    trace_sqlalchemy(skip_span=sqlalchemy_skip_span)
 
 
 def register_middleware(app: flask.Flask) -> None:

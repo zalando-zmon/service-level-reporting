@@ -20,6 +20,10 @@ auth = get_auth_app(oauth)
 oauth.remote_apps['auth'] = auth
 
 
+def request_skip_span(*args, **kwargs):
+    return request.path == '/health'
+
+
 def get_safe_redirect_uri(next_uri, default=''):
     redirect_uri = urljoin(APP_URL, next_uri)
 

@@ -9,7 +9,7 @@ class Objective(db.Model):
     title = db.Column(db.Text(), nullable=False)
     description = db.Column(db.Text(), default='')
 
-    product_id = db.Column(db.Integer(), db.ForeignKey('product.id', ondelete='CASCADE'))
+    product_id = db.Column(db.Integer(), db.ForeignKey('product.id', ondelete='CASCADE'), index=True)
 
     targets = db.relationship(
         'Target', backref=db.backref('objective', lazy='joined'), passive_deletes=True)

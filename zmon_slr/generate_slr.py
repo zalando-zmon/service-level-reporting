@@ -2,6 +2,9 @@
 
 import datetime
 import os
+import time
+import logging
+import sys
 
 import jinja2
 
@@ -21,6 +24,29 @@ AGGS_MAP = {
     'maximum': 'max',
     'max': 'max',
 }
+
+RETRY_SLEEP = 10
+MAX_RETRIES = 10
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.StreamHandler(sys.stdout))
+logger.setLevel(logging.INFO)
+
+
+def call_and_retry(fn, *args, **kwargs):
+    """Call `fn` and retry in case of API exception."""
+    count = 0
+
+    while True:
+        try:
+            return fn(*args, **kwargs)
+        except Exception:
+            if count < MAX_RETRIES:
+                logger.info('Retrying {} for args: {}'.format(fn, args))
+                time.sleep(RETRY_SLEEP)
+                count += 1
+                continue
+            raise
 
 
 def title(s):
@@ -97,7 +123,7 @@ def generate_directory_index(output_dir, path='/'):
 
 
 def generate_weekly_report(client: Client, product: dict, output_dir: str) -> None:
-    report_data = client.product_report(product)
+    report_data = call_and_retry(client.product_report, product)
 
     product_group = report_data['product_group_slug']
 

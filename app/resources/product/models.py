@@ -10,7 +10,7 @@ class Product(db.Model):
     email = db.Column(db.String(120), nullable=True)
     slug = db.Column(db.String(120), unique=True, nullable=False, index=True)
 
-    product_group_id = db.Column(db.Integer(), db.ForeignKey('product_group.id'), nullable=False)
+    product_group_id = db.Column(db.Integer(), db.ForeignKey('product_group.id'), nullable=False, index=True)
 
     objectives = db.relationship(
         'Objective', backref=db.backref('product', lazy='joined'), lazy='dynamic', passive_deletes=True)

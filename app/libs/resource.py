@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 class ResourceHandler:
 
     model_fields = ()
+    skip_count = False
 
     @property
     def authorization(self):
@@ -59,7 +60,7 @@ class ResourceHandler:
         # Transform objects to resources
         resources = [resource.build_resource(obj, **kwargs) for obj in objs]
 
-        total_count = query.count()
+        total_count = query.count() if not resource.skip_count else None
 
         # Return list response (mainly add _meta & data)
         return resource.build_list_response(resources, paginated, total_count, **kwargs)

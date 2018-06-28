@@ -2,24 +2,98 @@ import collections
 
 import opentracing
 
+from typing import Iterator, List, Dict
+
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from datetime_truncate import truncate
 
 from connexion import ProblemException
-
-from sqlalchemy.sql import text
 
 from opentracing.ext import tags as ot_tags
 from opentracing_utils import extract_span_from_flask_request, trace, extract_span_from_kwargs
 
-from app.extensions import db
 from app.libs.resource import ResourceHandler
 
 from app.resources.product.models import Product
-from app.resources.sli.models import Indicator
+from app.resources.sli.models import Indicator, IndicatorValue
+from app.resources.slo.models import Objective
 
 
 REPORT_TYPES = ('weekly', 'monthly', 'quarterly')
+
+
+def truncated_values(values: List[IndicatorValue], unit: str='day') -> Dict[str, List[IndicatorValue]]:
+    truncated = collections.defaultdict(list)
+
+    for v in values:
+        truncated[truncate(v.timestamp, unit)].append(v.value)
+
+    return truncated
+
+
+def get_report_summary(objectives: Iterator[Objective], unit: str, start: datetime, end: datetime,
+                       current_span: opentracing.Span) -> List[dict]:
+    summary = []
+    start = truncate(start)
+
+    for objective in objectives:
+        days = collections.defaultdict(dict)
+
+        if not len(objective.targets):
+            current_span.log_kv({'objective_skipped': True, 'objective': objective.id})
+            continue
+
+        current_span.log_kv({'objective_target_count': len(objective.targets)})
+
+        # Instrument objective summary!
+        objective_summary_span = opentracing.tracer.start_span(operation_name='report_summary', child_of=current_span)
+        objective_summary_span.set_tag('objective', objective.id)
+
+        with objective_summary_span:
+            for target in objective.targets:
+                ivs = IndicatorValue.query.filter(
+                    IndicatorValue.indicator_id == target.indicator_id,
+                    IndicatorValue.timestamp >= start,
+                    IndicatorValue.timestamp < end)
+
+                target_values_truncated = truncated_values(list(ivs))
+
+                for truncated_date, target_values in target_values_truncated.items():
+                    target_form = target.target_from or float('-inf')
+                    target_to = target.target_to or float('inf')
+
+                    target_count = len(target_values)
+                    target_sum = sum(target_values)
+                    breaches = target_count - len([v for v in target_values if v >= target_form and v <= target_to])
+
+                    days[truncated_date.isoformat()][target.indicator.name] = {
+                        'aggregation': target.indicator.aggregation,
+                        'avg': target_sum / target_count,
+                        'breaches': breaches,
+                        'count': target_count,
+                        'max': max(target_values),
+                        'min': min(target_values),
+                        'sum': target_sum,
+                    }
+
+            summary.append(
+                {
+                    'title': objective.title,
+                    'description': objective.description,
+                    'id': objective.id,
+                    'targets': [
+                        {
+                            'from': t.target_from, 'to': t.target_to, 'sli_name': t.indicator.name,
+                            'unit': t.indicator.unit, 'aggregation': t.indicator.aggregation
+                        }
+                        for t in objective.targets
+                    ],
+                    'days': days
+                }
+            )
+
+    return summary
 
 
 class ReportResource(ResourceHandler):
@@ -53,66 +127,9 @@ class ReportResource(ResourceHandler):
         current_span.set_tag('product_id', product_id)
         current_span.set_tag('product', product.name)
         current_span.set_tag('product_group', product.product_group.name)
+        current_span.log_kv({'report_duration_start': start, 'report_duration_end': now})
 
-        slo = []
-        for objective in objectives:
-            days = collections.defaultdict(dict)
-
-            if not len(objective.targets):
-                current_span.log_kv({'objective_skipped': True, 'objective': objective.id})
-                continue
-
-            q = text('''
-                SELECT
-                    date_trunc(:unit, indicatorvalue.timestamp) AS day,
-                    indicator.name AS name,
-                    indicator.aggregation AS aggregation,
-                    MIN(indicatorvalue.value) AS min,
-                    AVG(indicatorvalue.value) AS avg,
-                    MAX(indicatorvalue.value) AS max,
-                    COUNT(indicatorvalue.value) AS count,
-                    SUM(indicatorvalue.value) AS sum,
-                    (SELECT SUM(CASE b WHEN TRUE THEN 0 ELSE 1 END) FROM UNNEST(array_agg(indicatorvalue.value BETWEEN
-                        COALESCE(target.target_from, :lower) AND COALESCE(target.target_to, :upper))) AS dt(b)
-                    ) AS breaches
-                FROM indicatorvalue
-                JOIN target ON target.indicator_id = indicatorvalue.indicator_id AND target.objective_id = :objective_id
-                JOIN indicator ON indicator.id = indicatorvalue.indicator_id
-                WHERE indicatorvalue.timestamp >= :start AND indicatorvalue.timestamp < :now
-                GROUP BY day, name, aggregation
-                ''')  # noqa
-
-            params = {
-                'unit': unit, 'objective_id': objective.id, 'start': start, 'now': now, 'lower': float('-inf'),
-                'upper': float('inf')
-            }
-
-            # Instrument DB query to generate a product report!
-            db_query_span = opentracing.tracer.start_span(operation_name='report_db_query', child_of=current_span)
-            db_query_span.set_tag('objective', objective.id)
-            with db_query_span:
-
-                for obj in db.session.execute(q, params):
-                    days[obj.day.isoformat()][obj.name] = {
-                        'max': obj.max, 'min': obj.min, 'avg': obj.avg, 'count': obj.count, 'breaches': obj.breaches,
-                        'sum': obj.sum, 'aggregation': obj.aggregation
-                    }
-
-                slo.append(
-                    {
-                        'title': objective.title,
-                        'description': objective.description,
-                        'id': objective.id,
-                        'targets': [
-                            {
-                                'from': t.target_from, 'to': t.target_to, 'sli_name': t.indicator.name,
-                                'unit': t.indicator.unit, 'aggregation': t.indicator.aggregation
-                            }
-                            for t in objective.targets
-                        ],
-                        'days': days
-                    }
-                )
+        slo = get_report_summary(objectives, unit, start, now, current_span)
 
         current_span.log_kv({'report_objective_count': len(slo), 'objective_count': len(objectives)})
 

@@ -9,8 +9,9 @@ class Target(db.Model):
     target_from = db.Column(db.Float(), nullable=True)
     target_to = db.Column(db.Float(), nullable=True)
 
-    indicator_id = db.Column(db.Integer(), db.ForeignKey('indicator.id'), nullable=False)
-    objective_id = db.Column(db.Integer(), db.ForeignKey('objective.id', ondelete='CASCADE'), nullable=False)
+    indicator_id = db.Column(db.Integer(), db.ForeignKey('indicator.id'), nullable=False, index=True)
+    objective_id = db.Column(
+        db.Integer(), db.ForeignKey('objective.id', ondelete='CASCADE'), nullable=False, index=True)
 
     username = db.Column(db.String(120), default='')
     created = db.Column(db.DateTime(), default=datetime.utcnow)
