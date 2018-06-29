@@ -23,7 +23,8 @@ from app.resources.slo.models import Objective
 REPORT_TYPES = ('weekly', 'monthly', 'quarterly')
 
 
-def truncated_values(values: List[IndicatorValue], unit: str='day') -> Dict[str, List[IndicatorValue]]:
+@trace()
+def truncate_values(values: Iterator[IndicatorValue], unit: str='day') -> Dict[str, List[IndicatorValue]]:
     truncated = collections.defaultdict(list)
 
     for v in values:
@@ -44,20 +45,24 @@ def get_report_summary(objectives: Iterator[Objective], unit: str, start: dateti
             current_span.log_kv({'objective_skipped': True, 'objective': objective.id})
             continue
 
-        current_span.log_kv({'objective_target_count': len(objective.targets)})
+        current_span.log_kv({'objective_target_count': len(objective.targets), 'objective_id': objective.id})
 
         # Instrument objective summary!
-        objective_summary_span = opentracing.tracer.start_span(operation_name='report_summary', child_of=current_span)
-        objective_summary_span.set_tag('objective', objective.id)
+        objective_summary_span = opentracing.tracer.start_span(
+            operation_name='report_objective_summary', child_of=current_span)
+        objective_summary_span.set_tag('objective_id', objective.id)
 
         with objective_summary_span:
             for target in objective.targets:
-                ivs = IndicatorValue.query.filter(
-                    IndicatorValue.indicator_id == target.indicator_id,
-                    IndicatorValue.timestamp >= start,
-                    IndicatorValue.timestamp < end)
+                objective_summary_span.log_kv({'target_id': target.id, 'indicator_id': target.indicator_id})
+                ivs = (
+                    IndicatorValue.query
+                    .filter(IndicatorValue.indicator_id == target.indicator_id,
+                            IndicatorValue.timestamp >= start,
+                            IndicatorValue.timestamp < end)
+                    .order_by(IndicatorValue.timestamp))
 
-                target_values_truncated = truncated_values(list(ivs))
+                target_values_truncated = truncate_values(ivs, parent_span=objective_summary_span)
 
                 for truncated_date, target_values in target_values_truncated.items():
                     target_form = target.target_from or float('-inf')
@@ -126,6 +131,7 @@ class ReportResource(ResourceHandler):
         current_span.set_tag('report_type', report_type)
         current_span.set_tag('product_id', product_id)
         current_span.set_tag('product', product.name)
+        current_span.set_tag('product_slug', product.slug)
         current_span.set_tag('product_group', product.product_group.name)
         current_span.log_kv({'report_duration_start': start, 'report_duration_end': now})
 
