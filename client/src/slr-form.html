@@ -51,7 +51,7 @@
         let tracer = opentracing.globalTracer()
           this.span = tracer.startSpan('http_request')
           this.span
-            .setTag(opentracing.Tags.HTTP_URL, this.request.action)
+            .setTag(opentracing.Tags.HTTP_URL, this.request.url)
             .setTag(opentracing.Tags.HTTP_METHOD, this.request.method)
             .setTag(opentracing.Tags.SPAN_KIND, opentracing.Tags.SPAN_KIND_RPC_CLIENT)
             .setTag(opentracing.Tags.COMPONENT, 'slr-form')
