@@ -64,11 +64,10 @@
 
         this.set('loading', false)
 
-
         this.span
-          .setTag(opentracing.Tags.HTTP_STATUS_CODE, e.detail.request.xhr.response.status)
+          .setTag(opentracing.Tags.HTTP_STATUS_CODE, e.detail.request.xhr.status)
           .setTag(opentracing.Tags.ERROR, true)
-          .log({'message': e.detail.request.xhr.response.detail, 'error.kind': e.detail.request.xhr.response})
+          .log({'message': e.detail.response, 'error.kind': e.detail.error})
           .finish()
 
       }
@@ -79,7 +78,7 @@
         this.set('loading', false)
 
         this.span
-          .setTag(opentracing.Tags.HTTP_STATUS_CODE, e.detail.response.status)
+          .setTag(opentracing.Tags.HTTP_STATUS_CODE, e.detail.status)
           .finish()
 
       }
