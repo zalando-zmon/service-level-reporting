@@ -50,7 +50,7 @@
           .setTag(opentracing.Tags.HTTP_URL, this.url)
           .setTag(opentracing.Tags.HTTP_METHOD, this.method)
           .setTag(opentracing.Tags.SPAN_KIND, opentracing.Tags.SPAN_KIND_RPC_CLIENT)
-          .setTag(opentracing.Tags.COMPONENT, 'iron-ajax')
+          .setTag(opentracing.Tags.COMPONENT, 'slr-ajax')
           .setTag('browser', true)
 
         // Inject OT headers
