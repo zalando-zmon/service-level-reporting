@@ -7,10 +7,10 @@
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="../bower_components/iron-label/iron-label.html">
-<link rel="import" href="../bower_components/iron-form/iron-form.html">
 <link rel="import" href="../bower_components/iron-media-query/iron-media-query.html">
 
 <link rel="import" href="./slr-ajax.html">
+<link rel="import" href="./slr-form.html">
 <link rel="import" href="./slr-items-data.html">
 <link rel="import" href="./slr-dialog.html">
 <link rel="import" href="./slr-objective-view.html">
@@ -53,7 +53,7 @@
         padding: 0;
       }
 
-      iron-form {
+      slr-form {
         @apply --layout-vertical;
         height: 100%;
       }
@@ -215,7 +215,7 @@
 
 
       <div class="container flex-vertical" small-layout$="[[small]]">
-        <iron-form id="form" headers="[[headers]]">
+        <slr-form id="form" loading="{{loading}}" item="{{item}}">
           <form method="[[method]]" action="[[action]]">
 
             <div class="inputs">
@@ -313,7 +313,7 @@
             </div>
 
           </form>
-        </iron-form>
+        </slr-form>
       </div>
     </slr-dialog>
 
@@ -468,7 +468,6 @@
       ready() {
         super.ready()
         this.$.productModal.addEventListener('slr-dialog-closed', (e) => this.onClose(e))
-        this.$.form.addEventListener('iron-form-presubmit', (e) => this.onPresubmit(e))
         this.$.form.addEventListener('iron-form-error', (e) => this.onError(e))
         this.$.form.addEventListener('iron-form-response', (e) => this.onResponse(e))
         this.$.objectiveView.addEventListener('slr-objective-submitted', (e) => this.onObjectiveSubmit(e))
@@ -508,19 +507,7 @@
         this.initForm()
       }
 
-      onPresubmit(e) {
-        this.set('loading', true)
-        // change method to PUT if we are updating.
-        // we need the payload in the body, so we trick iron-form
-        // by using POST and changing to PUT right before submit (here)
-        if (this.item.uri && this.$.form.request.method === 'POST') {
-          this.$.form.request.method = 'PUT'
-        }
-        console.log('Form submitted:', this.$.form.serializeForm())
-      }
-
       onError(e) {
-        this.set('loading', false)
         let method = this.$.form.request.method || 'default'
         let m = { 'POST': 'add', 'PUT': 'update', 'DELETE': 'delete', 'default': 'save' }
 
@@ -546,7 +533,6 @@
         let newItem = e.detail.response
         let oldItem = this.item
 
-        this.set('loading', false)
         this.set('editMode', false)
 
         if (method === 'POST' || method === 'PUT') {
@@ -610,11 +596,6 @@
         this.set('action', '/api/products')
         this.set('productGroupsSearch', '')
         this.$.form.reset()
-
-        // manually reset invalid state since iron-form does not support
-        // reset() yet... (as of 07.2017)
-        this.$.name.$.input.invalid = false
-        this.$.productGroup.invalid = false
       }
 
       cancel() {
