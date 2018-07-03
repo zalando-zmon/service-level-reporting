@@ -1,10 +1,10 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
-<link rel="import" href="../bower_components/iron-form/iron-form.html">
 <link rel="import" href="../bower_components/paper-input/paper-input.html">
 <link rel="import" href="../bower_components/paper-input/paper-input-container.html">
 <link rel="import" href="../bower_components/paper-input/paper-textarea.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 
+<link rel="import" href="./slr-form.html">
 <link rel="import" href="./slr-dialog.html">
 
 <dom-module id="slr-indicator-view">
@@ -20,7 +20,7 @@
         padding: 0;
       }
 
-      iron-form {
+      slr-form {
         height: 100%;
       }
 
@@ -95,7 +95,7 @@
       </div>
 
       <div class="container">
-        <iron-form id="form" headers="[[headers]]">
+        <slr-form id="form" loading="{{loading}}" item="{{item}}">
           <form class="form" method="[[method]]" action="[[action]]">
             <paper-input  type="text"
                           id="name"
@@ -132,7 +132,7 @@
                           hidden
                           required></paper-input>
           </form>
-        </iron-form>
+        </slr-form>
       </div>
     </slr-dialog>
   </template>
@@ -242,24 +242,13 @@
       }
 
       onPresubmit(e) {
-        this.set('loading', true)
-        // change method to PUT if we are updating.
-        // we need the payload in the body, so we trick iron-form
-        // by using POST and changing to PUT right before submit (here)
-        if (this.item.uri && this.$.form.request.method === 'POST') {
-          this.$.form.request.method = 'PUT'
-        }
-
         // Parse Source Textarea value into JSON to submit as Object.
         if (this.$.form.request.method !== 'DELETE') {
           this.$.form.request.body.source = this.getSourceJson()
         }
-
-        console.log('Form submitted:', this.$.form.serializeForm())
       }
 
       onError(e) {
-        this.set('loading', false)
         let method = this.$.form.request.method || 'default'
         let m = {
           'POST': 'add',
@@ -286,7 +275,6 @@
       }
 
       onResponse(e) {
-        this.set('loading', false)
         this.dispatchEvent(new CustomEvent('slr-indicator-submitted',
           { detail: { item: e.detail.response }, bubble:true, composed: true })
         )
@@ -353,6 +341,7 @@
 
         // manually reset invalid state since iron-form does not support
         // reset() yet... (as of 07.2017)
+        // reset is now supported but breaks with textarea... (07.2018)
         this.$.name.$.input.invalid = false
         this.$.unit.$.input.invalid = false
       }
