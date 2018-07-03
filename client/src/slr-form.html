@@ -57,6 +57,11 @@
             .setTag(opentracing.Tags.COMPONENT, 'slr-form')
             .setTag('browser', true)
 
+        // Inject OT headers
+        let headersCarrier = {}
+        tracer.inject(this.span.context(), opentracing.FORMAT_TEXT_MAP, headersCarrier)
+        Object.assign(this.headers, headersCarrier)
+
       }
 
       
