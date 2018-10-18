@@ -127,24 +127,26 @@ def product_group(obj):
 
 
 @product_group.command('list')
+@click.option('--limit', '-l', required=False, type=int, default=100, help='Limit of number of groups returned')
 @click.pass_obj
-def product_group_list(obj):
+def product_group_list(obj, limit):
     """List all product groups"""
     client = get_client(obj)
 
-    res = client.product_group_list()
+    res = client.product_group_list(limit=limit)
 
     print(json.dumps(res, indent=4))
 
 
 @product_group.command('search')
 @click.argument('query')
+@click.option('--limit', '-l', required=False, type=int, default=100, help='Limit of number of groups returned')
 @click.pass_obj
-def product_group_search(obj, query):
+def product_group_search(obj, query, limit):
     """Search for all product groups with name matching the query"""
     client = get_client(obj)
 
-    pgs = client.product_group_list(q=query)
+    pgs = client.product_group_list(q=query, limit=limit)
 
     print(json.dumps(pgs, indent=4))
 
@@ -153,7 +155,7 @@ def product_group_search(obj, query):
 @click.argument('name')
 @click.pass_obj
 def product_group_get(obj, name):
-    """List all product groups"""
+    """Get product group"""
     client = get_client(obj)
 
     pgs = client.product_group_list(name)
@@ -227,24 +229,26 @@ def product(obj):
 
 @product.command('list')
 @click.option('--product-group-name', '-p', required=False, type=str, help='Filter products by product group name.')
+@click.option('--limit', '-l', required=False, type=int, default=100, help='Limit of number of products returned')
 @click.pass_obj
-def product_list(obj, product_group_name):
+def product_list(obj, product_group_name, limit):
     """List all products"""
     client = get_client(obj)
 
-    res = client.product_list(product_group_name=product_group_name)
+    res = client.product_list(product_group_name=product_group_name, limit=limit)
 
     print(json.dumps(res, indent=4))
 
 
 @product.command('search')
 @click.argument('query')
+@click.option('--limit', '-l', required=False, type=int, default=100, help='Limit of number of products returned')
 @click.pass_obj
-def product_search(obj, query):
+def product_search(obj, query, limit):
     """Search for all products with name matching the query"""
     client = get_client(obj)
 
-    pgs = client.product_list(q=query)
+    pgs = client.product_list(q=query, limit=limit)
 
     print(json.dumps(pgs, indent=4))
 
