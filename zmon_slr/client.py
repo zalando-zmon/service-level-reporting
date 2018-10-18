@@ -67,11 +67,14 @@ class Client:
 
         return res.json()
 
-    def product_group_list(self, name: str=None, q: str=None) -> List[dict]:
+    def product_group_list(self, name: str=None, q: str=None, limit: int=100) -> List[dict]:
         params = {} if not name else {'name': name}
 
         if q:
             params['q'] = q
+
+        if limit:
+            params['page_size'] = limit
 
         res = self.session.get(self.PRODUCT_GROUPS, params=params)
         res.raise_for_status()
