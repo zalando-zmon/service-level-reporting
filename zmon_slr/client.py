@@ -26,7 +26,7 @@ class Client:
         self.PRODUCT_GROUPS = api['product_groups_uri']
         self.PRODUCTS = api['products_uri']
 
-    def product_list(self, name: str=None, product_group_name: str=None, limit: int=100, q: str=None) -> List[dict]:
+    def product_list(self, name=None, product_group_name=None, limit=100, q=None) -> List[dict]:
         params = {} if not name else {'name': name}
 
         if q:
@@ -67,7 +67,7 @@ class Client:
 
         return res.json()
 
-    def product_group_list(self, name: str=None, q: str=None, limit: int=100) -> List[dict]:
+    def product_group_list(self, name=None, q=None, limit=100) -> List[dict]:
         params = {} if not name else {'name': name}
 
         if q:
@@ -170,7 +170,7 @@ class Client:
 
         return res
 
-    def target_create(self, slo: dict, sli_uri: str, target_from: float=0.0, target_to: float=0.0) -> dict:
+    def target_create(self, slo: dict, sli_uri: str, target_from=0.0, target_to=0.0) -> dict:
         target = {
             'from': target_from,
             'to': target_to,
@@ -245,7 +245,7 @@ class Client:
         values = res.json()
         return values['data']
 
-    def sli_query(self, sli: dict, start: int, end: str=None) -> dict:
+    def sli_query(self, sli: dict, start: int, end=None) -> dict:
         data = {}
         if start:
             data['start'] = start

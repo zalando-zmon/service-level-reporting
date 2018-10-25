@@ -24,7 +24,7 @@ REPORT_TYPES = ('weekly', 'monthly', 'quarterly')
 
 
 @trace()
-def truncate_values(values: Iterator[IndicatorValue], unit: str='day') -> Dict[str, List[IndicatorValue]]:
+def truncate_values(values: Iterator[IndicatorValue], unit='day') -> Dict[str, List[IndicatorValue]]:
     truncated = collections.defaultdict(list)
 
     for v in values:

@@ -122,7 +122,7 @@ class ResourceHandler:
         # Persist
         try:
             obj = resource.update_object(obj, **kwargs)
-        except IntegrityError as e:
+        except IntegrityError:
             return problem(status=400, title='Duplication error', detail='Resource already exist')
 
         return resource.build_resource(obj, **kwargs)
@@ -152,7 +152,7 @@ class ResourceHandler:
     ####################################################################################################################
     @staticmethod
     def get_uri_from_id(obj_id: Union[str, int], **kwargs) -> str:
-        raise NotImplemented
+        raise NotImplementedError
 
     ####################################################################################################################
     # DEFAULT IMPL
@@ -254,22 +254,22 @@ class ResourceHandler:
         pass
 
     def get_query(self, **kwargs) -> BaseQuery:
-        raise NotImplemented
+        raise NotImplementedError
 
     def new_object(self, **kwargs) -> Model:
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_objects(self, query: Pagination, **kwargs) -> List[Model]:
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_object(self, obj_id: int, **kwargs) -> Model:
-        raise NotImplemented
+        raise NotImplementedError
 
     def save_object(self, obj: Model, **kwargs) -> Model:
-        raise NotImplemented
+        raise NotImplementedError
 
     def update_object(self, obj: Model, **kwargs) -> Model:
-        raise NotImplemented
+        raise NotImplementedError
 
     def delete_object(self, obj: Model, **kwargs) -> Model:
-        raise NotImplemented
+        raise NotImplementedError

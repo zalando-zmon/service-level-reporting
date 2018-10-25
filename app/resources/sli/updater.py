@@ -7,7 +7,6 @@ import opentracing
 from flask import Flask
 
 from datetime import datetime, timedelta
-from typing import Optional
 
 from gevent.pool import Pool
 
@@ -77,7 +76,7 @@ def update_indicator(app: Flask, indicator: Indicator):
 
 
 @trace(pass_span=True)
-def update_indicator_values(indicator: Indicator, start: int, end: Optional[int]=None, **kwargs):
+def update_indicator_values(indicator: Indicator, start: int, end=None, **kwargs):
     """Query and update indicator values"""
     current_span = extract_span_from_kwargs(**kwargs)
 

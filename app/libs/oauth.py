@@ -13,7 +13,7 @@ from connexion.exceptions import OAuthProblem, OAuthResponseProblem, OAuthScopeP
 from opentracing_utils import extract_span_from_flask_request, trace
 
 from app.config import CREDENTIALS_DIR, AUTHORIZE_URL, ACCESS_TOKEN_URL
-from app.extensions import set_token_info, cache
+from app.extensions import set_token_info
 
 
 logger = logging.getLogger('connexion.api.security')
@@ -132,7 +132,6 @@ def verify_oauth_with_session(token_info_url, allowed_scopes, function):
     return wrapper
 
 
-@cache.memoize(60)
 @trace(span_extractor=extract_span_from_flask_request, tags={'oauth2': True})
 def fetch_token_info(token_info_url, token):
 
