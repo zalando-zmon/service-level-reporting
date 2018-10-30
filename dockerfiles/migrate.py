@@ -25,6 +25,7 @@ def upgrade(path):
         for r in result.splitlines():
             print(r)
     except subprocess.CalledProcessError as e:
+        logger.exception('Failed to complete alembic upgrade')
         return e.returncode
 
     return 0
