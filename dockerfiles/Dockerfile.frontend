@@ -24,9 +24,7 @@ COPY client /client
 WORKDIR /client
 
 RUN \
-    npm install -g bower && \
-    npm install -g polymer-cli && \
-    npm run-script build
+    npm install
 
 RUN cp -rf build/default /var/www/app
 
