@@ -24,6 +24,7 @@ COPY client /client
 WORKDIR /client
 
 RUN npm install && \
+    npm run-script polymer && \
     npm run-script build
 
 RUN cp -rf build/default /var/www/app
