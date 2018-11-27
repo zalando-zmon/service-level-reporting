@@ -12,7 +12,8 @@
     "mock": "./node_modules/polymer-cli/bin/polymer.js serve --proxy-path '/api/' --proxy-target 'http://localhost:8000/'",
     "build": "./node_modules/polymer-cli/bin/polymer.js build",
     "test": "./node_modules/polymer-cli/bin/polymer.js test -l chrome",
-    "polymer": "./node_modules/polymer-cli/bin/polymer.js install"
+    "polymer": "./node_modules/polymer-cli/bin/polymer.js install",
+    "postinstall": "npm run-script polymer"
   },
   "repository": {
     "type": "git",
