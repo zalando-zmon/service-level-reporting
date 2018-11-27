@@ -23,8 +23,7 @@ COPY client /client
 
 WORKDIR /client
 
-RUN \
-    npm install
+RUN npm install
 
 RUN cp -rf build/default /var/www/app
 
