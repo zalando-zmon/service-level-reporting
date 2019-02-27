@@ -26,7 +26,7 @@ def get_user_groups(username):
         token = zign.api.get_token('uid', ['uid'])
         headers = {'Authorization': 'Bearer {}'.format(token)}
 
-        logger.info('Retrieving groups for user: {}'.format(username))
+        logger.debug('Retrieving groups for user: {}'.format(username))
 
         url = urljoin(API_AUTHORIZATION_COMMUNITY_URL, 'api/employees/{}/groups'.format(username))
         resp = requests.get(url, headers=headers, timeout=2)

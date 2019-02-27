@@ -1,7 +1,6 @@
 import os
 import functools
 import logging
-import textwrap
 
 import requests
 from flask import request
@@ -92,7 +91,7 @@ def verify_oauth_with_session(token_info_url, allowed_scopes, function):
         token = flask_session.get('access_token')
 
         if not authorization and not token:
-            logger.info("... No auth provided. Aborting with 401.")
+            logger.debug("... No auth provided. Aborting with 401.")
             raise OAuthProblem(description='No authorization token provided')
 
         if not all([user, is_authenticated, token]):
@@ -110,17 +109,13 @@ def verify_oauth_with_session(token_info_url, allowed_scopes, function):
             logger.debug("... User scopes: %s", user_scopes)
 
             if not allowed_scopes <= user_scopes:
-                logger.info(textwrap.dedent("""
-                            ... User scopes (%s) do not match the scopes necessary to call endpoint (%s).
-                             Aborting with 403.""").replace('\n', ''),
-                            user_scopes, allowed_scopes)
                 raise OAuthScopeProblem(
                     description='Provided token doesn\'t have the required scope',
                     required_scopes=allowed_scopes,
                     token_scopes=user_scopes
                 )
 
-            logger.info("... Token authenticated.")
+            logger.debug("... Token authenticated.")
 
             request.user = token_info.get('uid')
             request.token_info = token_info
@@ -135,7 +130,7 @@ def verify_oauth_with_session(token_info_url, allowed_scopes, function):
 @trace(span_extractor=extract_span_from_flask_request, tags={'oauth2': True})
 def fetch_token_info(token_info_url, token):
 
-    logger.info("... Getting token from %s", token_info_url)
+    logger.debug("... Getting token from %s", token_info_url)
 
     token_request = session.get(token_info_url, headers={'Authorization': 'Bearer {}'.format(token)}, timeout=2)
 

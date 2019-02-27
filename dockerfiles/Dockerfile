@@ -1,7 +1,7 @@
 FROM registry.opensource.zalan.do/stups/python:latest
 
 # libpq-dev is needed for PostgreSQL driver
-RUN apt-get update && apt-get install -y libpq-dev dnsutils libdpkg-perl
+RUN apt-get update && apt-get install -y libpq-dev dnsutils libdpkg-perl python3-dev
 
 COPY requirements.txt /
 RUN pip3 install -r /requirements.txt

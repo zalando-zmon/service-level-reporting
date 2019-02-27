@@ -16,7 +16,7 @@ class AdminOnly(Authorization):
     def delete(self, obj: db.Model, **kwargs) -> None:
         user = request.user if hasattr(request, 'user') else None
 
-        logger.info('User {} deleting resource {}'.format(user, obj))
+        logger.debug('User {} deleting resource {}'.format(user, obj))
 
         if not user or user not in ADMINS:
             raise ProblemException(

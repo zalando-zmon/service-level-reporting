@@ -84,23 +84,24 @@ def update_indicator_values(indicator: Indicator, start: int, end=None, **kwargs
 
     result = query_sli(indicator.name, indicator.source, start, end)
 
-    insert_span = opentracing.tracer.start_span(operation_name='insert_indicator_values', child_of=current_span)
-    (insert_span
-        .set_tag('indicator', indicator.name)
-        .set_tag('indicator_id', indicator.id))
+    if result:
+        insert_span = opentracing.tracer.start_span(operation_name='insert_indicator_values', child_of=current_span)
+        (insert_span
+            .set_tag('indicator', indicator.name)
+            .set_tag('indicator_id', indicator.id))
 
-    insert_span.log_kv({'result_count': len(result)})
+        insert_span.log_kv({'result_count': len(result)})
 
-    with insert_span:
-        for minute, val in result.items():
-            if val > 0:
-                val = max(val, MIN_VAL)
-            elif val < 0:
-                val = min(val, MIN_VAL * -1)
+        with insert_span:
+            for minute, val in result.items():
+                if val > 0:
+                    val = max(val, MIN_VAL)
+                elif val < 0:
+                    val = min(val, MIN_VAL * -1)
 
-            iv = IndicatorValue(timestamp=minute, value=val, indicator_id=indicator.id)
-            insert_indicator_value(session, iv)
+                iv = IndicatorValue(timestamp=minute, value=val, indicator_id=indicator.id)
+                insert_indicator_value(session, iv)
 
-    session.commit()
+        session.commit()
 
     return len(result)
