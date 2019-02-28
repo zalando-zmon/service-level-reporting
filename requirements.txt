@@ -11,12 +11,15 @@ Flask-SQLAlchemy==2.2
 flask==0.12.4
 gevent==1.2.2
 ItsDangerous==0.24
+jsonschema<3.0.0
+oauthlib<3.0.0
 opentracing-utils
 opentracing>=1.2.2,<2
 psycogreen
 psycopg2
 python-dateutil==2.6.0
 redis==2.10.5
+requests-oauthlib==1.1.0
 stups-zign
 swagger-spec-validator==2.1.0
 zmon-cli
