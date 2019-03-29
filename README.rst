@@ -42,7 +42,7 @@ Run the server
 
 .. code-block:: bash
 
-    python -m app
+    python3 -m app
 
 
 Configuration parameters:
