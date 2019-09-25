@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 
 import datetime
-import os
-import time
 import logging
+import os
 import sys
+import time
+from collections import defaultdict
 
 import jinja2
 
-from collections import defaultdict
-
 from zmon_slr.client import Client
-
 from zmon_slr.plot import plot
-
 
 AGGS_MAP = {
     'average': 'avg',
@@ -206,6 +203,7 @@ def generate_weekly_report(client: Client, product: dict, output_dir: str) -> No
                 slis[sli]['unit'] = unit
                 slis[sli]['classes'] = classes
                 slis[sli]['aggregate'] = '{:.2f} {}'.format(get_aggregate(aggregation, sli_data), unit)
+
 
             dt = datetime.datetime.strptime(day[:10], '%Y-%m-%d')
             dow = dt.strftime('%a')
