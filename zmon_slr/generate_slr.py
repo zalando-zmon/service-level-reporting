@@ -204,7 +204,6 @@ def generate_weekly_report(client: Client, product: dict, output_dir: str) -> No
                 slis[sli]['classes'] = classes
                 slis[sli]['aggregate'] = '{:.2f} {}'.format(get_aggregate(aggregation, sli_data), unit)
 
-
             dt = datetime.datetime.strptime(day[:10], '%Y-%m-%d')
             dow = dt.strftime('%a')
 

@@ -2,7 +2,6 @@
 
 import collections
 import json
-import logging
 import pathlib
 import subprocess
 import traceback
@@ -19,8 +18,8 @@ def save_debug_data(output_file, gnuplot_data, gnuplot_result):
     try:
         output_file_path = pathlib.Path(output_file)
         filesize = output_file_path.stat().st_size
-        # if filesize:
-        #     return
+        if filesize:
+            return
 
         debug_file_path = pathlib.Path(f"{output_file_path}.debug.json")
         print(f"Generated graph {output_file} is probably corrupted! Saving troubleshooting data to {debug_file_path}...")
