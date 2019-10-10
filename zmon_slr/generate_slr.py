@@ -209,14 +209,25 @@ def generate_weekly_report(client: Client, product: dict, output_dir: str) -> No
 
             slo['data'].append({'caption': '{} {}'.format(dow, day[5:10]), 'slis': slis})
 
-        slo['breaches'] = max_or_zero(breaches_by_sli.values())
-        slo['count'] = max_or_zero(counts_by_sli.values())
+        if len(counts_by_sli.keys()):
+            worst_sli_name = None
+            worst_sli_breach_percentage = 0
+
+            for sli in counts_by_sli:
+                breach_percentage = breaches_by_sli[sli] / counts_by_sli[sli]
+                if breach_percentage > worst_sli_breach_percentage:
+                    worst_sli_breach_percentage = breach_percentage
+                    worst_sli_name = sli
+
+            slo['breaches'] = breaches_by_sli[worst_sli_name]
+            slo['count'] = counts_by_sli[worst_sli_name]
+        else:
+            slo['breaches'] = 0
+            slo['count'] = 0
 
         for target in slo['targets']:
             sli_name = target['sli_name']
             aggregation = target['aggregation']
-
-            val = None
 
             slo['slis'][sli_name] = {
                 'unit': target['unit'],

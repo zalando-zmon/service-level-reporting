@@ -108,8 +108,9 @@
                         <img src="{{ slo.chart }}" alt="Service Level Objective Chart"/>
                     </p>
                     {% if slo.breaches %}
-                    <div class="alert alert-danger"><p>During this period, the service failed to meet this SLO for <strong title="{{ slo.breaches }} minute(s)">{{ slo.breaches|human_time }}</strong>.
-                        The SLO was not met for <strong>{{ '%.2f'|format(slo.breaches/slo.count * 100) }} %</strong> of the observed time.</p></div>
+                    <div class="alert alert-danger"><p>During this period, the service failed to meet this SLO for *approximately <strong title="{{ slo.breaches }} minute(s)">{{ (slo.breaches/slo.count * 10080)|int|human_time }}</strong>.
+                        The SLO was not met for <strong>{{ '%.2f'|format(slo.breaches/slo.count * 100) }} %</strong> of the observed time.</p> * This time is derived from the number of data points and does not necessarily correspond
+                        to reality.</div>
                     {% endif %}
                 </div>
             </div>

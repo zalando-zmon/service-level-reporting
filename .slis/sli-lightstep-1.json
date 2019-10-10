@@ -1,0 +1,9 @@
+{
+  "name": "From Lightstep",
+  "unit": "ms",
+  "source": {
+      "type": "lightstep",
+      "stream-id": "yNzld3jn",
+      "metric": "p90"
+  }
+}

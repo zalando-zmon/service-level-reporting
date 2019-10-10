@@ -22,6 +22,10 @@ from app.resources.product.api import ProductResource
 from .models import Indicator, IndicatorValue
 from .updater import update_indicator_values
 
+from app.libs.lightstep import get_stream_data
+
+from dateutil.relativedelta import relativedelta
+
 
 class SLIResource(ResourceHandler):
     model_fields = ('name', 'slug', 'source', 'unit', 'aggregation', 'created', 'updated', 'username')
@@ -54,7 +58,15 @@ class SLIResource(ResourceHandler):
         source = sli.get('source')
         if not source:
             raise ProblemException(title='Invalid SLI', detail="SLI 'source' must have a value!")
+        source_type = source.get('type') or 'zmon'
 
+        if source_type == 'lightstep':
+            self.validate_lightstep_source(source)
+        else:
+            self.validate_zmon_source(source)
+
+    @staticmethod
+    def validate_zmon_source(source: dict):
         required = {'aggregation', 'check_id', 'keys'}
         missing = set(required) - set(source.keys())
         if missing:
@@ -77,6 +89,27 @@ class SLIResource(ResourceHandler):
             raise ProblemException(
                 title='Invalid SLI', detail="SLI 'source' aggregation type *weighted* must have *weight_keys*")
 
+    @staticmethod
+    def validate_lightstep_source(sli: dict):
+        pass
+
+    @staticmethod
+    def update_indicator_from_source(obj: Indicator):
+        _type = obj.source.get('type', 'zmon')
+        if _type == 'lightstep':
+            SLIResource.update_lightstep_from_source(obj)
+        else:
+            SLIResource.update_zmon_indicator_from_source(obj)
+
+    @staticmethod
+    def update_zmon_indicator_from_source(obj: Indicator):
+        obj.aggregation = obj.source['aggregation']['type']
+        pass
+
+    @staticmethod
+    def update_lightstep_from_source(source: dict):
+        pass
+
     def new_object(self, sli: dict, **kwargs) -> Indicator:
         fields = self.get_object_fields(sli)
 
@@ -96,7 +129,7 @@ class SLIResource(ResourceHandler):
 
     def save_object(self, obj: Indicator, **kwargs) -> Indicator:
         obj.slug = slugger(obj.name)
-        obj.aggregation = obj.source['aggregation']['type']
+        SLIResource.update_indicator_from_source(obj)
         db.session.add(obj)
         db.session.commit()
 
@@ -108,7 +141,7 @@ class SLIResource(ResourceHandler):
         for field, val in fields.items():
             setattr(obj, field, val)
 
-        obj.aggregation = obj.source['aggregation']['type']
+        SLIResource.update_indicator_from_source(obj)
 
         product_id = kwargs.get('product_id')
 
@@ -148,6 +181,32 @@ class SLIResource(ResourceHandler):
 class SLIValueResource(ResourceHandler):
     model_fields = ('timestamp', 'value',)
     skip_count = True
+
+    @classmethod
+    def list(cls, **kwargs) -> Union[dict, Tuple]:
+        indicator = Indicator.query.filter_by(id=kwargs.get('id'), is_deleted=False).first_or_404()
+        type = indicator.source.get('type')
+        if type != 'lightstep':
+            return super().list(**kwargs)
+
+        metric = indicator.source.get('metric')
+
+        now = datetime.utcnow()
+        start = now - relativedelta(days=7)
+        stream_data = get_stream_data("yNzld3jn", start, now, metric)
+        resources = [{
+            "timestamp": stream_object.timestamp,
+            "value": stream_object.value} for stream_object in stream_data
+        ]
+
+        return {
+            'data': resources,
+            '_meta': {
+                'count': len(resources),
+                'next_uri': None,
+                'previous_uri': None,
+            }
+        }
 
     def get_query(self, id: int, **kwargs) -> BaseQuery:
         Indicator.query.filter_by(id=id, is_deleted=False).first_or_404()

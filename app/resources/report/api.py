@@ -19,6 +19,8 @@ from app.resources.product.models import Product
 from app.resources.sli.models import Indicator, IndicatorValue
 from app.resources.slo.models import Objective
 
+from app.libs.lightstep import get_stream_data
+
 
 REPORT_TYPES = ('weekly', 'monthly', 'quarterly')
 
@@ -36,6 +38,7 @@ def truncate_values(values: Iterator[IndicatorValue], unit='day') -> Dict[str, L
 def get_report_summary(objectives: Iterator[Objective], unit: str, start: datetime, end: datetime,
                        current_span: opentracing.Span) -> List[dict]:
     summary = []
+
     start = truncate(start)
 
     for objective in objectives:
@@ -54,15 +57,29 @@ def get_report_summary(objectives: Iterator[Objective], unit: str, start: dateti
 
         with objective_summary_span:
             for target in objective.targets:
-                objective_summary_span.log_kv({'target_id': target.id, 'indicator_id': target.indicator_id})
-                ivs = (
-                    IndicatorValue.query
-                    .filter(IndicatorValue.indicator_id == target.indicator_id,
-                            IndicatorValue.timestamp >= start,
-                            IndicatorValue.timestamp < end)
-                    .order_by(IndicatorValue.timestamp))
 
-                target_values_truncated = truncate_values(ivs, parent_span=objective_summary_span)
+                objective_summary_span.log_kv({'target_id': target.id, 'indicator_id': target.indicator_id})
+
+                target_source_type = target.indicator.source.get('type', 'zmon')
+
+                if target_source_type == 'lightstep':
+                    stream_id = target.indicator.source.get('stream-id')
+                    metric = target.indicator.source.get('metric')
+
+                    ivs = get_stream_data(stream_id, start, end, metric)
+
+                else:
+                    ivs = (
+                        IndicatorValue.query
+                            .filter(IndicatorValue.indicator_id == target.indicator_id,
+                                    IndicatorValue.timestamp >= start,
+                                    IndicatorValue.timestamp < end)
+                            .order_by(IndicatorValue.timestamp))
+
+                try:
+                    target_values_truncated = truncate_values(ivs, parent_span=objective_summary_span)
+                except Exception as e:
+                    print(e)
 
                 for truncated_date, target_values in target_values_truncated.items():
                     target_form = target.target_from or float('-inf')

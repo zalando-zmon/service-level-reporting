@@ -11,7 +11,7 @@ Idea:
 * Retrieve metrics such as latencies and error counts from KairosDB
 * Aggregate metrics, weighted by requests/s
 * Push metrics truncated to full minute timestamps into PostgreSQL
-* Generate reliabilty reports (weekly, monthly, ..)
+* Generate reliability reports (weekly, monthly, ..)
 
 
 Server local setup

@@ -19,7 +19,6 @@ from app.libs.zmon import query_sli
 from .models import IndicatorValue, Indicator
 from .models import insert_indicator_value
 
-
 MIN_VAL = math.expm1(1e-10)
 
 logger = logging.getLogger(__name__)
@@ -36,7 +35,7 @@ def update_all_indicators(app: Flask):
 
     for indicator in Indicator.query.all():
         try:
-            if indicator.is_deleted is True:
+            if indicator.is_deleted is True or indicator.source.get('type', 'zmon') is not 'zmon':
                 continue
             updater_pool.spawn(update_indicator, app, indicator)
         except Exception:
@@ -55,11 +54,11 @@ def update_indicator(app: Flask, indicator: Indicator):
         try:
             newest_iv = (
                 IndicatorValue.query.
-                with_entities(db.func.max(IndicatorValue.timestamp).label('timestamp')).
-                filter(IndicatorValue.timestamp >= newest_dt,
-                       IndicatorValue.timestamp < now,
-                       IndicatorValue.indicator_id == indicator.id).
-                first()
+                    with_entities(db.func.max(IndicatorValue.timestamp).label('timestamp')).
+                    filter(IndicatorValue.timestamp >= newest_dt,
+                           IndicatorValue.timestamp < now,
+                           IndicatorValue.indicator_id == indicator.id).
+                    first()
             )
 
             if newest_iv and newest_iv.timestamp:
@@ -78,17 +77,29 @@ def update_indicator(app: Flask, indicator: Indicator):
 @trace(pass_span=True)
 def update_indicator_values(indicator: Indicator, start: int, end=None, **kwargs):
     """Query and update indicator values"""
-    current_span = extract_span_from_kwargs(**kwargs)
 
-    session = db.session
+    source_type = indicator.source.get('type', 'zmon')
 
+    if source_type == "lightstep":
+        updated_indicator_values = update_indicator_values_lightstep(indicator, start, end, **kwargs)
+    else:
+        updated_indicator_values = update_indicator_values_zmon(indicator, start, end, **kwargs)
+
+    return updated_indicator_values
+
+
+def update_indicator_values_zmon(indicator: Indicator, start: int, end=None, **kwargs):
     result = query_sli(indicator.name, indicator.source, start, end)
 
     if result:
+
+        session = db.session
+        current_span = extract_span_from_kwargs(**kwargs)
+
         insert_span = opentracing.tracer.start_span(operation_name='insert_indicator_values', child_of=current_span)
         (insert_span
-            .set_tag('indicator', indicator.name)
-            .set_tag('indicator_id', indicator.id))
+         .set_tag('indicator', indicator.name)
+         .set_tag('indicator_id', indicator.id))
 
         insert_span.log_kv({'result_count': len(result)})
 
@@ -105,3 +116,9 @@ def update_indicator_values(indicator: Indicator, start: int, end=None, **kwargs
         session.commit()
 
     return len(result)
+    pass
+
+
+def update_indicator_values_lightstep(indicator: Indicator, start: int, end=None, **kwargs):
+    logger.info('Updater: Indicator {} uses Lightstep and will be ignored'.format(indicator.name))
+    return 0

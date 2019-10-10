@@ -15,7 +15,6 @@ from zmon_cli.client import Zmon
 from zmon_slr.client import Client, SLRClientError
 from zmon_slr.generate_slr import generate_weekly_report
 
-
 DEFAULT_CONFIG_FILE = '~/.zmon-slr.yaml'
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 SLR_TOKEN = os.environ.get('SLR_TOKEN')
@@ -641,7 +640,32 @@ def target_delete(obj, product_name, target_uri):
 ########################################################################################################################
 # SLI
 ########################################################################################################################
-def validate_sli_source(config, source, ignore_keys=False):
+
+
+def validate_zmon_source(config, source, act: Action, ignore_keys=False):
+    required = {'aggregation', 'check_id', 'keys'}
+    missing = set(required) - set(source.keys())
+
+    # checking SLI source structure
+    if missing:
+        act.error('Fields {} are missing in SLI source definition.'.format(missing))
+
+    if 'keys' not in missing and not source.get('keys'):
+        act.error('Field "keys" value is missing in SLI source definition.')
+
+    # Checking aggregation sanity
+    aggregation = source.get('aggregation', {})
+    agg_type = aggregation.get('type')
+    if 'aggregation' not in missing:
+        if not agg_type or agg_type not in AGG_TYPES:
+            act.error('Field "type" is missing in SLI source aggregation. Valid values are: {}'.format(AGG_TYPES))
+
+        if agg_type == 'weighted' and not aggregation.get('weight_keys'):
+            act.error('Field "weight_keys" is missing in SLI source aggregation for type "weighted".')
+
+    if 'check_id' in missing or 'keys' in missing or not source['keys']:
+        act.error('')
+
     if 'zmon_url' not in config:
         config = set_config_file()
 
@@ -698,6 +722,27 @@ def validate_sli_source(config, source, ignore_keys=False):
                 check_id, set(sample_data)))
 
 
+def validate_lightstep_source(config, source, act: Action, ignore_keys=False):
+    required = {'stream-id', 'metric'}
+    missing = set(required) - set(source.keys())
+    # checking SLI source structure
+    if missing:
+        act.error('Fields {} are missing in SLI source definition.'.format(missing))
+    metric = source.get('metric', '')
+    if metric not in ["ops-count", "error-count", "p50", "p75", "p90", "p99"]:
+        act.error('"source.metric is invalid.'.format(missing))
+    return None
+
+
+def validate_sli_source(config, source: dict, act: Action, ignore_keys=False):
+    _type = source.get("type", "zmon")
+    if _type not in ["lightstep", "zmon"]:
+        act.error('Field "source.type" should be either "zmon", "lightstep" or empty. Defaults to "zmon"')
+    if _type == "lightstep":
+        return validate_lightstep_source(config, source, act, ignore_keys)
+    return validate_zmon_source(config, source, act, ignore_keys)
+
+
 def validate_sli(obj: dict, sli: dict, act: Action):
     if 'name' not in sli or not sli['name']:
         act.error('Field "name" is missing in SLI definition.')
@@ -710,31 +755,10 @@ def validate_sli(obj: dict, sli: dict, act: Action):
 
     source = sli.get('source', {})
 
-    required = {'aggregation', 'check_id', 'keys'}
-    missing = set(required) - set(source.keys())
-
-    # checking SLI source structure
-    if missing:
-        act.error('Fields {} are missing in SLI source definition.'.format(missing))
-
-    if 'keys' not in missing and not source.get('keys'):
-        act.error('Field "keys" value is missing in SLI source definition.')
-
-    # Checking aggregation sanity
-    aggregation = source.get('aggregation', {})
-    agg_type = aggregation.get('type')
-    if 'aggregation' not in missing:
-        if not agg_type or agg_type not in AGG_TYPES:
-            act.error('Field "type" is missing in SLI source aggregation. Valid values are: {}'.format(AGG_TYPES))
-
-        if agg_type == 'weighted' and not aggregation.get('weight_keys'):
-            act.error('Field "weight_keys" is missing in SLI source aggregation for type "weighted".')
-
-    if 'check_id' not in missing and 'keys' not in missing and source['keys']:
-        try:
-            validate_sli_source(obj, source)
-        except SLRClientError as e:
-            act.fatal_error(e)
+    try:
+        validate_sli_source(obj, source, act)
+    except SLRClientError as e:
+        act.fatal_error(e)
 
 
 @cli.group('sli', cls=AliasedGroup)

@@ -12,5 +12,7 @@ client/build
 build/
 dist/
 .mypy_cache/
+# shell for setting environment variables
+env.sh
 .vscode/
 .coverage
