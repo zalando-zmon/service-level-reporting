@@ -1,11 +1,44 @@
 #!/usr/bin/env python3
 
 import collections
+import json
+import pathlib
 import subprocess
+import traceback
 
 from zmon_slr.client import Client
 
 precision = {'ms': 0, '%': 2}
+
+
+def save_debug_data(output_file, gnuplot_data, gnuplot_result):
+    """Tries to gather and save debug data. If fails, continues and does not stall further processing.
+    """
+
+    try:
+        output_file_path = pathlib.Path(output_file)
+        filesize = output_file_path.stat().st_size
+        if filesize:
+            return
+
+        debug_file_path = pathlib.Path(f"{output_file_path}.debug.json")
+        print(
+            f"Generated graph {output_file} is probably corrupted! "
+            f"Saving troubleshooting data to {debug_file_path}..."
+        )
+        data = {
+            "output_file": output_file,
+            "gnuplot_data": gnuplot_data,
+            "gnuplot_version": subprocess.run(["gnuplot", "-V"], stdout=subprocess.PIPE).stdout.decode().strip(),
+            "gnuplot_result": [item.decode() for item in gnuplot_result],
+            "tsvs": {
+                str(path): path.read_text()
+                for path in pathlib.Path('/tmp').glob('data*.tsv')
+            }
+        }
+        debug_file_path.write_text(json.dumps(data))
+    except: # noqa
+        traceback.print_exc()
 
 
 def plot(client: Client, product: dict, slo_id: int, output_file):
@@ -39,7 +72,7 @@ def plot(client: Client, product: dict, slo_id: int, output_file):
             for row in data:
                 fd.write('{}\t{}\n'.format(row['timestamp'], row['value']))
 
-    plot = subprocess.Popen(['gnuplot'], stdin=subprocess.PIPE)
+    plot = subprocess.Popen(['gnuplot'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     gnuplot_data = '''
     set output '{}'
@@ -95,4 +128,5 @@ def plot(client: Client, product: dict, slo_id: int, output_file):
             plots.append('"{}" using 1:2 lw 2 axes x1{} with lines title "{}"'.format(
                 target['fn'], target['yaxis'], target['sli_name'].replace('_', ' ')))
     gnuplot_data += ', '.join(plots) + '\n'
-    plot.communicate(gnuplot_data.encode('utf-8'))
+    gnuplot_result = plot.communicate(gnuplot_data.encode('utf-8'))
+    save_debug_data(output_file, gnuplot_data, gnuplot_result)

@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 
 import datetime
-import os
-import time
 import logging
+import os
 import sys
+import time
+from collections import defaultdict
 
 import jinja2
 
-from collections import defaultdict
-
 from zmon_slr.client import Client
-
 from zmon_slr.plot import plot
-
 
 AGGS_MAP = {
     'average': 'avg',
