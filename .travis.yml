@@ -3,6 +3,6 @@ python:
   - "3.6"
 install:
   - pip install tox
-  - apt-get install -y gnuplot
+  - sudo apt-get install -y gnuplot
 script:
   - tox
