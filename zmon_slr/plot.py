@@ -72,7 +72,7 @@ def plot(client: Client, product: dict, slo_id: int, output_file):
             for row in data:
                 fd.write('{}\t{}\n'.format(row['timestamp'], row['value']))
 
-    plot = subprocess.Popen(['gnuplot'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    gnuplot = subprocess.Popen(['gnuplot'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     gnuplot_data = '''
     set output '{}'
@@ -100,7 +100,7 @@ def plot(client: Client, product: dict, slo_id: int, output_file):
 
             ymin, ymax = (min(from_list + min_list), max(to_list + max_list))
 
-            padding = (0.1 * (ymax - ymin))
+            padding = (0.1 * ((ymax - ymin) or ymin))
             ymin = ymin - padding
             ymax = ymax + padding
 
@@ -128,5 +128,5 @@ def plot(client: Client, product: dict, slo_id: int, output_file):
             plots.append('"{}" using 1:2 lw 2 axes x1{} with lines title "{}"'.format(
                 target['fn'], target['yaxis'], target['sli_name'].replace('_', ' ')))
     gnuplot_data += ', '.join(plots) + '\n'
-    gnuplot_result = plot.communicate(gnuplot_data.encode('utf-8'))
+    gnuplot_result = gnuplot.communicate(gnuplot_data.encode('utf-8'))
     save_debug_data(output_file, gnuplot_data, gnuplot_result)
