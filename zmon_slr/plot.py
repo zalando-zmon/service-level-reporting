@@ -2,6 +2,7 @@
 
 import collections
 import json
+import os
 import pathlib
 import subprocess
 import traceback
@@ -9,6 +10,9 @@ import traceback
 from zmon_slr.client import Client
 
 precision = {'ms': 0, '%': 2}
+
+
+ENABLE_TROUBLESHOOTING = bool(os.getenv('SLR_ENABLE_TROUBLESHOOTING', False))
 
 
 def save_debug_data(output_file, gnuplot_data, gnuplot_result):
@@ -129,4 +133,5 @@ def plot(client: Client, product: dict, slo_id: int, output_file):
                 target['fn'], target['yaxis'], target['sli_name'].replace('_', ' ')))
     gnuplot_data += ', '.join(plots) + '\n'
     gnuplot_result = gnuplot.communicate(gnuplot_data.encode('utf-8'))
-    save_debug_data(output_file, gnuplot_data, gnuplot_result)
+    if ENABLE_TROUBLESHOOTING:
+        save_debug_data(output_file, gnuplot_data, gnuplot_result)
