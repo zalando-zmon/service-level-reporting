@@ -211,9 +211,14 @@ def generate_weekly_report(client: Client, product: dict, output_dir: str) -> No
 
         slo['breaches'] = max_or_zero(breaches_by_sli.values())
         slo['count'] = max_or_zero(counts_by_sli.values())
+        slo['no_data'] = []
 
         for target in slo['targets']:
             sli_name = target['sli_name']
+
+            if not counts_by_sli.get(sli_name):
+                slo['no_data'].append(sli_name)
+
             aggregation = target['aggregation']
 
             val = None
