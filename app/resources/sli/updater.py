@@ -35,7 +35,7 @@ def update_all_indicators(app: Flask):
 
     for indicator in Indicator.query.all():
         try:
-            if indicator.is_deleted is True or indicator.source.get('type', 'zmon') is not 'zmon':
+            if indicator.is_deleted or indicator.get_source_type() != 'zmon':
                 continue
             updater_pool.spawn(update_indicator, app, indicator)
         except Exception:
@@ -52,14 +52,11 @@ def update_indicator(app: Flask, indicator: Indicator):
         newest_dt = now - timedelta(minutes=MAX_QUERY_TIME_SLICE)
 
         try:
-            newest_iv = (
-                IndicatorValue.query.
-                    with_entities(db.func.max(IndicatorValue.timestamp).label('timestamp')).
-                    filter(IndicatorValue.timestamp >= newest_dt,
-                           IndicatorValue.timestamp < now,
-                           IndicatorValue.indicator_id == indicator.id).
-                    first()
-            )
+            newest_iv = IndicatorValue.query.with_entities(
+                db.func.max(IndicatorValue.timestamp).label('timestamp')) \
+                .filter(IndicatorValue.timestamp >= newest_dt,
+                        IndicatorValue.timestamp < now,
+                        IndicatorValue.indicator_id == indicator.id).first()
 
             if newest_iv and newest_iv.timestamp:
                 start = (now - newest_iv.timestamp).seconds // 60 + 5  # add some overlapping
@@ -78,9 +75,7 @@ def update_indicator(app: Flask, indicator: Indicator):
 def update_indicator_values(indicator: Indicator, start: int, end=None, **kwargs):
     """Query and update indicator values"""
 
-    source_type = indicator.source.get('type', 'zmon')
-
-    if source_type == "lightstep":
+    if indicator.get_source_type() == "lightstep":
         updated_indicator_values = update_indicator_values_lightstep(indicator, start, end, **kwargs)
     else:
         updated_indicator_values = update_indicator_values_zmon(indicator, start, end, **kwargs)

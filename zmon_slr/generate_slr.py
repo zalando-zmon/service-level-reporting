@@ -6,6 +6,7 @@ import os
 import sys
 import time
 from collections import defaultdict
+from typing import Tuple, DefaultDict
 
 import jinja2
 
@@ -119,6 +120,24 @@ def generate_directory_index(output_dir, path='/'):
     template.stream(**data).dump(os.path.join(output_dir, 'index.html'))
 
 
+# returns a tuple with the worst SLI data points count and number of breaches, in this order
+def get_worst_sli(counts_by_sli: DefaultDict[int, any], breaches_by_sli: DefaultDict[int, any]) -> Tuple[int, int]:
+    if len(counts_by_sli.keys()) == 0:
+        return 0, 0
+
+    worst_sli_name = None
+    # worst_sli_breach_percentage needs to start negative so any breach percentage will be bigger than it
+    worst_sli_breach_percentage = -1
+
+    for sli in counts_by_sli:
+        breach_percentage = breaches_by_sli[sli] / counts_by_sli[sli]
+        if breach_percentage > worst_sli_breach_percentage:
+            worst_sli_breach_percentage = breach_percentage
+            worst_sli_name = sli
+
+    return counts_by_sli[worst_sli_name], breaches_by_sli[worst_sli_name]
+
+
 def generate_weekly_report(client: Client, product: dict, output_dir: str) -> None:
     report_data = call_and_retry(client.product_report, product)
 
@@ -209,21 +228,7 @@ def generate_weekly_report(client: Client, product: dict, output_dir: str) -> No
 
             slo['data'].append({'caption': '{} {}'.format(dow, day[5:10]), 'slis': slis})
 
-        if len(counts_by_sli.keys()):
-            worst_sli_name = None
-            worst_sli_breach_percentage = 0
-
-            for sli in counts_by_sli:
-                breach_percentage = breaches_by_sli[sli] / counts_by_sli[sli]
-                if breach_percentage > worst_sli_breach_percentage:
-                    worst_sli_breach_percentage = breach_percentage
-                    worst_sli_name = sli
-
-            slo['breaches'] = breaches_by_sli[worst_sli_name]
-            slo['count'] = counts_by_sli[worst_sli_name]
-        else:
-            slo['breaches'] = 0
-            slo['count'] = 0
+        slo['count'], slo['breaches'] = get_worst_sli(counts_by_sli, breaches_by_sli)
 
         for target in slo['targets']:
             sli_name = target['sli_name']

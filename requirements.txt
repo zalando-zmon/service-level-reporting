@@ -1,3 +1,6 @@
+boto3
+requests
+pytest
 awesome-slugify
 clickclick
 connexion==1.1.4

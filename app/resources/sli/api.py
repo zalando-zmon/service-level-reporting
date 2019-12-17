@@ -22,7 +22,7 @@ from app.resources.product.api import ProductResource
 from .models import Indicator, IndicatorValue
 from .updater import update_indicator_values
 
-from app.libs.lightstep import get_stream_data
+from common.lightstep import get_stream_data
 
 from dateutil.relativedelta import relativedelta
 
@@ -95,8 +95,7 @@ class SLIResource(ResourceHandler):
 
     @staticmethod
     def update_indicator_from_source(obj: Indicator):
-        _type = obj.source.get('type', 'zmon')
-        if _type == 'lightstep':
+        if obj.get_source_type() == 'lightstep':
             SLIResource.update_lightstep_from_source(obj)
         else:
             SLIResource.update_zmon_indicator_from_source(obj)
@@ -185,15 +184,15 @@ class SLIValueResource(ResourceHandler):
     @classmethod
     def list(cls, **kwargs) -> Union[dict, Tuple]:
         indicator = Indicator.query.filter_by(id=kwargs.get('id'), is_deleted=False).first_or_404()
-        type = indicator.source.get('type')
-        if type != 'lightstep':
+        if indicator.get_source_type() != 'lightstep':
             return super().list(**kwargs)
 
         metric = indicator.source.get('metric')
+        stream_id = indicator.source.get('stream-id')
 
         now = datetime.utcnow()
         start = now - relativedelta(days=7)
-        stream_data = get_stream_data("yNzld3jn", start, now, metric)
+        stream_data = get_stream_data(stream_id, start, now, metric)
         resources = [{
             "timestamp": stream_object.timestamp,
             "value": stream_object.value} for stream_object in stream_data

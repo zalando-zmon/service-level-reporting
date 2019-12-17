@@ -19,8 +19,7 @@ from app.resources.product.models import Product
 from app.resources.sli.models import Indicator, IndicatorValue
 from app.resources.slo.models import Objective
 
-from app.libs.lightstep import get_stream_data
-
+from common.lightstep import get_stream_data
 
 REPORT_TYPES = ('weekly', 'monthly', 'quarterly')
 
@@ -60,7 +59,7 @@ def get_report_summary(objectives: Iterator[Objective], unit: str, start: dateti
 
                 objective_summary_span.log_kv({'target_id': target.id, 'indicator_id': target.indicator_id})
 
-                target_source_type = target.indicator.source.get('type', 'zmon')
+                target_source_type = target.indicator.get_source_type()
 
                 if target_source_type == 'lightstep':
                     stream_id = target.indicator.source.get('stream-id')
@@ -70,24 +69,20 @@ def get_report_summary(objectives: Iterator[Objective], unit: str, start: dateti
 
                 else:
                     ivs = (
-                        IndicatorValue.query
-                            .filter(IndicatorValue.indicator_id == target.indicator_id,
-                                    IndicatorValue.timestamp >= start,
-                                    IndicatorValue.timestamp < end)
-                            .order_by(IndicatorValue.timestamp))
+                        IndicatorValue.query.filter(IndicatorValue.indicator_id == target.indicator_id,
+                                                    IndicatorValue.timestamp >= start,
+                                                    IndicatorValue.timestamp < end)
+                        .order_by(IndicatorValue.timestamp))
 
-                try:
-                    target_values_truncated = truncate_values(ivs, parent_span=objective_summary_span)
-                except Exception as e:
-                    print(e)
+                target_values_truncated = truncate_values(ivs, parent_span=objective_summary_span)
 
                 for truncated_date, target_values in target_values_truncated.items():
-                    target_form = target.target_from or float('-inf')
+                    target_from = target.target_from or float('-inf')
                     target_to = target.target_to or float('inf')
 
                     target_count = len(target_values)
                     target_sum = sum(target_values)
-                    breaches = target_count - len([v for v in target_values if v >= target_form and v <= target_to])
+                    breaches = target_count - len([v for v in target_values if target_from <= v <= target_to])
 
                     days[truncated_date.isoformat()][target.indicator.name] = {
                         'aggregation': target.indicator.aggregation,

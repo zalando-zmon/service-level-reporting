@@ -4,8 +4,11 @@ import dateutil.parser
 from datetime import datetime
 from datetime_truncate import truncate
 
-# ops-count, error-count, p99, p90, p75, p50
-from app.resources import IndicatorValue
+
+class StreamDataPoint:
+    def __init__(self, timestamp, value):
+        self.timestamp = timestamp
+        self.value = value
 
 
 def get_individual_metric_from_stream(stream_data, position, metric):
@@ -16,20 +19,15 @@ def get_individual_metric_from_stream(stream_data, position, metric):
     return stream_data["data"]["attributes"]["latencies"][0]["latency-ms"][position]
 
 
-class StreamDataPoint:
-    def __init__(self, timestamp, value):
-        self.timestamp = timestamp
-        self.value = value
-
-
 def extract_metric_from_stream(stream_data, metric):
     result = []
     data_points = stream_data['data']['attributes']['points-count']
     for i in range(0, data_points):
-
-        timestamp = truncate(dateutil.parser.parse(stream_data["data"]["attributes"]["time-windows"][i]["youngest-time"]), 'second').replace(tzinfo=None)
+        timestamp = truncate(
+            dateutil.parser.parse(stream_data["data"]["attributes"]["time-windows"][i]["youngest-time"]),
+            'second').replace(tzinfo=None)
         value = get_individual_metric_from_stream(stream_data, i, metric)
-        result.append(IndicatorValue(timestamp=timestamp, value=value))
+        result.append(StreamDataPoint(timestamp=timestamp, value=value))
     return result
 
 
@@ -68,7 +66,7 @@ def get_stream_data(stream_id, timestamp_start: datetime, timestamp_end: datetim
         "oldest-time": timestamp_start_iso,
         "youngest-time": timestamp_end_iso,
         "resolution-ms": "600000",
-    # Lightstep has an internal server error at a resolution of 60000, for more than 2 days
+        # Lightstep has an internal server error at a resolution of 60000, for more than 2 days
         "include-ops-counts": "1" if metric == "ops-count" else "0",
         "percentile": "90",
         "include-error-counts": "1"
@@ -88,11 +86,3 @@ def get_stream_data(stream_id, timestamp_start: datetime, timestamp_end: datetim
         raise Exception('Lightstep returned errors', errors)
 
     return extract_metric_from_stream(response_json, metric)
-
-
-if __name__ == '__main__':
-    try:
-        result = get_stream_data("yNzld3jn", "2019-11-01T00:00:00Z", "2019-11-03T00:00:00Z", "ops-count")
-        print(result)
-    except KeyboardInterrupt:
-        pass

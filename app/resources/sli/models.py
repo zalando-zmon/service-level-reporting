@@ -33,6 +33,9 @@ class Indicator(db.Model):
     def get_owner(self):
         return self.product.product_group.name
 
+    def get_source_type(self):
+        return self.source.get('type', 'zmon')
+
     def __repr__(self):
         return '<SLI {} | {} | {}>'.format(self.product.name, self.name, self.source)
 
