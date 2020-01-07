@@ -7,7 +7,7 @@ from typing import Dict, Generator, List, Tuple
 import dateutil.parser
 import requests
 
-LIGHTSTEP_API_KEY = os.getenv("LIGHTSTEP_API_KEY")
+from app.config import LIGHTSTEP_API_KEY
 
 
 class SourceError(Exception):
@@ -21,14 +21,59 @@ class IndicatorValueLike:
 
 
 class Source:
+    @classmethod
+    def validate_config(cls, config: Dict):
+        raise NotImplementedError
+
     def get_indicator_values(
         self, from_: datetime.datetime, to: datetime.datetime
     ) -> List[IndicatorValueLike]:
         raise NotImplementedError
 
+    def update_indicator_values(self):
+        raise NotImplementedError
+
 
 class ZMON(Source):
-    pass
+    AGG_TYPES = ("average", "weighted", "sum", "min", "max", "minimum", "maximum")
+
+    @classmethod
+    def validate_config(cls, config: Dict):
+        required = {"aggregation", "check_id", "keys"}
+        missing = set(required) - set(config.keys())
+        if missing:
+            raise SourceError("SLI 'source' has missing keys: {}!".format(missing),)
+
+        if not config["keys"]:
+            raise SourceError("SLI 'source' *keys* must have a value")
+
+        aggregation = config.get("aggregation", {})
+        if not aggregation:
+            raise SourceError("SLI 'source' *aggregation* must have a value",)
+
+        agg_type = aggregation.get("type")
+        if not agg_type or agg_type not in cls.AGG_TYPES:
+            raise SourceError(
+                "SLI 'source' aggregation type is invalid. Valid values are: {}".format(
+                    cls.AGG_TYPES
+                ),
+            )
+
+        if agg_type == "weighted" and not aggregation.get("weight_keys"):
+            raise SourceError(
+                "SLI 'source' aggregation type *weighted* must have *weight_keys*",
+            )
+
+    def __init__(self, check_id, keys, aggregation, weight_keys=()):
+        self.check_id = check_id
+        self.keys = keys
+        self.aggregation = aggregation
+        self.weight_keys = weight_keys
+
+    def get_indicator_values(
+        self, from_: datetime.datetime, to: datetime.datetime
+    ) -> List[IndicatorValueLike]:
+        pass
 
 
 class Lightstep(Source):
@@ -104,6 +149,9 @@ class Lightstep(Source):
             for timestamp_str, value in self.metric.get_datapoints(response)
         ]
 
+    def update_indicator_values(self):
+        pass
+
 
 _DEFAULT_SOURCE = "zmon"
 _SOURCES = {"zmon": ZMON, "lightstep": Lightstep}
@@ -113,4 +161,12 @@ def from_config(config: Dict) -> Source:
     config = config.copy()
     type_ = config.pop("type", _DEFAULT_SOURCE)
 
-    return _SOURCES[type_](**config)
+    try:
+        cls = _SOURCES[type_]
+        cls.validate_config(config)
+
+        return cls(**config)
+    except KeyError:
+        raise SourceError(
+            f"Given source type '{type_}' is not valid. Choose one from: {_SOURCES.keys()}"
+        )
