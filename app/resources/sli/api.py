@@ -6,8 +6,11 @@ from connexion import ProblemException, request
 from dateutil.relativedelta import relativedelta
 from flask_sqlalchemy import BaseQuery, Pagination
 from opentracing.ext import tags as ot_tags
-from opentracing_utils import (extract_span_from_flask_request,
-                               extract_span_from_kwargs, trace)
+from opentracing_utils import (
+    extract_span_from_flask_request,
+    extract_span_from_kwargs,
+    trace,
+)
 
 from app.config import API_DEFAULT_PAGE_SIZE
 from app.extensions import db
@@ -18,7 +21,6 @@ from app.resources.product.api import ProductResource
 from app.resources.product.models import Product
 from app.resources.sli import sources
 from app.utils import slugger
-from common.lightstep import get_stream_data
 
 from .models import Indicator, IndicatorValue
 from .updater import update_indicator_values
