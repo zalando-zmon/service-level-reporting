@@ -16,14 +16,12 @@ from app.config import API_DEFAULT_PAGE_SIZE
 from app.extensions import db
 from app.libs.authorization import Authorization
 from app.libs.resource import ResourceHandler
-from app.libs.zmon import AGG_TYPES
 from app.resources.product.api import ProductResource
 from app.resources.product.models import Product
 from app.resources.sli import sources
 from app.utils import slugger
 
 from .models import Indicator, IndicatorValue
-from .updater import update_indicator_values
 
 
 class SLIResource(ResourceHandler):
@@ -72,7 +70,7 @@ class SLIResource(ResourceHandler):
             )
 
         try:
-            sources.from_config(kwargs.get("id"), source_config)
+            sources.validate_config(source_config)
         except sources.SourceError as e:
             raise ProblemException(title="Invalid SLI source", detail=str(e))
 
@@ -179,7 +177,7 @@ class SLIValueResource(ResourceHandler):
             per_page = int(kwargs.get("page_size", API_DEFAULT_PAGE_SIZE))
             page = int(kwargs.get("page") or 1)
 
-        source = sources.from_config(indicator.id, indicator.source)
+        source = sources.from_indicator(indicator)
         indicator_values, metadata = source.get_indicator_values(
             from_timestamp,
             to_timestamp,
@@ -252,7 +250,7 @@ class SLIQueryResource(ResourceHandler):
         self.current_span.log_kv({"query_start": start, "query_end": end})
 
         # Query and insert IndicatorValue
-        return update_indicator_values(obj, start, end)
+        return sources.from_indicator(obj).update_indicator_values(start, end)
 
     def build_resource(self, obj: IndicatorValue, count=0, **kwargs) -> dict:
         resource = super().build_resource(obj, **kwargs)

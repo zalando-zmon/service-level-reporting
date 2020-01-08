@@ -70,10 +70,9 @@ def get_report_summary(
                 objective_summary_span.log_kv(
                     {"target_id": target.id, "indicator_id": target.indicator_id}
                 )
-                source = sources.from_config(
-                    target.indicator_id, target.indicator.source
+                ivs = sources.from_indicator(target.indicator).get_indicator_values(
+                    start, end
                 )
-                ivs = source.get_indicator_values(start, end)
 
                 target_values_truncated = truncate_values(
                     ivs, parent_span=objective_summary_span
