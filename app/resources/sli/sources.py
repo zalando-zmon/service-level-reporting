@@ -206,15 +206,15 @@ _DEFAULT_SOURCE = "zmon"
 _SOURCES = {"zmon": ZMON, "lightstep": Lightstep}
 
 
-def from_indicator(indicator: Indicator) -> Source:
-    config = indicator.source.copy()
+def from_config(indicator_id: int, config: Dict) -> Source:
+    config = config.copy()
     type_ = config.pop("type", _DEFAULT_SOURCE)
 
     try:
         cls = _SOURCES[type_]
         cls.validate_config(config)
 
-        return cls(indicator_id=indicator.id, **config)
+        return cls(indicator_id=indicator_id, **config)
     except KeyError:
         raise SourceError(
             f"Given source type '{type_}' is not valid. Choose one from: {_SOURCES.keys()}"

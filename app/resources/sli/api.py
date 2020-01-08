@@ -6,11 +6,8 @@ from connexion import ProblemException, request
 from dateutil.relativedelta import relativedelta
 from flask_sqlalchemy import BaseQuery, Pagination
 from opentracing.ext import tags as ot_tags
-from opentracing_utils import (
-    extract_span_from_flask_request,
-    extract_span_from_kwargs,
-    trace,
-)
+from opentracing_utils import (extract_span_from_flask_request,
+                               extract_span_from_kwargs, trace)
 
 from app.config import API_DEFAULT_PAGE_SIZE
 from app.extensions import db
@@ -73,7 +70,7 @@ class SLIResource(ResourceHandler):
             )
 
         try:
-            sources.from_config(source_config)
+            sources.from_config(kwargs.get("id"), source_config)
         except sources.SourceError as e:
             raise ProblemException(title="Invalid SLI source", detail=str(e))
 
@@ -180,7 +177,7 @@ class SLIValueResource(ResourceHandler):
             per_page = int(kwargs.get("page_size", API_DEFAULT_PAGE_SIZE))
             page = int(kwargs.get("page") or 1)
 
-        source = sources.from_indicator(indicator)
+        source = sources.from_config(indicator.id, indicator.source)
         indicator_values, metadata = source.get_indicator_values(
             from_timestamp,
             to_timestamp,
