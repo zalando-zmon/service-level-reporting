@@ -46,18 +46,15 @@ class Indicator(db.Model):
     def get_owner(self):
         return self.product.product_group.name
 
-    def get_source_type(self):
-        return self.source.get("type", "zmon")
-
     def __repr__(self):
         return "<SLI {} | {} | {}>".format(self.product.name, self.name, self.source)
 
 
 class IndicatorValueLike:
-    timestamp: datetime.datetime
+    timestamp: datetime
     value: str
 
-    def __init__(self, timestamp: datetime.datetime, value: str):
+    def __init__(self, timestamp: datetime, value: str):
         self.timestamp = timestamp
         self.value = value
 
