@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, cast
 from urllib.parse import urljoin
 
 from connexion import ProblemException, request
@@ -12,6 +12,7 @@ from opentracing_utils import (
     trace,
 )
 
+from app.config import API_DEFAULT_PAGE_SIZE
 from app.extensions import db
 from app.libs.authorization import Authorization
 from app.libs.resource import ResourceHandler
@@ -154,90 +155,42 @@ class SLIResource(ResourceHandler):
         return resource
 
 
-# TODO: Properly introduce into abstraction
 class SLIValueResource(ResourceHandler):
-    model_fields = (
-        "timestamp",
-        "value",
-    )
-    skip_count = True
-
     @classmethod
-    def list(cls, **kwargs) -> Union[dict, Tuple]:
+    def list(cls, **kwargs) -> dict:
         indicator = Indicator.query.filter_by(
             id=kwargs.get("id"), is_deleted=False
         ).first_or_404()
-        if indicator.get_source_type() != "lightstep":
-            return super().list(**kwargs)
 
-        metric = indicator.source.get("metric")
-        stream_id = indicator.source.get("stream-id")
-
+        from_minutes = kwargs.get("from", 10080)
+        to_minutes = kwargs.get("to")
         now = datetime.utcnow()
-        start = now - relativedelta(days=7)
-        stream_data = get_stream_data(stream_id, start, now, metric)
-        resources = [
-            {"timestamp": stream_object.timestamp, "value": stream_object.value}
-            for stream_object in stream_data
-        ]
-
-        return {
-            "data": resources,
-            "_meta": {"count": len(resources), "next_uri": None, "previous_uri": None,},
-        }
-
-    def get_query(self, id: int, **kwargs) -> BaseQuery:
-        Indicator.query.filter_by(id=id, is_deleted=False).first_or_404()
-        return IndicatorValue.query.filter_by(indicator_id=id).order_by(
-            IndicatorValue.timestamp
-        )
-
-    def get_filter_kwargs(self, **kwargs) -> dict:
-        min_from = kwargs.get("from", 10080)
-        min_to = kwargs.get("to")
-
-        now = datetime.utcnow()
-        start = now - timedelta(minutes=min_from)
-        end = now if not min_to else now - timedelta(minutes=min_to)
-
-        if end < start:
+        from_timestamp = now - timedelta(minutes=from_minutes)
+        to_timestamp = now if not to_minutes else now - timedelta(minutes=to_minutes)
+        if to_timestamp < from_timestamp:
             raise ProblemException(
                 status=400,
                 title="Invalid time range",
                 detail="Query filters 'from' should be greater than 'to'",
             )
 
-        return {"start": start, "end": end}
-
-    def get_filtered_query(self, query: BaseQuery, **kwargs) -> BaseQuery:
-        """Filter query using query parameters"""
-        end = kwargs.get("end")
-        start = kwargs.get("start")
-        return query.filter(
-            IndicatorValue.timestamp >= start, IndicatorValue.timestamp < end
-        )
-
-    def get_limited_query(
-        self, query: BaseQuery, **kwargs
-    ) -> Union[Pagination, BaseQuery]:
-        """Apply pagination limits on query"""
         if "from" in kwargs:
-            return query
+            page, per_page = None, None
+        else:
+            per_page = int(kwargs.get("page_size", API_DEFAULT_PAGE_SIZE))
+            page = int(kwargs.get("page") or 1)
 
-        return super().get_limited_query(query, **kwargs)
+        source = sources.from_indicator(indicator)
+        indicator_values, metadata = source.get_indicator_values(
+            from_timestamp,
+            to_timestamp,
+            sources.GetIndicatorValuesHints(page=page, per_page=per_page),
+        )
+        resources = [iv.as_dict() for iv in indicator_values]
 
-    def get_objects(
-        self, query: Union[Pagination, BaseQuery], **kwargs
-    ) -> List[IndicatorValue]:
-        if isinstance(query, Pagination):
-            return [obj for obj in query.items]
-
-        return [obj for obj in query.all()]
-
-    def build_resource(self, obj: IndicatorValue, **kwargs) -> dict:
-        resource = super().build_resource(obj, **kwargs)
-        resource.pop("uri", None)
-        return resource
+        return cls().build_list_response(
+            resources, cast(Pagination, metadata), len(resources)
+        )
 
 
 class SLIQueryResource(ResourceHandler):

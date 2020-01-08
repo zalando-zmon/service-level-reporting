@@ -9,15 +9,30 @@ import requests
 
 from app.config import LIGHTSTEP_API_KEY
 
+from .models import Indicator, IndicatorValue, IndicatorValueLike, PureIndicatorValue
+
 
 class SourceError(Exception):
     pass
 
 
-@dataclasses.dataclass
-class IndicatorValueLike:
-    timestamp: datetime.datetime
-    value: str
+@dataclasses.dataclass(frozen=True)
+class GetIndicatorValuesHints:
+    page: Optional[int] = None
+    per_page: Optional[int] = None
+
+
+_GET_INDICATOR_VALUES_HINTS_DEFAULT = GetIndicatorValuesHints()
+
+
+@dataclasses.dataclass(frozen=True)
+class GetIndicatorValuesMetadata:
+    page: Optional[int] = None
+    per_page: Optional[int] = None
+    next_num: Optional[int] = None
+
+
+_GET_INDICATOR_VALUES_METADATA_DEFAULT = GetIndicatorValuesMetadata()
 
 
 class Source:
@@ -26,8 +41,11 @@ class Source:
         raise NotImplementedError
 
     def get_indicator_values(
-        self, from_: datetime.datetime, to: datetime.datetime
-    ) -> List[IndicatorValueLike]:
+        self,
+        from_: datetime.datetime,
+        to: datetime.datetime,
+        hints: GetIndicatorValuesHints = _GET_INDICATOR_VALUES_HINTS_DEFAULT,
+    ) -> Tuple[List[IndicatorValueLike], GetIndicatorValuesMetadata]:
         raise NotImplementedError
 
     def update_indicator_values(self):
@@ -64,16 +82,31 @@ class ZMON(Source):
                 "SLI 'source' aggregation type *weighted* must have *weight_keys*",
             )
 
-    def __init__(self, check_id, keys, aggregation, weight_keys=()):
+    def __init__(self, indicator_id, check_id, keys, aggregation, weight_keys=()):
+        self.indicator_id = indicator_id
         self.check_id = check_id
         self.keys = keys
         self.aggregation = aggregation
         self.weight_keys = weight_keys
 
     def get_indicator_values(
-        self, from_: datetime.datetime, to: datetime.datetime
-    ) -> List[IndicatorValueLike]:
-        pass
+        self,
+        from_: datetime.datetime,
+        to: datetime.datetime,
+        hints: GetIndicatorValuesHints = _GET_INDICATOR_VALUES_HINTS_DEFAULT,
+    ) -> Tuple[List[IndicatorValue], GetIndicatorValuesMetadata]:
+        query = IndicatorValue.query.filter(
+            IndicatorValue.indicator_id == self.indicator_id,
+            IndicatorValue.timestamp >= from_,
+            IndicatorValue.timestamp < to,
+        ).order_by(IndicatorValue.timestamp)
+        if hints.page and hints.per_page:
+            query = query.paginate(
+                page=hints.page, per_page=hints.per_page, error_out=False
+            )
+
+        else:
+            items = list(query.all())
 
 
 class Lightstep(Source):
@@ -115,13 +148,17 @@ class Lightstep(Source):
                 for window, value in zip(attributes["time-windows"], values)
             )
 
-    def __init__(self, stream_id: str, metric: str):
+    def __init__(self, indicator_id: int, stream_id: str, metric: str):
+        self.indicator_id = indicator_id
         self.stream_id = stream_id
         self.metric = self.Metric.from_str(metric)
 
     def get_indicator_values(
-        self, from_: datetime.datetime, to: datetime.datetime
-    ) -> List[IndicatorValueLike]:
+        self,
+        from_: datetime.datetime,
+        to: datetime.datetime,
+        hints: GetIndicatorValuesHints = _GET_INDICATOR_VALUES_HINTS_DEFAULT,
+    ) -> Tuple[List[IndicatorValueLike], GetIndicatorValuesMetadata]:
         params = {
             "oldest-time": from_.replace(tzinfo=datetime.timezone.utc).isoformat(),
             "youngest-time": to.replace(tzinfo=datetime.timezone.utc).isoformat(),
@@ -144,10 +181,13 @@ class Lightstep(Source):
                 f"Something went wrong with a request to the Lightstep API: {errors}."
             )
 
-        return [
-            IndicatorValueLike(dateutil.parser.parse(timestamp_str), value)
-            for timestamp_str, value in self.metric.get_datapoints(response)
-        ]
+        return (
+            [
+                PureIndicatorValue(dateutil.parser.parse(timestamp_str), value)
+                for timestamp_str, value in self.metric.get_datapoints(response)
+            ],
+            _GET_INDICATOR_VALUES_METADATA_DEFAULT,
+        )
 
     def update_indicator_values(self):
         pass
@@ -157,15 +197,15 @@ _DEFAULT_SOURCE = "zmon"
 _SOURCES = {"zmon": ZMON, "lightstep": Lightstep}
 
 
-def from_config(config: Dict) -> Source:
-    config = config.copy()
+def from_indicator(indicator: Indicator) -> Source:
+    config = indicator.source.copy()
     type_ = config.pop("type", _DEFAULT_SOURCE)
 
     try:
         cls = _SOURCES[type_]
         cls.validate_config(config)
 
-        return cls(**config)
+        return cls(indicator_id=indicator.id, **config)
     except KeyError:
         raise SourceError(
             f"Given source type '{type_}' is not valid. Choose one from: {_SOURCES.keys()}"
