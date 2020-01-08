@@ -2,7 +2,7 @@ import dataclasses
 import datetime
 import enum
 import os
-from typing import Dict, Generator, List, Tuple
+from typing import Dict, Generator, List, Optional, Tuple
 
 import dateutil.parser
 import requests

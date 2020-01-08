@@ -18,7 +18,6 @@ from app.resources.product.models import Product
 from app.resources.sli import sources
 from app.resources.sli.models import Indicator, IndicatorValue
 from app.resources.slo.models import Objective
-from common.lightstep import get_stream_data
 
 REPORT_TYPES = ("weekly", "monthly", "quarterly")
 
