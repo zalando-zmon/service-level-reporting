@@ -342,8 +342,13 @@ class Lightstep(Source):
                 for window, value in zip(attributes["time-windows"], values)
             )
 
-    def __init__(self, indicator_id: int, stream_id: str, metric: str):
-        self.indicator_id = indicator_id
+    @classmethod
+    def validate_config(cls, config: Dict):
+        # TODO: Really validate
+        pass
+
+    def __init__(self, indicator: Indicator, stream_id: str, metric: str):
+        self.indicator = indicator
         self.stream_id = stream_id
         self.metric = self.Metric.from_str(metric)
 

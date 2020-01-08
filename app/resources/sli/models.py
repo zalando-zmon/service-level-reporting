@@ -64,6 +64,9 @@ class IndicatorValueLike:
 
 @dataclasses.dataclass
 class PureIndicatorValue(IndicatorValueLike):
+    timestamp: datetime
+    value: str
+
     def as_dict(self):
         return dataclasses.asdict(self)
 

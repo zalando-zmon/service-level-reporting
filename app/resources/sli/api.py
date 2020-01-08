@@ -185,6 +185,7 @@ class SLIValueResource(ResourceHandler):
         )
         resources = [iv.as_dict() for iv in indicator_values]
 
+        # TODO: Continue fixing bugs here
         return cls().build_list_response(
             resources, cast(Pagination, metadata), len(resources)
         )
