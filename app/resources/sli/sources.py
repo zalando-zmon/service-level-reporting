@@ -105,8 +105,17 @@ class ZMON(Source):
                 page=hints.page, per_page=hints.per_page, error_out=False
             )
 
+            return (
+                list(query.items),
+                GetIndicatorValuesMetadata(
+                    page=query.page, per_page=query.per_page, next_num=query.next_num,
+                ),
+            )
         else:
-            items = list(query.all())
+            return list(query.all()), _GET_INDICATOR_VALUES_METADATA_DEFAULT
+
+    def update_indicator_values(self):
+        pass
 
 
 class Lightstep(Source):
