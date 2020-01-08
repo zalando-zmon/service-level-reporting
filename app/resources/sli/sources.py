@@ -101,9 +101,9 @@ class ZMON(Source):
             )
 
     def __init__(
-        self, indicator_id, check_id, keys, aggregation, tags=None, exclude_keys=()
+        self, indicator, check_id, keys, aggregation, tags=None, exclude_keys=()
     ):
-        self.indicator_id = indicator_id
+        self.indicator = indicator
 
         self.check_id = check_id
         self.keys = keys
@@ -119,7 +119,7 @@ class ZMON(Source):
         hints: GetIndicatorValuesHints = _GET_INDICATOR_VALUES_HINTS_DEFAULT,
     ) -> Tuple[List[IndicatorValue], GetIndicatorValuesMetadata]:
         query = IndicatorValue.query.filter(
-            IndicatorValue.indicator_id == self.indicator_id,
+            IndicatorValue.indicator_id == self.indicator.id,
             IndicatorValue.timestamp >= from_,
             IndicatorValue.timestamp < to,
         ).order_by(IndicatorValue.timestamp)
@@ -265,8 +265,9 @@ class ZMON(Source):
 
         return result
 
+    @trace(pass_span=True)
     def update_indicator_values(
-        self, from_: Optional[int] = None, to: Optional[int] = None,
+        self, from_: Optional[int] = None, to: Optional[int] = None, **kwargs,
     ):
         result = self._query(from_ or self._get_timespan_for_update(), to)
 
@@ -278,8 +279,8 @@ class ZMON(Source):
                 operation_name="insert_indicator_values", child_of=current_span
             )
             (
-                insert_span.set_tag("indicator", indicator.name).set_tag(
-                    "indicator_id", indicator.id
+                insert_span.set_tag("indicator", self.indicator.name).set_tag(
+                    "indicator_id", self.indicator.id
                 )
             )
 
@@ -293,7 +294,7 @@ class ZMON(Source):
                         val = min(val, _MIN_VAL * -1)
 
                     iv = IndicatorValue(
-                        timestamp=minute, value=val, indicator_id=indicator.id
+                        timestamp=minute, value=val, indicator_id=self.indicator.id
                     )
                     insert_indicator_value(session, iv)
 

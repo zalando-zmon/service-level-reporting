@@ -68,7 +68,7 @@ class PureIndicatorValue(IndicatorValueLike):
         return dataclasses.asdict(self)
 
 
-class IndicatorValue(IndicatorValueLike, db.Model):
+class IndicatorValue(db.Model, IndicatorValueLike):
     __tablename__ = "indicatorvalue"
 
     timestamp = db.Column(db.DateTime(), nullable=False)
