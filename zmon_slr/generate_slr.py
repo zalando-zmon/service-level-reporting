@@ -6,7 +6,7 @@ import os
 import sys
 import time
 from collections import defaultdict
-from typing import Tuple, DefaultDict
+from typing import DefaultDict, Tuple
 
 import jinja2
 
@@ -229,9 +229,14 @@ def generate_weekly_report(client: Client, product: dict, output_dir: str) -> No
             slo['data'].append({'caption': '{} {}'.format(dow, day[5:10]), 'slis': slis})
 
         slo['count'], slo['breaches'] = get_worst_sli(counts_by_sli, breaches_by_sli)
+        slo['no_data'] = []
 
         for target in slo['targets']:
             sli_name = target['sli_name']
+
+            if not counts_by_sli.get(sli_name):
+                slo['no_data'].append(sli_name)
+
             aggregation = target['aggregation']
 
             slo['slis'][sli_name] = {

@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 
-import os
-import sys
-import subprocess
 import logging
+import os
+import subprocess
+import sys
 import time
-
 from datetime import datetime
 
 import zign.api
 
 from zmon_slr.client import Client
 from zmon_slr.generate_slr import generate_weekly_report
-
 
 OUTPUT_DIR = os.environ.get('SLR_OUTPUT_DIR', '/var/www/reports')
 
@@ -39,8 +37,8 @@ def sync_reports(to_local=True):
             logger.info('Starting S3 sync from {} to {}'.format(src, dst))
 
             res = subprocess.check_output(['aws', 's3', 'sync', src, dst], stderr=subprocess.STDOUT)
-            for r in res.splitlines():
-                print(r)
+            for line in res.splitlines():
+                logger.debug(line)
 
             retries = 0
             logger.info('Successfully completed S3 sync from {} to {}'.format(src, dst))
