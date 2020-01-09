@@ -8,7 +8,7 @@ import requests
 from app.config import LIGHTSTEP_API_KEY, LIGHTSTEP_RESOLUTION_SECONDS
 
 from ..models import Indicator, IndicatorValueLike, PureIndicatorValue
-from .base import DatetimeRange, Source, SourceError, TimeRange
+from .base import DatetimeRange, Pagination, Source, SourceError, TimeRange
 
 
 class _Metric(enum.Enum):
@@ -56,12 +56,12 @@ class _Metric(enum.Enum):
 
 def _paginate_timerange(
     timerange: TimeRange, page: Optional[int] = None, per_page: Optional[int] = None,
-) -> DatetimeRange:
+) -> Tuple[DatetimeRange, Optional[Pagination]]:
     if not page or not per_page:
-        return timerange
+        return timerange, None
+
     start_dt, end_dt = timerange.to_datetimes()
     delta_seconds = (end_dt - start_dt).total_seconds()
-    values_count = delta_seconds / LIGHTSTEP_RESOLUTION_SECONDS
     start_dt = start_dt + datetime.timedelta(
         seconds=(page - 1) * per_page * LIGHTSTEP_RESOLUTION_SECONDS
     )
@@ -69,7 +69,16 @@ def _paginate_timerange(
         seconds=LIGHTSTEP_RESOLUTION_SECONDS * per_page
     )
 
-    return DatetimeRange(start_dt, end_dt)
+    total_count = delta_seconds / LIGHTSTEP_RESOLUTION_SECONDS
+    current_count = page * per_page
+    pagination = Pagination()
+    pagination.per_page = per_page
+    if page > 1:
+        pagination.page = page
+    if current_count < total_count:
+        pagination.next_num = page + 1
+
+    return DatetimeRange(start_dt, end_dt), pagination
 
 
 class Lightstep(Source):
@@ -102,8 +111,8 @@ class Lightstep(Source):
         timerange: TimeRange = TimeRange.DEFAULT,
         page: Optional[int] = None,
         per_page: Optional[int] = None,
-    ) -> Tuple[List[IndicatorValueLike], None]:
-        timerange = _paginate_timerange(timerange, page, per_page)
+    ) -> Tuple[List[IndicatorValueLike], Optional[Pagination]]:
+        timerange, pagination = _paginate_timerange(timerange, page, per_page)
         start_dt, end_dt = timerange.to_datetimes()
 
         params = {
@@ -135,7 +144,7 @@ class Lightstep(Source):
                 )
                 for timestamp_str, value in self.metric.get_datapoints(response)
             ],
-            None,
+            pagination,
         )
 
     def update_indicator_values(self, *_, **__) -> int:

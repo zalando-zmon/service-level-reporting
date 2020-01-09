@@ -61,6 +61,10 @@ class DatetimeRange(TimeRange):
 TimeRange.DEFAULT = DatetimeRange()
 
 
+class Pagination(object):
+    pass
+
+
 class Source:
     @classmethod
     def validate_config(cls, config: Dict):
@@ -71,14 +75,8 @@ class Source:
         timerange: TimeRange = TimeRange.DEFAULT,
         page: Optional[int] = None,
         per_page: Optional[int] = None,
-    ) -> Tuple[List[IndicatorValueLike], Optional[object]]:
+    ) -> Tuple[List[IndicatorValueLike], Optional[Pagination]]:
         raise NotImplementedError
 
     def update_indicator_values(self, timerange: TimeRange = TimeRange.DEFAULT) -> int:
         raise NotImplementedError
-
-
-@dataclasses.dataclass
-class Pagination:
-    page: int
-    per_page: int

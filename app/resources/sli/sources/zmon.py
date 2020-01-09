@@ -3,7 +3,6 @@ import fnmatch
 import math
 from typing import Dict, List, Optional, Tuple
 
-import flask_sqlalchemy
 import opentracing
 import requests
 import zign.api
@@ -13,7 +12,7 @@ from app.config import KAIROS_QUERY_LIMIT, KAIROSDB_URL, MAX_QUERY_TIME_SLICE
 from app.extensions import db
 
 from ..models import Indicator, IndicatorValue, insert_indicator_value
-from .base import Source, SourceError, TimeRange
+from .base import Pagination, Source, SourceError, TimeRange
 
 _MIN_VAL = math.expm1(1e-10)
 
@@ -72,7 +71,7 @@ class ZMON(Source):
         timerange: TimeRange,
         page: Optional[int] = None,
         per_page: Optional[int] = None,
-    ) -> Tuple[List[IndicatorValue], Optional[flask_sqlalchemy.Pagination]]:
+    ) -> Tuple[List[IndicatorValue], Optional[Pagination]]:
         from_, to = timerange.to_datetimes()
         query = IndicatorValue.query.filter(
             IndicatorValue.indicator_id == self.indicator.id,
