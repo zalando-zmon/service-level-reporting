@@ -153,6 +153,8 @@ class SLIResource(ResourceHandler):
 
 
 class SLIValueResource(ResourceHandler):
+    model_fields = ("timestamp", "value")
+
     @classmethod
     def list(cls, **kwargs) -> dict:
         indicator = Indicator.query.filter_by(
@@ -179,11 +181,12 @@ class SLIValueResource(ResourceHandler):
 
         source = sources.from_indicator(indicator)
         indicator_values, metadata = source.get_indicator_values(
-            from_timestamp,
-            to_timestamp,
-            sources.GetIndicatorValuesHints(page=page, per_page=per_page),
+            from_timestamp, to_timestamp, page=page, per_page=per_page,
         )
-        resources = [iv.as_dict() for iv in indicator_values]
+        resources = [
+            {k: v for k, v in iv.as_dict().items() if k in cls.model_fields}
+            for iv in indicator_values
+        ]
 
         # TODO: Continue fixing bugs here
         return cls().build_list_response(

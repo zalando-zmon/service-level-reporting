@@ -8,13 +8,14 @@ import os
 from typing import Dict, Generator, List, Optional, Tuple, Type
 
 import dateutil.parser
+import flask_sqlalchemy
 import opentracing
 import requests
 import zign.api
 from opentracing_utils import extract_span_from_kwargs, trace
 
 from app.config import (KAIROS_QUERY_LIMIT, KAIROSDB_URL, LIGHTSTEP_API_KEY,
-                        MAX_QUERY_TIME_SLICE)
+                        LIGHTSTEP_RESOLUTION_SECONDS, MAX_QUERY_TIME_SLICE)
 from app.extensions import db
 
 from .models import (Indicator, IndicatorValue, IndicatorValueLike,
@@ -34,25 +35,6 @@ class SourceError(Exception):
     pass
 
 
-@dataclasses.dataclass(frozen=True)
-class GetIndicatorValuesHints:
-    page: Optional[int] = None
-    per_page: Optional[int] = None
-
-
-_GET_INDICATOR_VALUES_HINTS_DEFAULT = GetIndicatorValuesHints()
-
-
-@dataclasses.dataclass(frozen=True)
-class GetIndicatorValuesMetadata:
-    page: Optional[int] = None
-    per_page: Optional[int] = None
-    next_num: Optional[int] = None
-
-
-_GET_INDICATOR_VALUES_METADATA_DEFAULT = GetIndicatorValuesMetadata()
-
-
 class Source:
     @classmethod
     def validate_config(cls, config: Dict):
@@ -62,8 +44,9 @@ class Source:
         self,
         from_: datetime.datetime,
         to: datetime.datetime,
-        hints: GetIndicatorValuesHints = _GET_INDICATOR_VALUES_HINTS_DEFAULT,
-    ) -> Tuple[List[IndicatorValueLike], GetIndicatorValuesMetadata]:
+        page: Optional[int] = None,
+        per_page: Optional[int] = None,
+    ) -> Tuple[List[IndicatorValueLike], Optional[object]]:
         raise NotImplementedError
 
     def update_indicator_values(self) -> int:
@@ -116,30 +99,27 @@ class ZMON(Source):
         self,
         from_: datetime.datetime,
         to: datetime.datetime,
-        hints: GetIndicatorValuesHints = _GET_INDICATOR_VALUES_HINTS_DEFAULT,
-    ) -> Tuple[List[IndicatorValue], GetIndicatorValuesMetadata]:
+        page: Optional[int] = None,
+        per_page: Optional[int] = None,
+    ) -> Tuple[List[IndicatorValue], Optional[flask_sqlalchemy.Pagination]]:
         query = IndicatorValue.query.filter(
             IndicatorValue.indicator_id == self.indicator.id,
             IndicatorValue.timestamp >= from_,
             IndicatorValue.timestamp < to,
         ).order_by(IndicatorValue.timestamp)
-        if hints.page and hints.per_page:
-            query = query.paginate(
-                page=hints.page, per_page=hints.per_page, error_out=False
-            )
+        if page and per_page:
+            query = query.paginate(page=page, per_page=per_page, error_out=False)
 
             return (
                 list(query.items),
-                GetIndicatorValuesMetadata(
-                    page=query.page, per_page=query.per_page, next_num=query.next_num,
-                ),
+                query,
             )
         else:
-            return list(query.all()), _GET_INDICATOR_VALUES_METADATA_DEFAULT
+            return list(query.all()), None
 
     def _get_timespan_for_update(self) -> int:
         now = datetime.datetime.utcnow()
-        newest_dt = now - datetime.datetime.timedelta(minutes=MAX_QUERY_TIME_SLICE)
+        newest_dt = now - datetime.timedelta(minutes=MAX_QUERY_TIME_SLICE)
 
         newest_iv = (
             IndicatorValue.query.with_entities(
@@ -148,7 +128,7 @@ class ZMON(Source):
             .filter(
                 IndicatorValue.timestamp >= newest_dt,
                 IndicatorValue.timestamp < now,
-                IndicatorValue.indicator_id == self.indicator_id,
+                IndicatorValue.indicator_id == self.indicator.id,
             )
             .first()
         )
@@ -356,12 +336,24 @@ class Lightstep(Source):
         self,
         from_: datetime.datetime,
         to: datetime.datetime,
-        hints: GetIndicatorValuesHints = _GET_INDICATOR_VALUES_HINTS_DEFAULT,
-    ) -> Tuple[List[IndicatorValueLike], GetIndicatorValuesMetadata]:
+        page: Optional[int] = None,
+        per_page: Optional[int] = None,
+    ) -> Tuple[List[IndicatorValueLike], None]:
+        if page and per_page:
+            delta_seconds = (to - from_).total_seconds()
+            resolution_seconds = 600
+            values_count = delta_seconds / LIGHTSTEP_RESOLUTION_SECONDS
+            from_ = from_ + datetime.timedelta(
+                seconds=(page - 1) * per_page * LIGHTSTEP_RESOLUTION_SECONDS
+            )
+            to = from_ + datetime.timedelta(
+                seconds=LIGHTSTEP_RESOLUTION_SECONDS * per_page
+            )
+
         params = {
             "oldest-time": from_.replace(tzinfo=datetime.timezone.utc).isoformat(),
             "youngest-time": to.replace(tzinfo=datetime.timezone.utc).isoformat(),
-            "resolution-ms": "600000",
+            "resolution-ms": str(LIGHTSTEP_RESOLUTION_SECONDS * 1000),
             **self.metric.to_request(),
         }
         response = requests.get(
@@ -382,10 +374,10 @@ class Lightstep(Source):
 
         return (
             [
-                PureIndicatorValue(dateutil.parser.parse(timestamp_str), value)
+                PureIndicatorValue(dateutil.parser.parse(timestamp_str, ignoretz=True), value)
                 for timestamp_str, value in self.metric.get_datapoints(response)
             ],
-            _GET_INDICATOR_VALUES_METADATA_DEFAULT,
+            None,
         )
 
     def update_indicator_values(self) -> int:
