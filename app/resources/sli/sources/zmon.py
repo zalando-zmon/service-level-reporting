@@ -1,56 +1,28 @@
-import dataclasses
 import datetime
-import enum
 import fnmatch
-import functools
 import math
-import os
-from typing import Dict, Generator, List, Optional, Tuple, Type
+from typing import Dict, List, Optional, Tuple
 
-import dateutil.parser
 import flask_sqlalchemy
 import opentracing
 import requests
 import zign.api
 from opentracing_utils import extract_span_from_kwargs, trace
 
-from app.config import (KAIROS_QUERY_LIMIT, KAIROSDB_URL, LIGHTSTEP_API_KEY,
-                        LIGHTSTEP_RESOLUTION_SECONDS, MAX_QUERY_TIME_SLICE)
+from app.config import KAIROS_QUERY_LIMIT, KAIROSDB_URL, MAX_QUERY_TIME_SLICE
 from app.extensions import db
 
-from .models import (Indicator, IndicatorValue, IndicatorValueLike,
-                     PureIndicatorValue, insert_indicator_value)
+from ..models import IndicatorValue, insert_indicator_value
+from .base import Source, SourceError
 
 _MIN_VAL = math.expm1(1e-10)
 
 
-def key_matches(key, key_patterns):
+def _key_matches(key, key_patterns):
     for pat in key_patterns:
         if fnmatch.fnmatch(key, pat):
             return True
     return False
-
-
-class SourceError(Exception):
-    pass
-
-
-class Source:
-    @classmethod
-    def validate_config(cls, config: Dict):
-        raise NotImplementedError
-
-    def get_indicator_values(
-        self,
-        from_: datetime.datetime,
-        to: datetime.datetime,
-        page: Optional[int] = None,
-        per_page: Optional[int] = None,
-    ) -> Tuple[List[IndicatorValueLike], Optional[object]]:
-        raise NotImplementedError
-
-    def update_indicator_values(self) -> int:
-        raise NotImplementedError
 
 
 class ZMON(Source):
@@ -190,7 +162,7 @@ class ZMON(Source):
             group = result["group_by"][0]["group"]
             key = group["key"]
 
-            exclude = key_matches(key, self.exclude_keys)
+            exclude = _key_matches(key, self.exclude_keys)
 
             if not exclude:
                 for ts, value in result["values"]:
@@ -203,7 +175,9 @@ class ZMON(Source):
                     if g not in res[minute]:
                         res[minute][g] = {}
 
-                    if aggregation_type == "weighted" and key_matches(key, weight_keys):
+                    if aggregation_type == "weighted" and _key_matches(
+                        key, weight_keys
+                    ):
                         res[minute][g]["weight"] = value
                     else:
                         res[minute][g]["value"] = value
@@ -281,132 +255,3 @@ class ZMON(Source):
             session.commit()  # pylint: disable=no-member
 
         return len(result)
-
-
-class Lightstep(Source):
-    class Metric(enum.Enum):
-        OPS_COUNT = "ops-counts"
-        ERRORS_COUNT = "error-counts"
-        LATENCY_P50 = "50"
-        LATENCY_P75 = "75"
-        LATENCY_P90 = "90"
-        LATENCY_P99 = "99"
-
-        @classmethod
-        def from_str(cls, metric_str: str) -> "Metric":
-            return cls[metric_str.upper().replace("-", "_")]
-
-        def to_request(self) -> Dict:
-            if self.name.startswith("LATENCY_"):
-                return {"percentile": self.value}
-
-            return {f"include-{self.value}": 1}
-
-        def get_datapoints(self, response) -> Generator[Tuple[str, str], None, None]:
-            attributes = response["data"]["attributes"]
-
-            if self.name.startswith("LATENCY_"):
-                for latency in attributes["latencies"]:
-                    if latency["percentile"] == self.value:
-                        values = latency["latency-ms"]
-                        break
-                else:
-                    raise SourceError(
-                        f"No latencies found for {self.value}th percentile in timeseries."
-                    )
-            else:
-                values = attributes[self.value]
-
-            return (
-                (window["youngest-time"], value)
-                for window, value in zip(attributes["time-windows"], values)
-            )
-
-    @classmethod
-    def validate_config(cls, config: Dict):
-        # TODO: Really validate
-        pass
-
-    def __init__(self, indicator: Indicator, stream_id: str, metric: str):
-        self.indicator = indicator
-        self.stream_id = stream_id
-        self.metric = self.Metric.from_str(metric)
-
-    def get_indicator_values(
-        self,
-        from_: datetime.datetime,
-        to: datetime.datetime,
-        page: Optional[int] = None,
-        per_page: Optional[int] = None,
-    ) -> Tuple[List[IndicatorValueLike], None]:
-        if page and per_page:
-            delta_seconds = (to - from_).total_seconds()
-            resolution_seconds = 600
-            values_count = delta_seconds / LIGHTSTEP_RESOLUTION_SECONDS
-            from_ = from_ + datetime.timedelta(
-                seconds=(page - 1) * per_page * LIGHTSTEP_RESOLUTION_SECONDS
-            )
-            to = from_ + datetime.timedelta(
-                seconds=LIGHTSTEP_RESOLUTION_SECONDS * per_page
-            )
-
-        params = {
-            "oldest-time": from_.replace(tzinfo=datetime.timezone.utc).isoformat(),
-            "youngest-time": to.replace(tzinfo=datetime.timezone.utc).isoformat(),
-            "resolution-ms": str(LIGHTSTEP_RESOLUTION_SECONDS * 1000),
-            **self.metric.to_request(),
-        }
-        response = requests.get(
-            url=f"https://api.lightstep.com/public/v0.1/Zalando/projects/Production/searches/{self.stream_id}/timeseries",
-            headers={"Authorization": f"Bearer {LIGHTSTEP_API_KEY}"},
-            params=params,
-        )
-        if response.status_code == 401:
-            raise SourceError(
-                "Given Lightstep API key is probably wrong. Please verify if the LIGHTSTEP_API_KEY environment variable contains a valid key."
-            )
-        response = response.json()
-        errors = response.get("errors")
-        if errors:
-            raise SourceError(
-                f"Something went wrong with a request to the Lightstep API: {errors}."
-            )
-
-        return (
-            [
-                PureIndicatorValue(dateutil.parser.parse(timestamp_str, ignoretz=True), value)
-                for timestamp_str, value in self.metric.get_datapoints(response)
-            ],
-            None,
-        )
-
-    def update_indicator_values(self) -> int:
-        return 0
-
-
-_DEFAULT_SOURCE = "zmon"
-_SOURCES = {"zmon": ZMON, "lightstep": Lightstep}
-
-
-def _get_source_cls_from_config(config: Dict) -> Tuple[Type[Source], Dict]:
-    config = config.copy()
-    type_ = config.pop("type", _DEFAULT_SOURCE)
-
-    try:
-        return _SOURCES[type_], config
-    except KeyError:
-        raise SourceError(
-            f"Given source type '{type_}' is not valid. Choose one from: {_SOURCES.keys()}"
-        )
-
-
-def validate_config(config: Dict):
-    cls, config = _get_source_cls_from_config(config)
-
-    return cls.validate_config(config)
-
-
-def from_indicator(indicator: Indicator) -> Source:
-    cls, config = _get_source_cls_from_config(indicator.source)
-
-    return cls(indicator=indicator, **config)
