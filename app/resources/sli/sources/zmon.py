@@ -72,11 +72,11 @@ class ZMON(Source):
         page: Optional[int] = None,
         per_page: Optional[int] = None,
     ) -> Tuple[List[IndicatorValue], Optional[Pagination]]:
-        from_, to = timerange.to_datetimes()
+        start_dt, end_dt = timerange.to_datetimes()
         query = IndicatorValue.query.filter(
             IndicatorValue.indicator_id == self.indicator.id,
-            IndicatorValue.timestamp >= from_,
-            IndicatorValue.timestamp < to,
+            IndicatorValue.timestamp >= start_dt,
+            IndicatorValue.timestamp < end_dt,
         ).order_by(IndicatorValue.timestamp)
         if page and per_page:
             query = query.paginate(page=page, per_page=per_page, error_out=False)
