@@ -1,19 +1,14 @@
 import logging
-import math
 import os
 import warnings
-from datetime import datetime, timedelta
 
-import opentracing
 from flask import Flask
 from gevent.pool import Pool
-from opentracing_utils import extract_span_from_kwargs, trace
 
-from app.config import MAX_QUERY_TIME_SLICE, UPDATER_CONCURRENCY
-from app.extensions import db
+from app.config import UPDATER_CONCURRENCY
 
 from . import sources
-from .models import Indicator, IndicatorValue, insert_indicator_value
+from .models import Indicator
 
 logger = logging.getLogger(__name__)
 

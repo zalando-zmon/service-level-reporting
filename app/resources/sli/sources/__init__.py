@@ -1,4 +1,3 @@
-import datetime
 from typing import Dict, Tuple, Type
 
 from ..models import Indicator

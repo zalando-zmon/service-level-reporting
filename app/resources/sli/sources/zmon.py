@@ -55,7 +55,7 @@ class ZMON(Source):
             )
 
     def __init__(
-        self, indicator, check_id, keys, aggregation, tags=None, exclude_keys=()
+        self, indicator: Indicator, check_id, keys, aggregation, tags=None, exclude_keys=()
     ):
         self.indicator = indicator
 

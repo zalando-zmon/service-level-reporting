@@ -24,7 +24,7 @@ class _Metric(enum.Enum):
         return [metric.name.lower() for metric in cls]
 
     @classmethod
-    def from_str(cls, metric_str: str) -> "Metric":
+    def from_str(cls, metric_str: str) -> "_Metric":
         return cls[metric_str.upper().replace("-", "_")]
 
     def to_request(self) -> Dict:

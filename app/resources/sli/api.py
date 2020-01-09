@@ -1,9 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Tuple, Union, cast
 from urllib.parse import urljoin
 
 from connexion import ProblemException, request
-from dateutil.relativedelta import relativedelta
 from flask_sqlalchemy import BaseQuery, Pagination
 from opentracing.ext import tags as ot_tags
 from opentracing_utils import (
