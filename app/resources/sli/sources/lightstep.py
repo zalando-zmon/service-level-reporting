@@ -124,14 +124,16 @@ class Lightstep(Source):
             "resolution-ms": str(LIGHTSTEP_RESOLUTION_SECONDS * 1000),
             **self.metric.to_request(),
         }
+        url = f"https://api.lightstep.com/public/v0.1/Zalando/projects/Production/searches/{self.stream_id}/timeseries"
         response = requests.get(
-            url=f"https://api.lightstep.com/public/v0.1/Zalando/projects/Production/searches/{self.stream_id}/timeseries",
+            url=url,
             headers={"Authorization": f"Bearer {LIGHTSTEP_API_KEY}"},
             params=params,
         )
         if response.status_code == 401:
             raise SourceError(
-                "Given Lightstep API key is probably wrong. Please verify if the LIGHTSTEP_API_KEY environment variable contains a valid key."
+                "Given Lightstep API key is probably wrong. "
+                "Please verify if the LIGHTSTEP_API_KEY environment variable contains a valid key."
             )
         response = response.json()
         errors = response.get("errors")
