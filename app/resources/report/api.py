@@ -7,11 +7,8 @@ from connexion import ProblemException
 from datetime_truncate import truncate
 from dateutil.relativedelta import relativedelta
 from opentracing.ext import tags as ot_tags
-from opentracing_utils import (
-    extract_span_from_flask_request,
-    extract_span_from_kwargs,
-    trace,
-)
+from opentracing_utils import (extract_span_from_flask_request,
+                               extract_span_from_kwargs, trace)
 
 from app.libs.resource import ResourceHandler
 from app.resources.product.models import Product
@@ -70,7 +67,7 @@ def get_report_summary(
                 objective_summary_span.log_kv(
                     {"target_id": target.id, "indicator_id": target.indicator_id}
                 )
-                ivs = sources.from_indicator(target.indicator).get_indicator_values(
+                ivs, _ = sources.from_indicator(target.indicator).get_indicator_values(
                     sources.DatetimeRange(start, end)
                 )
 
