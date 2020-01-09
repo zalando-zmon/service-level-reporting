@@ -101,10 +101,13 @@ class Lightstep(Source):
                 f"Current value is {metric!r} whereas the valid choices are: {', '.join(_Metric.names())}. "
             )
 
-    def __init__(self, indicator: Indicator, stream_id: str, metric: str):
+    def __init__(
+        self, indicator: Indicator, stream_id: str, metric: str, aggregation: Dict
+    ):
         self.indicator = indicator
         self.stream_id = stream_id
         self.metric = _Metric.from_str(metric)
+        self.aggregation = aggregation
 
     def get_indicator_values(
         self,

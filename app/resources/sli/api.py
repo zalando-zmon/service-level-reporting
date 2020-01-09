@@ -6,8 +6,11 @@ from connexion import ProblemException, request
 from dateutil.relativedelta import relativedelta
 from flask_sqlalchemy import BaseQuery, Pagination
 from opentracing.ext import tags as ot_tags
-from opentracing_utils import (extract_span_from_flask_request,
-                               extract_span_from_kwargs, trace)
+from opentracing_utils import (
+    extract_span_from_flask_request,
+    extract_span_from_kwargs,
+    trace,
+)
 
 from app.config import API_DEFAULT_PAGE_SIZE
 from app.extensions import db
@@ -184,7 +187,6 @@ class SLIValueResource(ResourceHandler):
             for iv in indicator_values
         ]
 
-        # TODO: Continue fixing bugs here
         return cls().build_list_response(
             resources, cast(Pagination, metadata), len(resources)
         )

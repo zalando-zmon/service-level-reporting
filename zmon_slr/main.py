@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 
-import os
 import json
 import numbers
+import os
 import subprocess
 
 import click
 import requests
 import zign.api
-
-from clickclick import AliasedGroup, Action, error, warning, fatal_error
+from clickclick import Action, AliasedGroup, error, fatal_error, warning
 from zmon_cli.client import Zmon
 
 from zmon_slr.client import Client, SLRClientError
@@ -723,13 +722,13 @@ def validate_zmon_source(config, source, act: Action, ignore_keys=False):
 
 
 def validate_lightstep_source(config, source, act: Action, ignore_keys=False):
-    required = {'stream-id', 'metric'}
+    required = {'stream_id', 'metric'}
     missing = set(required) - set(source.keys())
     # checking SLI source structure
     if missing:
         act.error('Fields {} are missing in SLI source definition.'.format(missing))
     metric = source.get('metric', '')
-    if metric not in ["ops-count", "error-count", "p50", "p75", "p90", "p99"]:
+    if metric not in ["ops_count", "error_count", "latency_p50", "latency_p75", "latency_p90", "latency_p99"]:
         act.error('"source.metric is invalid.'.format(missing))
     return None
 
