@@ -71,7 +71,7 @@ def get_report_summary(
                     {"target_id": target.id, "indicator_id": target.indicator_id}
                 )
                 ivs = sources.from_indicator(target.indicator).get_indicator_values(
-                    start, end
+                    sources.DatetimeRange(start, end)
                 )
 
                 target_values_truncated = truncate_values(

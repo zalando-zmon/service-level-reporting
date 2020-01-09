@@ -6,11 +6,8 @@ from connexion import ProblemException, request
 from dateutil.relativedelta import relativedelta
 from flask_sqlalchemy import BaseQuery, Pagination
 from opentracing.ext import tags as ot_tags
-from opentracing_utils import (
-    extract_span_from_flask_request,
-    extract_span_from_kwargs,
-    trace,
-)
+from opentracing_utils import (extract_span_from_flask_request,
+                               extract_span_from_kwargs, trace)
 
 from app.config import API_DEFAULT_PAGE_SIZE
 from app.extensions import db
@@ -161,12 +158,11 @@ class SLIValueResource(ResourceHandler):
             id=kwargs.get("id"), is_deleted=False
         ).first_or_404()
 
-        from_minutes = kwargs.get("from", 10080)
-        to_minutes = kwargs.get("to")
-        now = datetime.utcnow()
-        from_timestamp = now - timedelta(minutes=from_minutes)
-        to_timestamp = now if not to_minutes else now - timedelta(minutes=to_minutes)
-        if to_timestamp < from_timestamp:
+        timerange = sources.RelativeMinutesRange(
+            kwargs.get("from", 10080), kwargs.get("to")
+        )
+        start_dt, end_dt = timerange.to_datetimes()
+        if start_dt > end_dt:
             raise ProblemException(
                 status=400,
                 title="Invalid time range",
@@ -181,7 +177,7 @@ class SLIValueResource(ResourceHandler):
 
         source = sources.from_indicator(indicator)
         indicator_values, metadata = source.get_indicator_values(
-            from_timestamp, to_timestamp, page=page, per_page=per_page,
+            timerange, page=page, per_page=per_page,
         )
         resources = [
             {k: v for k, v in iv.as_dict().items() if k in cls.model_fields}
@@ -254,7 +250,9 @@ class SLIQueryResource(ResourceHandler):
         self.current_span.log_kv({"query_start": start, "query_end": end})
 
         # Query and insert IndicatorValue
-        return sources.from_indicator(obj).update_indicator_values(start, end)
+        return sources.from_indicator(obj).update_indicator_values(
+            sources.RelativeMinutesRange(start=start, end=end)
+        )
 
     def build_resource(self, obj: IndicatorValue, count=0, **kwargs) -> dict:
         resource = super().build_resource(obj, **kwargs)

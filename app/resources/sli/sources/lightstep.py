@@ -8,7 +8,7 @@ import requests
 from app.config import LIGHTSTEP_API_KEY, LIGHTSTEP_RESOLUTION_SECONDS
 
 from ..models import Indicator, IndicatorValueLike, PureIndicatorValue
-from .base import Source, SourceError
+from .base import DatetimeRange, Source, SourceError, TimeRange
 
 
 class _Metric(enum.Enum):
@@ -55,19 +55,21 @@ class _Metric(enum.Enum):
 
 
 def _paginate_timerange(
-    from_: datetime.datetime,
-    to: datetime.datetime,
-    page: Optional[int] = None,
-    per_page: Optional[int] = None,
-) -> Tuple[datetime.datetime, datetime.datetime]:
-    delta_seconds = (to - from_).total_seconds()
+    timerange: TimeRange, page: Optional[int] = None, per_page: Optional[int] = None,
+) -> DatetimeRange:
+    if not page or not per_page:
+        return timerange
+    start_dt, end_dt = timerange.to_datetimes()
+    delta_seconds = (end_dt - start_dt).total_seconds()
     values_count = delta_seconds / LIGHTSTEP_RESOLUTION_SECONDS
-    from_ = from_ + datetime.timedelta(
+    start_dt = start_dt + datetime.timedelta(
         seconds=(page - 1) * per_page * LIGHTSTEP_RESOLUTION_SECONDS
     )
-    to = from_ + datetime.timedelta(seconds=LIGHTSTEP_RESOLUTION_SECONDS * per_page)
+    end_dt = start_dt + datetime.timedelta(
+        seconds=LIGHTSTEP_RESOLUTION_SECONDS * per_page
+    )
 
-    return from_, to
+    return DatetimeRange(start_dt, end_dt)
 
 
 class Lightstep(Source):
@@ -97,17 +99,16 @@ class Lightstep(Source):
 
     def get_indicator_values(
         self,
-        from_: datetime.datetime,
-        to: datetime.datetime,
+        timerange: TimeRange = TimeRange.DEFAULT,
         page: Optional[int] = None,
         per_page: Optional[int] = None,
     ) -> Tuple[List[IndicatorValueLike], None]:
-        if page and per_page:
-            from_, to = _paginate_timerange(from_, to, page, per_page)
+        timerange = _paginate_timerange(timerange, page, per_page)
+        start_dt, end_dt = timerange.to_datetimes()
 
         params = {
-            "oldest-time": from_.replace(tzinfo=datetime.timezone.utc).isoformat(),
-            "youngest-time": to.replace(tzinfo=datetime.timezone.utc).isoformat(),
+            "oldest-time": start_dt.replace(tzinfo=datetime.timezone.utc).isoformat(),
+            "youngest-time": end_dt.replace(tzinfo=datetime.timezone.utc).isoformat(),
             "resolution-ms": str(LIGHTSTEP_RESOLUTION_SECONDS * 1000),
             **self.metric.to_request(),
         }

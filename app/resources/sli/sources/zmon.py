@@ -12,8 +12,8 @@ from opentracing_utils import extract_span_from_kwargs, trace
 from app.config import KAIROS_QUERY_LIMIT, KAIROSDB_URL, MAX_QUERY_TIME_SLICE
 from app.extensions import db
 
-from ..models import IndicatorValue, insert_indicator_value
-from .base import Source, SourceError
+from ..models import Indicator, IndicatorValue, insert_indicator_value
+from .base import Source, SourceError, TimeRange
 
 _MIN_VAL = math.expm1(1e-10)
 
@@ -69,11 +69,11 @@ class ZMON(Source):
 
     def get_indicator_values(
         self,
-        from_: datetime.datetime,
-        to: datetime.datetime,
+        timerange: TimeRange,
         page: Optional[int] = None,
         per_page: Optional[int] = None,
     ) -> Tuple[List[IndicatorValue], Optional[flask_sqlalchemy.Pagination]]:
+        from_, to = timerange.to_datetimes()
         query = IndicatorValue.query.filter(
             IndicatorValue.indicator_id == self.indicator.id,
             IndicatorValue.timestamp >= from_,
@@ -89,7 +89,7 @@ class ZMON(Source):
         else:
             return list(query.all()), None
 
-    def _get_timespan_for_update(self) -> int:
+    def _get_start_relative_for_update(self) -> int:
         now = datetime.datetime.utcnow()
         newest_dt = now - datetime.timedelta(minutes=MAX_QUERY_TIME_SLICE)
 
@@ -104,17 +104,12 @@ class ZMON(Source):
             )
             .first()
         )
+        if not getattr(newest_iv, "timestamp", None):
+            return MAX_QUERY_TIME_SLICE
 
-        if newest_iv and newest_iv.timestamp:
-            start = (
-                now - newest_iv.timestamp
-            ).seconds // 60 + 5  # add some overlapping
-        else:
-            start = MAX_QUERY_TIME_SLICE
+        return (now - newest_iv.timestamp).seconds // 60 + 5  # add some overlapping
 
-        return start
-
-    def _query(self, start, end=None):
+    def _query_kairosdb(self, start, end=None):
         aggregation_type = self.aggregation["type"]
         weight_keys = self.aggregation.get("weight_keys", [])
 
@@ -221,37 +216,38 @@ class ZMON(Source):
 
     @trace(pass_span=True)
     def update_indicator_values(
-        self, from_: Optional[int] = None, to: Optional[int] = None, **kwargs,
+        self, timerange: TimeRange = TimeRange.DEFAULT, **kwargs,
     ):
-        result = self._query(from_ or self._get_timespan_for_update(), to)
+        start, end = timerange.to_relative_minutes()
+        start = start or self._get_start_relative_for_update()
+        result = self._query_kairosdb(start, end)
+        if not result:
+            return 0
 
-        if result:
-            session = db.session
-            current_span = extract_span_from_kwargs(**kwargs)
-
-            insert_span = opentracing.tracer.start_span(
-                operation_name="insert_indicator_values", child_of=current_span
+        session = db.session
+        current_span = extract_span_from_kwargs(**kwargs)
+        insert_span = opentracing.tracer.start_span(
+            operation_name="insert_indicator_values", child_of=current_span
+        )
+        (
+            insert_span.set_tag("indicator", self.indicator.name).set_tag(
+                "indicator_id", self.indicator.id
             )
-            (
-                insert_span.set_tag("indicator", self.indicator.name).set_tag(
-                    "indicator_id", self.indicator.id
+        )
+        insert_span.log_kv({"result_count": len(result)})
+
+        with insert_span:
+            for minute, val in result.items():
+                if val > 0:
+                    val = max(val, _MIN_VAL)
+                elif val < 0:
+                    val = min(val, _MIN_VAL * -1)
+
+                iv = IndicatorValue(
+                    timestamp=minute, value=val, indicator_id=self.indicator.id
                 )
-            )
+                insert_indicator_value(session, iv)
 
-            insert_span.log_kv({"result_count": len(result)})
-
-            with insert_span:
-                for minute, val in result.items():
-                    if val > 0:
-                        val = max(val, _MIN_VAL)
-                    elif val < 0:
-                        val = min(val, _MIN_VAL * -1)
-
-                    iv = IndicatorValue(
-                        timestamp=minute, value=val, indicator_id=self.indicator.id
-                    )
-                    insert_indicator_value(session, iv)
-
-            session.commit()  # pylint: disable=no-member
+        session.commit()  # pylint: disable=no-member
 
         return len(result)
