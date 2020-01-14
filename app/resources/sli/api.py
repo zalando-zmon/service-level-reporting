@@ -25,14 +25,14 @@ from .models import Indicator, IndicatorValue
 
 class SLIResource(ResourceHandler):
     model_fields = (
-        "name",
-        "slug",
-        "source",
-        "unit",
-        "aggregation",
-        "created",
-        "updated",
-        "username",
+        'name',
+        'slug',
+        'source',
+        'unit',
+        'aggregation',
+        'created',
+        'updated',
+        'username',
     )
 
     @property
@@ -41,8 +41,8 @@ class SLIResource(ResourceHandler):
 
     @staticmethod
     def get_uri_from_id(obj_id: Union[str, int], **kwargs) -> str:
-        product_id = kwargs.get("product_id")
-        return urljoin(request.api_url, "products/{}/sli/{}".format(product_id, obj_id))
+        product_id = kwargs.get('product_id')
+        return urljoin(request.api_url, 'products/{}/sli/{}'.format(product_id, obj_id))
 
     def get_query(self, product_id: int, **kwargs) -> BaseQuery:
         return Indicator.query.filter_by(product_id=product_id, is_deleted=False)
@@ -51,8 +51,8 @@ class SLIResource(ResourceHandler):
         """Return relevant filters"""
         filters = {}
 
-        if "name" in kwargs:
-            filters["slug"] = slugger(kwargs["name"])
+        if 'name' in kwargs:
+            filters['slug'] = slugger(kwargs['name'])
 
         return filters
 
@@ -81,11 +81,11 @@ class SLIResource(ResourceHandler):
     def new_object(self, sli: dict, **kwargs) -> Indicator:
         fields = self.get_object_fields(sli)
 
-        product_id = kwargs.get("product_id")
+        product_id = kwargs.get('product_id')
 
         sli_product = Product.query.get_or_404(product_id)
 
-        fields["product_id"] = sli_product.id
+        fields['product_id'] = sli_product.id
 
         return Indicator(**fields)
 
@@ -111,7 +111,7 @@ class SLIResource(ResourceHandler):
 
         self.before_object_update(obj)
 
-        product_id = kwargs.get("product_id")
+        product_id = kwargs.get('product_id')
 
         # No need to make extra DB call!
         if obj.product_id != product_id:
@@ -126,10 +126,10 @@ class SLIResource(ResourceHandler):
         if obj.targets.count():
             raise ProblemException(
                 status=403,
-                title="Deleting SLI forbidden",
-                detail="Some SLO targets reference this SLI.",
+                title='Deleting SLI forbidden',
+                detail='Some SLO targets reference this SLI.',
             )
-        obj.name = "{}-{}".format(obj.name, datetime.utcnow())
+        obj.name = '{}-{}'.format(obj.name, datetime.utcnow())
         obj.is_deleted = True
         db.session.commit()
 
@@ -137,22 +137,22 @@ class SLIResource(ResourceHandler):
         resource = super().build_resource(obj)
 
         # extra fields
-        resource["product_name"] = obj.product.name
+        resource['product_name'] = obj.product.name
 
         # Links
-        base_uri = resource["uri"] + "/"
+        base_uri = resource['uri'] + '/'
 
-        resource["product_uri"] = ProductResource.get_uri_from_id(
+        resource['product_uri'] = ProductResource.get_uri_from_id(
             obj.product_id, **kwargs
         )
-        resource["sli_values_uri"] = urljoin(base_uri, "values")
-        resource["sli_query_uri"] = urljoin(base_uri, "query")
+        resource['sli_values_uri'] = urljoin(base_uri, 'values')
+        resource['sli_query_uri'] = urljoin(base_uri, 'query')
 
         return resource
 
 
 class SLIValueResource(ResourceHandler):
-    model_fields = ("timestamp", "value")
+    model_fields = ('timestamp', 'value')
 
     @classmethod
     def list(cls, **kwargs) -> dict:
@@ -195,16 +195,16 @@ class SLIQueryResource(ResourceHandler):
     @classmethod
     @trace(
         span_extractor=extract_span_from_flask_request,
-        operation_name="indicator_query",
+        operation_name='indicator_query',
         pass_span=True,
-        tags={ot_tags.COMPONENT: "flask"},
+        tags={ot_tags.COMPONENT: 'flask'},
     )
     def create(cls, **kwargs) -> Tuple:
         resource = cls()
 
         resource.current_span = extract_span_from_kwargs(**kwargs)
 
-        obj_id = int(kwargs.get("id"))
+        obj_id = int(kwargs.get('id'))
 
         # Get objects from DB
         obj = resource.get_object(obj_id, **kwargs)
@@ -224,18 +224,18 @@ class SLIQueryResource(ResourceHandler):
         return Indicator.query.filter_by(product_id=product_id, is_deleted=False)
 
     def validate(self, duration: dict, **kwargs) -> None:
-        start = duration.get("start")
-        end = duration.get("end", 0)
+        start = duration.get('start')
+        end = duration.get('end', 0)
 
         if not duration or not start:
             raise ProblemException(
-                title="Invalid query duration",
+                title='Invalid query duration',
                 detail="Query 'start' must have a value!",
             )
 
         if start < end:
             raise ProblemException(
-                title="Invalid query duration",
+                title='Invalid query duration',
                 detail="Query 'start' must be greater than 'end'",
             )
 
@@ -243,12 +243,12 @@ class SLIQueryResource(ResourceHandler):
         return self.get_query(**kwargs).filter_by(id=obj_id).first_or_404()
 
     def query(self, obj: Indicator, duration: dict, **kwargs) -> int:
-        start = duration.get("start")
-        end = duration.get("end", 0)
+        start = duration.get('start')
+        end = duration.get('end', 0)
 
-        self.current_span.set_tag("indicator", obj.name)
-        self.current_span.set_tag("product", obj.product.name)
-        self.current_span.log_kv({"query_start": start, "query_end": end})
+        self.current_span.set_tag('indicator', obj.name)
+        self.current_span.set_tag('product', obj.product.name)
+        self.current_span.log_kv({'query_start': start, 'query_end': end})
 
         # Query and insert IndicatorValue
         return sources.from_indicator(obj).update_indicator_values(
@@ -257,8 +257,8 @@ class SLIQueryResource(ResourceHandler):
 
     def build_resource(self, obj: IndicatorValue, count=0, **kwargs) -> dict:
         resource = super().build_resource(obj, **kwargs)
-        resource.pop("uri", None)
+        resource.pop('uri', None)
 
-        resource["count"] = count
+        resource['count'] = count
 
         return resource
