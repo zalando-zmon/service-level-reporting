@@ -10,6 +10,8 @@ from app.config import LIGHTSTEP_API_KEY, LIGHTSTEP_RESOLUTION_SECONDS
 from ..models import Indicator, IndicatorValueLike, PureIndicatorValue
 from .base import DatetimeRange, Pagination, Source, SourceError, TimeRange
 
+_AGGREGATION_TYPES = ("average", "sum", "min", "max", "minimum", "maximum")
+
 
 class _Metric(enum.Enum):
     OPS_COUNT = "ops-counts"
@@ -27,6 +29,10 @@ class _Metric(enum.Enum):
     def from_str(cls, metric_str: str) -> "_Metric":
         return cls[metric_str.upper().replace("-", "_")]
 
+    @property
+    def is_latency(self):
+        return self.name.startswith("LATENCY_")
+
     def to_request(self) -> Dict:
         if self.name.startswith("LATENCY_"):
             return {"percentile": self.value}
@@ -36,7 +42,7 @@ class _Metric(enum.Enum):
     def get_datapoints(self, response) -> Generator[Tuple[str, str], None, None]:
         attributes = response["data"]["attributes"]
 
-        if self.name.startswith("LATENCY_"):
+        if self.is_latency:
             for latency in attributes["latencies"]:
                 if latency["percentile"] == self.value:
                     values = latency["latency-ms"]
@@ -86,6 +92,7 @@ class Lightstep(Source):
     def validate_config(cls, config: Dict):
         stream_id = config.get("stream_id")
         metric = config.get("metric")
+        aggregation_type = config.get("aggregation", {}).get("type")
 
         if not stream_id:
             raise SourceError(
@@ -101,8 +108,18 @@ class Lightstep(Source):
                 f"Current value is {metric!r} whereas the valid choices are: {', '.join(_Metric.names())}. "
             )
 
+        if aggregation_type not in _AGGREGATION_TYPES:
+            raise SourceError(
+                "Provided aggregation type is not supported for LightStep. "
+                f"Current value is {aggregation_type!r} whereas the valid choices are: {', '.join(_AGGREGATION_TYPES)}."
+            )
+
     def __init__(
-        self, indicator: Indicator, stream_id: str, metric: str, aggregation: Dict
+        self,
+        indicator: Indicator,
+        stream_id: str,
+        metric: str,
+        aggregation: Optional[Dict] = None,
     ):
         self.indicator = indicator
         self.stream_id = stream_id

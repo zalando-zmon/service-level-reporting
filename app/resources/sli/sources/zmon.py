@@ -15,6 +15,7 @@ from ..models import Indicator, IndicatorValue, insert_indicator_value
 from .base import Pagination, Source, SourceError, TimeRange
 
 _MIN_VAL = math.expm1(1e-10)
+_AGGREGATION_TYPES = ("average", "weighted", "sum", "min", "max", "minimum", "maximum")
 
 
 def _key_matches(key, key_patterns):
@@ -25,8 +26,6 @@ def _key_matches(key, key_patterns):
 
 
 class ZMON(Source):
-    AGG_TYPES = ("average", "weighted", "sum", "min", "max", "minimum", "maximum")
-
     @classmethod
     def validate_config(cls, config: Dict):
         required = {"aggregation", "check_id", "keys"}
@@ -42,10 +41,10 @@ class ZMON(Source):
             raise SourceError("SLI 'source' *aggregation* must have a value",)
 
         agg_type = aggregation.get("type")
-        if not agg_type or agg_type not in cls.AGG_TYPES:
+        if not agg_type or agg_type not in _AGGREGATION_TYPES:
             raise SourceError(
                 "SLI 'source' aggregation type is invalid. Valid values are: {}".format(
-                    cls.AGG_TYPES
+                    _AGGREGATION_TYPES
                 ),
             )
 
@@ -55,7 +54,13 @@ class ZMON(Source):
             )
 
     def __init__(
-        self, indicator: Indicator, check_id, keys, aggregation, tags=None, exclude_keys=()
+        self,
+        indicator: Indicator,
+        check_id,
+        keys,
+        aggregation,
+        tags=None,
+        exclude_keys=(),
     ):
         self.indicator = indicator
 
