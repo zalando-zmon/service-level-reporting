@@ -2,7 +2,7 @@ import dataclasses
 import datetime
 from typing import Dict, List, Optional, Tuple
 
-from ..models import Indicator, IndicatorValueLike
+from ..models import IndicatorValueLike
 
 
 class SourceError(Exception):
