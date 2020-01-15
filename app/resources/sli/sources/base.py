@@ -1,6 +1,8 @@
 import dataclasses
 import datetime
-from typing import Dict, List, Optional, Tuple, cast
+import enum
+from decimal import Decimal
+from typing import Dict, List, NamedTuple, Optional, Set, Tuple, cast
 
 from ..models import Indicator, IndicatorValueLike
 
@@ -68,10 +70,31 @@ class DatetimeRange(TimeRange):
 TimeRange.DEFAULT = DatetimeRange()
 
 
+class Aggregate(enum.Enum):
+    DAILY = 86400
+    WEEKLY = 604800
+    TOTAL = None
+
+
 class Pagination(object):
     per_page: int
     page: int
     next_num: int
+
+
+@dataclasses.dataclass
+class IndicatorValueAggregate:
+    aggregate: Decimal
+    aggregation: Optional[Decimal] = None
+    avg: Optional[Decimal] = None
+    count: Optional[Decimal] = None
+    max: Optional[Decimal] = None
+    min: Optional[Decimal] = None
+    sum: Optional[Decimal] = None
+
+    @classmethod
+    def from_indicator_value(cls, indicator_value):
+        return cls(aggregate=indicator_value.value)
 
 
 class Source:
@@ -81,6 +104,11 @@ class Source:
 
     def __init__(self, indicator: Indicator, **kwargs):
         self.indicator = indicator
+
+    def get_indicator_value_aggregates(
+        self, timerange: TimeRange, aggregates: Set[Aggregate]
+    ) -> Dict:
+        raise NotImplementedError
 
     def get_indicator_values(
         self,

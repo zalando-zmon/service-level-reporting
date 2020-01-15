@@ -1,7 +1,7 @@
 import datetime
 import fnmatch
 import math
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import opentracing
 import requests
@@ -12,7 +12,7 @@ from app.config import KAIROS_QUERY_LIMIT, KAIROSDB_URL, MAX_QUERY_TIME_SLICE
 from app.extensions import db
 
 from ..models import Indicator, IndicatorValue, insert_indicator_value
-from .base import Pagination, Source, SourceError, TimeRange
+from .base import Aggregate, Pagination, Source, SourceError, TimeRange
 
 _MIN_VAL = math.expm1(1e-10)
 _AGGREGATION_TYPES = ("average", "weighted", "sum", "min", "max", "minimum", "maximum")
@@ -70,6 +70,11 @@ class ZMON(Source):
 
         self.exclude_keys = exclude_keys
         self.tags = tags or {}
+
+    def get_indicator_value_aggregates(
+        self, timerange: TimeRange, aggregates: Set[Aggregate]
+    ) -> Dict:
+        return {}
 
     def get_indicator_values(
         self,

@@ -1,24 +1,32 @@
 import datetime
 import enum
 from decimal import Decimal
-from typing import Dict, Generator, List, Optional, Tuple
+from typing import Dict, Generator, List, Optional, Set, Tuple
 
+import datetime_truncate
 import dateutil.parser
 import requests
 
 from app.config import LIGHTSTEP_API_KEY, LIGHTSTEP_RESOLUTION_SECONDS
 
 from ..models import Indicator, IndicatorValueLike, PureIndicatorValue
-from .base import DatetimeRange, Pagination, Source, SourceError, TimeRange
-
-_AGGREGATION_TYPES = ("average", "sum", "min", "max", "minimum", "maximum")
+from .base import (
+    Aggregate,
+    DatetimeRange,
+    IndicatorValueAggregate,
+    Pagination,
+    RelativeMinutesRange,
+    Source,
+    SourceError,
+    TimeRange,
+)
 
 
 class _MetricImpl:
     def to_request(self) -> Dict:
         raise NotImplementedError
 
-    def from_response(self, attributes: Dict) -> List[Decimal]:
+    def from_response(self, attributes: Dict, resolution: int) -> List[Decimal]:
         raise NotImplementedError
 
 
@@ -41,10 +49,9 @@ class _OperationRate(_MetricImpl):
     def to_request(self) -> Dict:
         return {"include-ops-counts": 1}
 
-    def from_response(self, attributes: Dict) -> List[Decimal]:
+    def from_response(self, attributes: Dict, resolution: int) -> List[Decimal]:
         return [
-            Decimal(ops_count) / int(LIGHTSTEP_RESOLUTION_SECONDS)
-            for ops_count in attributes["ops-counts"]
+            Decimal(ops_count) / resolution for ops_count in attributes["ops-counts"]
         ]
 
 
@@ -93,9 +100,11 @@ class _Metric(enum.Enum):
     def to_request(self) -> Dict:
         return self.value.to_request()
 
-    def get_datapoints(self, response) -> List[Tuple[str, Decimal]]:
+    def from_response(
+        self, response: Dict, resolution: int
+    ) -> List[Tuple[str, Decimal]]:
         attributes = response["data"]["attributes"]
-        values = self.value.from_response(attributes)
+        values = self.value.from_response(attributes, resolution)
 
         return [
             (window["youngest-time"], value)
@@ -104,21 +113,20 @@ class _Metric(enum.Enum):
 
 
 def _paginate_timerange(
-    timerange: TimeRange, page: Optional[int] = None, per_page: Optional[int] = None,
+    timerange: TimeRange,
+    resolution: int,
+    page: Optional[int] = None,
+    per_page: Optional[int] = None,
 ) -> Tuple[TimeRange, Optional[Pagination]]:
     if not page or not per_page:
         return timerange, None
 
     start_dt, end_dt = timerange.to_datetimes()
     delta_seconds = (end_dt - start_dt).total_seconds()
-    start_dt = start_dt + datetime.timedelta(
-        seconds=(page - 1) * per_page * LIGHTSTEP_RESOLUTION_SECONDS
-    )
-    end_dt = start_dt + datetime.timedelta(
-        seconds=LIGHTSTEP_RESOLUTION_SECONDS * per_page
-    )
+    start_dt = start_dt + datetime.timedelta(seconds=(page - 1) * per_page * resolution)
+    end_dt = start_dt + datetime.timedelta(seconds=resolution * per_page)
 
-    total_count = delta_seconds / LIGHTSTEP_RESOLUTION_SECONDS
+    total_count = delta_seconds / resolution
     current_count = page * per_page
     pagination = Pagination()
     pagination.per_page = per_page
@@ -135,7 +143,6 @@ class Lightstep(Source):
     def validate_config(cls, config: Dict):
         stream_id = config.get("stream_id")
         metric = str(config.get("metric"))
-        aggregation_type = config.get("aggregation", {}).get("type")
 
         if not stream_id:
             raise SourceError(
@@ -151,37 +158,47 @@ class Lightstep(Source):
                 f"Current value is {metric!r} whereas the valid choices are: {', '.join(_Metric.names())}. "
             )
 
-        if aggregation_type and (aggregation_type not in _AGGREGATION_TYPES):
-            raise SourceError(
-                "Provided aggregation type is not supported for LightStep. "
-                f"Current value is {aggregation_type!r} whereas the valid choices are: {', '.join(_AGGREGATION_TYPES)}."
-            )
-
-    def __init__(
-        self,
-        indicator: Indicator,
-        stream_id: str,
-        metric: str,
-        aggregation: Optional[Dict] = None,
-    ):
+    def __init__(self, indicator: Indicator, stream_id: str, metric: str):
         self.indicator = indicator
         self.stream_id = stream_id
         self.metric = _Metric.from_str(metric)
-        self.aggregation = aggregation
+
+    def get_indicator_value_aggregates(
+        self, timerange: TimeRange, aggregates: Set[Aggregate]
+    ) -> Dict:
+        result = {
+            aggregate: [
+                IndicatorValueAggregate.from_indicator_value(iv)
+                for iv in self.get_indicator_values(timerange, aggregate.value)[0]
+            ]
+            for aggregate in aggregates
+        }
+
+        # from_dt, to_dt = timerange.to_datetimes()
+        # timerange_seconds = int((to_dt - from_dt).total_seconds())
+        # result[Aggregate.TOTAL] = self.get_indicator_values(
+        #     timerange, timerange_seconds
+        # )[0][0]
+
+        return result
 
     def get_indicator_values(
         self,
         timerange: TimeRange = TimeRange.DEFAULT,
+        resolution: Optional[int] = None,
         page: Optional[int] = None,
         per_page: Optional[int] = None,
     ) -> Tuple[List[IndicatorValueLike], Optional[Pagination]]:
-        timerange, pagination = _paginate_timerange(timerange, page, per_page)
+        resolution = resolution or LIGHTSTEP_RESOLUTION_SECONDS
+        timerange, pagination = _paginate_timerange(
+            timerange, resolution, page, per_page
+        )
         start_dt, end_dt = timerange.to_datetimes()
 
         params = {
             "oldest-time": start_dt.replace(tzinfo=datetime.timezone.utc).isoformat(),
             "youngest-time": end_dt.replace(tzinfo=datetime.timezone.utc).isoformat(),
-            "resolution-ms": str(LIGHTSTEP_RESOLUTION_SECONDS * 1000),
+            "resolution-ms": str(resolution * 1000),
             **self.metric.to_request(),
         }
         url = f"https://api.lightstep.com/public/v0.1/Zalando/projects/Production/searches/{self.stream_id}/timeseries"
@@ -207,7 +224,9 @@ class Lightstep(Source):
                 PureIndicatorValue(
                     dateutil.parser.parse(timestamp_str, ignoretz=True), value
                 )
-                for timestamp_str, value in self.metric.get_datapoints(response_dict)
+                for timestamp_str, value in self.metric.from_response(
+                    response_dict, resolution
+                )
             ],
             pagination,
         )

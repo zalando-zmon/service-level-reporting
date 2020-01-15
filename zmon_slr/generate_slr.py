@@ -68,6 +68,8 @@ def get_aggregate(aggregation: str, data: dict):
         val = values = data['sum']
         if type(values) is list:
             val = sum(values) if len(values) > 0 else None
+    else:
+        val = None
 
     return round(val, 2) if val else 0.0
 

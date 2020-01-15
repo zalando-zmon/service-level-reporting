@@ -33,17 +33,18 @@ def truncate_values(
 
     return truncated
 
+    # target_values_truncated = truncate_values(
+    #     ivs, parent_span=objective_summary_span
+    # )
+
 
 def get_report_summary(
     objectives: Iterator[Objective],
+    iv_aggregates,
     unit: str,
-    start: datetime,
-    end: datetime,
     current_span: opentracing.Span,
 ) -> List[dict]:
     summary = []
-
-    start = truncate(start)
 
     for objective in objectives:
         days = collections.defaultdict(dict)
@@ -67,36 +68,35 @@ def get_report_summary(
 
         with objective_summary_span:
             for target in objective.targets:
+
                 objective_summary_span.log_kv(
                     {'target_id': target.id, 'indicator_id': target.indicator_id}
                 )
-                ivs, _ = sources.from_indicator(target.indicator).get_indicator_values(
-                    sources.DatetimeRange(start, end)
-                )
 
-                target_values_truncated = truncate_values(
-                    ivs, parent_span=objective_summary_span
-                )
+                values = iv_aggregates[target.indicator][sources.Aggregate.DAILY]
+                import pdb
 
-                for truncated_date, target_values in target_values_truncated.items():
-                    target_from = target.target_from or float('-inf')
-                    target_to = target.target_to or float('inf')
+                pdb.set_trace()
 
-                    target_count = len(target_values)
-                    target_sum = sum(target_values)
-                    breaches = target_count - len(
-                        [v for v in target_values if target_from <= v <= target_to]
-                    )
+                # for truncated_date, target_values in target_values_truncated.items():
+                #     target_from = target.target_from or float('-inf')
+                #     target_to = target.target_to or float('inf')
 
-                    days[truncated_date.isoformat()][target.indicator.name] = {
-                        'aggregation': target.indicator.aggregation,
-                        'avg': target_sum / target_count,
-                        'breaches': breaches,
-                        'count': target_count,
-                        'max': max(target_values),
-                        'min': min(target_values),
-                        'sum': target_sum,
-                    }
+                #     target_count = len(target_values)
+                #     target_sum = sum(target_values)
+                #     breaches = target_count - len(
+                #         [v for v in target_values if target_from <= v <= target_to]
+                #     )
+
+                #     days[truncated_date.isoformat()][target.indicator.name] = {
+                #         'aggregation': target.indicator.aggregation,
+                #         'avg': target_sum / target_count,
+                #         'breaches': breaches,
+                #         'count': target_count,
+                #         'max': max(target_values),
+                #         'min': min(target_values),
+                #         'sum': target_sum,
+                #     }
 
             summary.append(
                 {
@@ -164,7 +164,14 @@ class ReportResource(ResourceHandler):
             {'report_duration_start': start, 'report_duration_end': now}
         )
 
-        slo = get_report_summary(objectives, unit, start, now, current_span)
+        iv_aggregates = {
+            indicator: sources.from_indicator(indicator).get_indicator_value_aggregates(
+                sources.DatetimeRange(truncate(start)), {sources.Aggregate.DAILY}
+            )
+            for indicator in product.indicators.all()
+        }
+
+        slo = get_report_summary(objectives, iv_aggregates, unit, current_span)
 
         current_span.log_kv(
             {'report_objective_count': len(slo), 'objective_count': len(objectives)}

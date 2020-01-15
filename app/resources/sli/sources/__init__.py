@@ -2,7 +2,7 @@ from typing import Dict, Tuple, Type
 
 from ..models import Indicator
 from .base import Source  # noqa
-from .base import DatetimeRange, RelativeMinutesRange, SourceError, TimeRange
+from .base import Aggregate, DatetimeRange, RelativeMinutesRange, SourceError, TimeRange
 from .lightstep import Lightstep
 from .zmon import ZMON
 
@@ -12,6 +12,7 @@ __all__ = [
     "DatetimeRange",
     "RelativeMinutesRange",
     "TimeRange",
+    "Aggregate",
 ]
 
 _DEFAULT_SOURCE = "zmon"
