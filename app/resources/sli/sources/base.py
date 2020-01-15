@@ -84,6 +84,7 @@ class Pagination(object):
 
 @dataclasses.dataclass
 class IndicatorValueAggregate:
+    timestamp: datetime.datetime
     aggregate: Decimal
     aggregation: Optional[Decimal] = None
     avg: Optional[Decimal] = None
@@ -94,7 +95,14 @@ class IndicatorValueAggregate:
 
     @classmethod
     def from_indicator_value(cls, indicator_value):
-        return cls(aggregate=indicator_value.value)
+        return cls(timestamp=indicator_value.timestamp, aggregate=indicator_value.value)
+
+    @classmethod
+    def from_indicator_values(cls, indicator_values):
+        pass
+
+    def as_dict(self):
+        return dataclasses.asdict(self)
 
 
 class Source:

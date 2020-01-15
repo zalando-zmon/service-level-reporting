@@ -12,7 +12,14 @@ from app.config import KAIROS_QUERY_LIMIT, KAIROSDB_URL, MAX_QUERY_TIME_SLICE
 from app.extensions import db
 
 from ..models import Indicator, IndicatorValue, insert_indicator_value
-from .base import Aggregate, Pagination, Source, SourceError, TimeRange
+from .base import (
+    Aggregate,
+    IndicatorValueAggregate,
+    Pagination,
+    Source,
+    SourceError,
+    TimeRange,
+)
 
 _MIN_VAL = math.expm1(1e-10)
 _AGGREGATION_TYPES = ("average", "weighted", "sum", "min", "max", "minimum", "maximum")
@@ -74,7 +81,7 @@ class ZMON(Source):
     def get_indicator_value_aggregates(
         self, timerange: TimeRange, aggregates: Set[Aggregate]
     ) -> Dict:
-        return {}
+        values = self.get_indicator_values(timerange)
 
     def get_indicator_values(
         self,

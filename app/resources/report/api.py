@@ -68,12 +68,19 @@ def get_report_summary(
 
         with objective_summary_span:
             for target in objective.targets:
-
                 objective_summary_span.log_kv(
                     {'target_id': target.id, 'indicator_id': target.indicator_id}
                 )
 
-                values = iv_aggregates[target.indicator][sources.Aggregate.DAILY]
+                target_from = target.target_from or float('-inf')
+                target_to = target.target_to or float('inf')
+                for aggregate in iv_aggregates[target.indicator][
+                    sources.Aggregate.DAILY
+                ]:
+                    days[aggregate.timestamp][
+                        target.indicator.name
+                    ] = aggregate.as_dict()
+
                 import pdb
 
                 pdb.set_trace()
