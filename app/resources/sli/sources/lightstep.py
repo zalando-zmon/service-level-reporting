@@ -1,5 +1,6 @@
 import datetime
 import enum
+from decimal import Decimal
 from typing import Dict, Generator, List, Optional, Tuple
 
 import dateutil.parser
@@ -13,13 +14,73 @@ from .base import DatetimeRange, Pagination, Source, SourceError, TimeRange
 _AGGREGATION_TYPES = ("average", "sum", "min", "max", "minimum", "maximum")
 
 
+class _MetricImpl:
+    def to_request(self) -> Dict:
+        raise NotImplementedError
+
+    def from_response(self, attributes: Dict) -> List[Decimal]:
+        raise NotImplementedError
+
+
+class _Latency(_MetricImpl):
+    def __init__(self, percentile: str):
+        self.percentile = percentile
+
+    def to_request(self) -> Dict:
+        return {"percentile": self.percentile}
+
+    def from_response(self, attributes: Dict) -> List[Decimal]:
+        for latency_dict in attributes["latencies"]:
+            if latency_dict["percentile"] == self.percentile:
+                return [Decimal(latency) for latency in latency_dict["latency-ms"]]
+
+        return []
+
+
+class _OperationRate(_MetricImpl):
+    def to_request(self) -> Dict:
+        return {"include-ops-counts": 1}
+
+    def from_response(self, attributes: Dict) -> List[Decimal]:
+        return [
+            Decimal(ops_count) / int(LIGHTSTEP_RESOLUTION_SECONDS)
+            for ops_count in attributes["ops-counts"]
+        ]
+
+
+class _ErrorPercentage(_MetricImpl):
+    def to_request(self) -> Dict:
+        return {"include-ops-counts": 1, "include-error-counts": 1}
+
+    def from_response(self, attributes: Dict) -> List[Decimal]:
+        return [
+            Decimal(error_count) / Decimal(ops_count)
+            for ops_count, error_count in zip(
+                attributes["ops-counts"], attributes["error-counts"]
+            )
+        ]
+
+
+class _RawCount(_MetricImpl):
+    def __init__(self, name: str):
+        self.name = name
+
+    def to_request(self) -> Dict:
+        return {f"include-{self.name}": 1}
+
+    def from_response(self, attributes: Dict) -> List[Decimal]:
+        return [Decimal(count) for count in attributes[self.name]]
+
+
 class _Metric(enum.Enum):
-    OPS_COUNT = "ops-counts"
-    ERRORS_COUNT = "error-counts"
-    LATENCY_P50 = "50"
-    LATENCY_P75 = "75"
-    LATENCY_P90 = "90"
-    LATENCY_P99 = "99"
+    OPERATION_COUNT = _RawCount("ops-counts")
+    OPERATION_RATE = _OperationRate()
+    ERROR_COUNT = _RawCount("error-counts")
+    ERROR_PERCENTAGE = _ErrorPercentage()
+    LATENCY_P50 = _Latency("50")
+    LATENCY_P75 = _Latency("75")
+    LATENCY_P90 = _Latency("90")
+    LATENCY_P99 = _Latency("99")
 
     @classmethod
     def names(cls):
@@ -29,40 +90,22 @@ class _Metric(enum.Enum):
     def from_str(cls, metric_str: str) -> "_Metric":
         return cls[metric_str.upper().replace("-", "_")]
 
-    @property
-    def is_latency(self):
-        return self.name.startswith("LATENCY_")
-
     def to_request(self) -> Dict:
-        if self.name.startswith("LATENCY_"):
-            return {"percentile": self.value}
+        return self.value.to_request()
 
-        return {f"include-{self.value}": 1}
-
-    def get_datapoints(self, response) -> Generator[Tuple[str, str], None, None]:
+    def get_datapoints(self, response) -> List[Tuple[str, Decimal]]:
         attributes = response["data"]["attributes"]
+        values = self.value.from_response(attributes)
 
-        if self.is_latency:
-            for latency in attributes["latencies"]:
-                if latency["percentile"] == self.value:
-                    values = latency["latency-ms"]
-                    break
-            else:
-                raise SourceError(
-                    f"No latencies found for {self.value}th percentile in timeseries."
-                )
-        else:
-            values = attributes[self.value]
-
-        return (
+        return [
             (window["youngest-time"], value)
             for window, value in zip(attributes["time-windows"], values)
-        )
+        ]
 
 
 def _paginate_timerange(
     timerange: TimeRange, page: Optional[int] = None, per_page: Optional[int] = None,
-) -> Tuple[DatetimeRange, Optional[Pagination]]:
+) -> Tuple[TimeRange, Optional[Pagination]]:
     if not page or not per_page:
         return timerange, None
 
@@ -91,7 +134,7 @@ class Lightstep(Source):
     @classmethod
     def validate_config(cls, config: Dict):
         stream_id = config.get("stream_id")
-        metric = config.get("metric")
+        metric = str(config.get("metric"))
         aggregation_type = config.get("aggregation", {}).get("type")
 
         if not stream_id:
@@ -108,7 +151,7 @@ class Lightstep(Source):
                 f"Current value is {metric!r} whereas the valid choices are: {', '.join(_Metric.names())}. "
             )
 
-        if aggregation_type not in _AGGREGATION_TYPES:
+        if aggregation_type and (aggregation_type not in _AGGREGATION_TYPES):
             raise SourceError(
                 "Provided aggregation type is not supported for LightStep. "
                 f"Current value is {aggregation_type!r} whereas the valid choices are: {', '.join(_AGGREGATION_TYPES)}."
@@ -152,8 +195,8 @@ class Lightstep(Source):
                 "Given Lightstep API key is probably wrong. "
                 "Please verify if the LIGHTSTEP_API_KEY environment variable contains a valid key."
             )
-        response = response.json()
-        errors = response.get("errors")
+        response_dict = response.json()
+        errors = response_dict.get("errors")
         if errors:
             raise SourceError(
                 f"Something went wrong with a request to the Lightstep API: {errors}."
@@ -164,7 +207,7 @@ class Lightstep(Source):
                 PureIndicatorValue(
                     dateutil.parser.parse(timestamp_str, ignoretz=True), value
                 )
-                for timestamp_str, value in self.metric.get_datapoints(response)
+                for timestamp_str, value in self.metric.get_datapoints(response_dict)
             ],
             pagination,
         )

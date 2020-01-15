@@ -73,7 +73,7 @@ class ZMON(Source):
 
     def get_indicator_values(
         self,
-        timerange: TimeRange,
+        timerange: TimeRange = TimeRange.DEFAULT,
         page: Optional[int] = None,
         per_page: Optional[int] = None,
     ) -> Tuple[List[IndicatorValue], Optional[Pagination]]:

@@ -1,5 +1,6 @@
 import dataclasses
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import false
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -52,7 +53,7 @@ class Indicator(db.Model):
 
 class IndicatorValueLike:
     timestamp: datetime
-    value: str
+    value: Decimal
 
     def __init__(self, timestamp: datetime, value: str):
         self.timestamp = timestamp
@@ -65,7 +66,7 @@ class IndicatorValueLike:
 @dataclasses.dataclass
 class PureIndicatorValue(IndicatorValueLike):
     timestamp: datetime
-    value: str
+    value: Decimal
 
     def as_dict(self):
         return dataclasses.asdict(self)

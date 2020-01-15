@@ -1,8 +1,8 @@
 import dataclasses
 import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, cast
 
-from ..models import IndicatorValueLike
+from ..models import Indicator, IndicatorValueLike
 
 
 class SourceError(Exception):
@@ -10,26 +10,28 @@ class SourceError(Exception):
 
 
 class TimeRange:
-    NOW = 0
+    DEFAULT: "TimeRange"
 
-    def to_relative_minutes(self) -> Tuple[int, int]:
-        return NotImplementedError
+    def to_relative_minutes(self) -> Tuple[Optional[int], int]:
+        return NotImplementedError  # type: ignore
 
     def to_datetimes(self) -> Tuple[datetime.datetime, datetime.datetime]:
-        return NotImplementedError
+        return NotImplementedError  # type: ignore
 
 
 @dataclasses.dataclass
 class RelativeMinutesRange(TimeRange):
     start: Optional[int] = None
-    end: int = TimeRange.NOW
+    end: Optional[int] = None
 
-    def to_relative_minutes(self) -> Tuple[int, int]:
-        return self.start, self.end
+    def to_relative_minutes(self) -> Tuple[Optional[int], int]:
+        return self.start, self.end or 0
 
     def to_datetimes(self) -> Tuple[datetime.datetime, datetime.datetime]:
         now = datetime.datetime.utcnow()
-        from_dt = now - datetime.timedelta(minutes=self.start)
+        from_dt = now
+        if self.start:
+            from_dt -= datetime.timedelta(minutes=float(self.start))
         to_dt = now if not self.end else now - datetime.timedelta(minutes=self.end)
 
         return from_dt, to_dt
@@ -38,37 +40,47 @@ class RelativeMinutesRange(TimeRange):
 @dataclasses.dataclass
 class DatetimeRange(TimeRange):
     start: Optional[datetime.datetime] = None
-    end: datetime.datetime = TimeRange.NOW
+    end: Optional[datetime.datetime] = None
 
-    def to_relative_minutes(self) -> Tuple[int, int]:
+    def to_relative_minutes(self) -> Tuple[Optional[int], int]:
         now = datetime.datetime.utcnow()
+        start: Optional[int]
+
         if self.end:
-            end = (now - self.end).total_seconds() // 60
+            end = int((now - self.end).total_seconds() / 60)
         else:
-            end = self.end
+            end = 0
 
         if self.start:
-            start = (now - self.start).total_seconds() // 60
+            start = int((now - self.start).total_seconds() / 60)
         else:
-            start = self.start
+            start = None
 
         return start, end
 
     def to_datetimes(self) -> Tuple[datetime.datetime, datetime.datetime]:
-        return self.start, self.end if self.end else datetime.datetime.utcnow()
+        from_dt = self.start if self.start else datetime.datetime.min
+        to_dt = self.end if self.end else datetime.datetime.utcnow()
+
+        return from_dt, to_dt
 
 
 TimeRange.DEFAULT = DatetimeRange()
 
 
 class Pagination(object):
-    pass
+    per_page: int
+    page: int
+    next_num: int
 
 
 class Source:
     @classmethod
     def validate_config(cls, config: Dict):
         raise NotImplementedError
+
+    def __init__(self, indicator: Indicator, **kwargs):
+        self.indicator = indicator
 
     def get_indicator_values(
         self,

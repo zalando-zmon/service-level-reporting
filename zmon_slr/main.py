@@ -728,7 +728,7 @@ def validate_lightstep_source(config, source, act: Action, ignore_keys=False):
     if missing:
         act.error('Fields {} are missing in SLI source definition.'.format(missing))
     metric = source.get('metric', '')
-    if metric not in ["ops_count", "error_count", "latency_p50", "latency_p75", "latency_p90", "latency_p99"]:
+    if metric not in ["operation_count", "operation_rate", "error_count", "error_percentage", "latency_p50", "latency_p75", "latency_p90", "latency_p99"]:
         act.error('"source.metric is invalid.'.format(missing))
     return None
 
