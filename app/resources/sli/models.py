@@ -55,7 +55,7 @@ class IndicatorValueLike:
     timestamp: datetime
     value: Decimal
 
-    def __init__(self, timestamp: datetime, value: str):
+    def __init__(self, timestamp: datetime, value: Decimal, **kwargs):
         self.timestamp = timestamp
         self.value = value
 

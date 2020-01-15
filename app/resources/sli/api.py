@@ -204,7 +204,7 @@ class SLIQueryResource(ResourceHandler):
 
         resource.current_span = extract_span_from_kwargs(**kwargs)
 
-        obj_id = int(kwargs.get('id'))
+        obj_id = int(cast(str, kwargs.get('id')))
 
         # Get objects from DB
         obj = resource.get_object(obj_id, **kwargs)
