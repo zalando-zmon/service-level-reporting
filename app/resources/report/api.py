@@ -7,11 +7,8 @@ from connexion import ProblemException
 from datetime_truncate import truncate as truncate_datetime
 from dateutil.relativedelta import relativedelta
 from opentracing.ext import tags as ot_tags
-from opentracing_utils import (
-    extract_span_from_flask_request,
-    extract_span_from_kwargs,
-    trace,
-)
+from opentracing_utils import (extract_span_from_flask_request,
+                               extract_span_from_kwargs, trace)
 
 from app.libs.resource import ResourceHandler
 from app.resources.product.models import Product
@@ -67,7 +64,7 @@ def get_report_summary(
 
         with objective_summary_span:
             days = collections.defaultdict(dict)
-            total = {}
+            targets = []
 
             for target in objective.targets:
                 objective_summary_span.log_kv(
@@ -87,9 +84,21 @@ def get_report_summary(
                     )
                     days[timestamp_str][target.indicator.name] = aggregate_dict
 
-                total.setdefault(
-                    target.indicator.name,
-                    target_aggregates[sources.Resolution.TOTAL].as_dict(),
+                total_aggregate = target_aggregates[sources.Resolution.TOTAL]
+                total_aggregate_dict = total_aggregate.as_dict()
+                total_aggregate_dict['healthy'] = bool(
+                    target_from <= total_aggregate.aggregate <= target_to
+                )
+
+                targets.append(
+                    {
+                        'from': target.target_from,
+                        'to': target.target_to,
+                        'sli_name': target.indicator.name,
+                        'sli_aggregate': total_aggregate_dict,
+                        'unit': target.indicator.unit,
+                        'aggregation': target.indicator.aggregation,
+                    }
                 )
 
             summary.append(
@@ -97,18 +106,8 @@ def get_report_summary(
                     'title': objective.title,
                     'description': objective.description,
                     'id': objective.id,
-                    'targets': [
-                        {
-                            'from': t.target_from,
-                            'to': t.target_to,
-                            'sli_name': t.indicator.name,
-                            'unit': t.indicator.unit,
-                            'aggregation': t.indicator.aggregation,
-                        }
-                        for t in objective.targets
-                    ],
+                    'targets': targets,
                     'days': days,
-                    'total': total,
                 }
             )
 
