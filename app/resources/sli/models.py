@@ -2,7 +2,6 @@ import dataclasses
 from datetime import datetime
 
 from sqlalchemy import false
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.extensions import db
 

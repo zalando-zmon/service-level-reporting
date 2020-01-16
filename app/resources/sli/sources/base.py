@@ -115,21 +115,27 @@ class PureIndicatorValue(IndicatorValueLike):
 class IndicatorValueAggregate:
     timestamp: datetime.datetime
     aggregate: Union[Decimal, float]
+    indicator_values: List[IndicatorValueLike] = dataclasses.field(
+        repr=False, default=()
+    )
     aggregation: Optional[Aggregation] = None
     average: Optional[Decimal] = None
     count: Optional[Decimal] = None
     max: Optional[Decimal] = None
     min: Optional[Decimal] = None
     sum: Optional[Decimal] = None
-    indicator_values: Optional[List[IndicatorValueLike]] = None
 
     @classmethod
-    def from_indicator_value(cls, indicator_value):
-        return cls(timestamp=indicator_value.timestamp, aggregate=indicator_value.value)
+    def from_indicator_value(cls, indicator_value: IndicatorValueLike):
+        aggregate = cls(
+            indicator_value.timestamp, indicator_value.value, [indicator_value]
+        )
+
+        return aggregate
 
     @classmethod
     def from_indicator_values(
-        cls, timestamp: datetime.datetime, aggregation, indicator_values
+        cls, timestamp: datetime.datetime, indicator_values, aggregation,
     ):
         values: List[Decimal] = [
             indicator_value.value for indicator_value in indicator_values
@@ -144,7 +150,7 @@ class IndicatorValueAggregate:
             "min": min(values),
         }
 
-        return cls(
+        aggregate = cls(
             timestamp=timestamp,
             aggregation=aggregation,
             aggregate=summary[aggregation],
@@ -152,8 +158,13 @@ class IndicatorValueAggregate:
             **summary,  # type: ignore
         )
 
+        return aggregate
+
     def as_dict(self):
-        return dataclasses.asdict(self)
+        dict_ = dataclasses.asdict(self)
+        del dict_['indicator_values']
+
+        return dict_
 
 
 class Pagination(object):

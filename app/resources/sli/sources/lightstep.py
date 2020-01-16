@@ -6,21 +6,13 @@ from typing import Dict, Generator, List, Optional, Set, Tuple
 import datetime_truncate
 import dateutil.parser
 import requests
+from datetime_truncate import truncate as truncate_datetime
 
 from app.config import LIGHTSTEP_API_KEY, LIGHTSTEP_RESOLUTION_SECONDS
 
-from .base import (
-    DatetimeRange,
-    IndicatorValueAggregate,
-    IndicatorValueLike,
-    Pagination,
-    PureIndicatorValue,
-    RelativeMinutesRange,
-    Resolution,
-    Source,
-    SourceError,
-    TimeRange,
-)
+from .base import (DatetimeRange, IndicatorValueAggregate, IndicatorValueLike,
+                   Pagination, PureIndicatorValue, RelativeMinutesRange,
+                   Resolution, Source, SourceError, TimeRange)
 
 
 class _MetricImpl:
@@ -167,13 +159,19 @@ class Lightstep(Source):
     def get_indicator_value_aggregates(
         self, timerange: TimeRange, resolutions: Set[Resolution]
     ) -> Dict:
-        result = {
-            resolution: [
-                IndicatorValueAggregate.from_indicator_value(value)
-                for value in self.get_indicator_values(timerange, resolution.seconds)[0]
-            ]
-            for resolution in resolutions
-        }
+        aggregates = dict.fromkeys(resolutions, [])
+
+        for resolution in resolutions:
+            indicator_values, _ = self.get_indicator_values(
+                timerange, resolution.seconds
+            )
+            for indicator_value in indicator_values:
+                indicator_value.timestamp = truncate_datetime(
+                    indicator_value.timestamp, resolution.unit
+                )
+                aggregates[resolution].append(
+                    IndicatorValueAggregate.from_indicator_value(indicator_value)
+                )
 
         # from_dt, to_dt = timerange.to_datetimes()
         # timerange_seconds = int((to_dt - from_dt).total_seconds())
@@ -181,7 +179,7 @@ class Lightstep(Source):
         #     timerange, timerange_seconds
         # )[0][0]
 
-        return result
+        return aggregates
 
     def get_indicator_values(
         self,

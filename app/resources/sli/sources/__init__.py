@@ -3,6 +3,7 @@ from typing import Dict, Tuple, Type
 from .base import Source  # noqa
 from .base import (
     DatetimeRange,
+    IndicatorValueAggregate,
     IndicatorValueLike,
     RelativeMinutesRange,
     Resolution,
@@ -18,6 +19,7 @@ __all__ = [
     "DatetimeRange",
     "RelativeMinutesRange",
     "IndicatorValueLike",
+    "IndicatorValueAggregate",
     "TimeRange",
     "Resolution",
 ]

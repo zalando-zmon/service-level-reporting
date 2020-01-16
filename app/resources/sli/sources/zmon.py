@@ -9,6 +9,7 @@ import requests
 import zign.api
 from datetime_truncate import truncate as truncate_datetime
 from opentracing_utils import extract_span_from_kwargs, trace
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.config import KAIROS_QUERY_LIMIT, KAIROSDB_URL, MAX_QUERY_TIME_SLICE
 from app.extensions import db
@@ -170,9 +171,9 @@ class ZMON(Source):
         return {
             resolution: [
                 IndicatorValueAggregate.from_indicator_values(
-                    timestamp, self.indicator.aggregation, values
+                    timestamp, list(grouped_values), self.indicator.aggregation,
                 )
-                for timestamp, values in itertools.groupby(
+                for timestamp, grouped_values in itertools.groupby(
                     values,
                     lambda value: truncate_datetime(value.timestamp, resolution.unit),
                 )

@@ -1,10 +1,10 @@
 import collections
 from datetime import datetime
-from typing import Dict, Iterator, List
+from typing import Dict, Iterator, List, Tuple
 
 import opentracing
 from connexion import ProblemException
-from datetime_truncate import truncate
+from datetime_truncate import truncate as truncate_datetime
 from dateutil.relativedelta import relativedelta
 from opentracing.ext import tags as ot_tags
 from opentracing_utils import (
@@ -22,10 +22,27 @@ from app.resources.slo.models import Objective
 REPORT_TYPES = ('weekly', 'monthly', 'quarterly')
 
 
+def get_report_params(report_type) -> Tuple[sources.DatetimeRange, sources.Resolution]:
+    to_dt = datetime.utcnow()
+    if report_type == "weekly":
+        from_dt = to_dt - relativedelta(days=7)
+        resolution = sources.Resolution.DAILY
+    elif report_type == "monthly":
+        from_dt = to_dt - relativedelta(months=1)
+        resolution = sources.Resolution.WEEKLY
+    elif report_type == "quarterly":
+        from_dt = to_dt - relativedelta(months=3)
+        resolution = sources.Resolution.WEEKLY
+
+    return sources.DatetimeRange(truncate_datetime(from_dt), to_dt), resolution
+
+
 def get_report_summary(
     objectives: Iterator[Objective],
-    iv_aggregates,
-    unit: str,
+    aggregates: Dict[
+        Indicator, Dict[sources.Resolution, List[sources.IndicatorValueAggregate]]
+    ],
+    resolution: sources.Resolution,
     current_span: opentracing.Span,
 ) -> List[dict]:
     summary = []
@@ -58,36 +75,18 @@ def get_report_summary(
 
                 target_from = target.target_from or float('-inf')
                 target_to = target.target_to or float('inf')
-                for aggregate in iv_aggregates[target.indicator][
-                    sources.Resolution.DAILY
-                ]:
-                    days[aggregate.timestamp][
-                        target.indicator.name
-                    ] = aggregate.as_dict()
+                for aggregate in aggregates[target.indicator][resolution]:
+                    aggregate_dict = aggregate.as_dict()
+                    del aggregate_dict['timestamp']
 
-                import pdb
+                    aggregate_dict['breaches'] = sum(
+                        1
+                        for iv in aggregate.indicator_values
+                        if target_from > iv.value > target_to
+                    )
 
-                pdb.set_trace()
-
-                # for truncated_date, target_values in target_values_truncated.items():
-                #     target_from = target.target_from or float('-inf')
-                #     target_to = target.target_to or float('inf')
-
-                #     target_count = len(target_values)
-                #     target_sum = sum(target_values)
-                #     breaches = target_count - len(
-                #         [v for v in target_values if target_from <= v <= target_to]
-                #     )
-
-                #     days[truncated_date.isoformat()][target.indicator.name] = {
-                #         'aggregation': target.indicator.aggregation,
-                #         'avg': target_sum / target_count,
-                #         'breaches': breaches,
-                #         'count': target_count,
-                #         'max': max(target_values),
-                #         'min': min(target_values),
-                #         'sum': target_sum,
-                #     }
+                    timestamp_str = aggregate.timestamp.isoformat()
+                    days[timestamp_str][target.indicator.name] = aggregate_dict
 
             summary.append(
                 {
@@ -135,16 +134,7 @@ class ReportResource(ResourceHandler):
         product_id = kwargs.get('product_id')
         product = Product.query.get_or_404(product_id)
 
-        objectives = product.objectives.all()
-
-        now = datetime.utcnow()
-        start = now - relativedelta(days=7)
-
-        if report_type != 'weekly':
-            months = 1 if report_type == 'monthly' else 3
-            start = now - relativedelta(months=months)
-
-        unit = 'day' if report_type == 'weekly' else 'week'
+        timerange, resolution = get_report_params(report_type)
 
         current_span.set_tag('report_type', report_type)
         current_span.set_tag('product_id', product_id)
@@ -152,17 +142,21 @@ class ReportResource(ResourceHandler):
         current_span.set_tag('product_slug', product.slug)
         current_span.set_tag('product_group', product.product_group.name)
         current_span.log_kv(
-            {'report_duration_start': start, 'report_duration_end': now}
+            {
+                'report_duration_start': timerange.start,
+                'report_duration_end': timerange.end,
+            }
         )
 
-        iv_aggregates = {
+        aggregates = {
             indicator: sources.from_indicator(indicator).get_indicator_value_aggregates(
-                sources.DatetimeRange(truncate(start)), {sources.Resolution.DAILY}
+                timerange, {resolution}
             )
             for indicator in product.indicators.all()
         }
+        objectives = product.objectives.all()
 
-        slo = get_report_summary(objectives, iv_aggregates, unit, current_span)
+        slo = get_report_summary(objectives, aggregates, resolution, current_span)
 
         current_span.log_kv(
             {'report_objective_count': len(slo), 'objective_count': len(objectives)}
