@@ -14,8 +14,15 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.config import KAIROS_QUERY_LIMIT, KAIROSDB_URL, MAX_QUERY_TIME_SLICE
 from app.extensions import db
 
-from .base import (IndicatorValueAggregate, IndicatorValueLike, Pagination,
-                   Resolution, Source, SourceError, TimeRange)
+from .base import (
+    IndicatorValueAggregate,
+    IndicatorValueLike,
+    Pagination,
+    Resolution,
+    Source,
+    SourceError,
+    TimeRange,
+)
 
 _MIN_VAL = math.expm1(1e-10)
 _AGGREGATION_TYPES = ("average", "weighted", "sum", "min", "max", "minimum", "maximum")
@@ -164,22 +171,26 @@ class ZMON(Source):
             return list(query.all()), None
 
     def get_indicator_value_aggregates(
-        self, timerange: TimeRange, resolutions: Set[Resolution]
+        self, timerange: TimeRange, resolution: Resolution
     ) -> Dict:
-        values, _ = self.get_indicator_values(timerange)
+        aggregates = {resolution: [], Resolution.TOTAL: None}
 
-        return {
-            resolution: [
-                IndicatorValueAggregate.from_indicator_values(
-                    timestamp, list(grouped_values), self.indicator.aggregation,
-                )
-                for timestamp, grouped_values in itertools.groupby(
-                    values,
-                    lambda value: truncate_datetime(value.timestamp, resolution.unit),
-                )
-            ]
-            for resolution in resolutions
-        }
+        indicator_values, _ = self.get_indicator_values(timerange)
+        aggregates[resolution] = [
+            IndicatorValueAggregate.from_indicator_values(
+                timestamp, list(grouped_values), self.indicator.aggregation,
+            )
+            for timestamp, grouped_values in itertools.groupby(
+                indicator_values,
+                lambda value: truncate_datetime(value.timestamp, resolution.unit),
+            )
+        ]
+
+        aggregates[Resolution.TOTAL] = IndicatorValueAggregate.from_indicator_values(
+            indicator_values[0].timestamp, indicator_values, self.indicator.aggregation
+        )
+
+        return aggregates
 
     def _get_start_relative_for_update(self) -> int:
         now = datetime.datetime.utcnow()

@@ -1,6 +1,6 @@
 import collections
 from datetime import datetime
-from typing import Dict, Iterator, List, Tuple
+from typing import Dict, Iterator, List, Set, Tuple
 
 import opentracing
 from connexion import ProblemException
@@ -22,7 +22,7 @@ from app.resources.slo.models import Objective
 REPORT_TYPES = ('weekly', 'monthly', 'quarterly')
 
 
-def get_report_params(report_type) -> Tuple[sources.DatetimeRange, sources.Resolution]:
+def get_report_params(report_type,) -> Tuple[sources.DatetimeRange, sources.Resolution]:
     to_dt = datetime.utcnow()
     if report_type == "weekly":
         from_dt = to_dt - relativedelta(days=7)
@@ -48,8 +48,6 @@ def get_report_summary(
     summary = []
 
     for objective in objectives:
-        days = collections.defaultdict(dict)
-
         if not len(objective.targets):
             current_span.log_kv({'objective_skipped': True, 'objective': objective.id})
             continue
@@ -68,6 +66,9 @@ def get_report_summary(
         objective_summary_span.set_tag('objective_id', objective.id)
 
         with objective_summary_span:
+            days = collections.defaultdict(dict)
+            total = {}
+
             for target in objective.targets:
                 objective_summary_span.log_kv(
                     {'target_id': target.id, 'indicator_id': target.indicator_id}
@@ -75,18 +76,21 @@ def get_report_summary(
 
                 target_from = target.target_from or float('-inf')
                 target_to = target.target_to or float('inf')
-                for aggregate in aggregates[target.indicator][resolution]:
+                target_aggregates = aggregates[target.indicator]
+                for aggregate in target_aggregates[resolution]:
+                    timestamp_str = aggregate.timestamp.isoformat()
                     aggregate_dict = aggregate.as_dict()
-                    del aggregate_dict['timestamp']
-
                     aggregate_dict['breaches'] = sum(
                         1
                         for iv in aggregate.indicator_values
                         if target_from > iv.value > target_to
                     )
-
-                    timestamp_str = aggregate.timestamp.isoformat()
                     days[timestamp_str][target.indicator.name] = aggregate_dict
+
+                total.setdefault(
+                    target.indicator.name,
+                    target_aggregates[sources.Resolution.TOTAL].as_dict(),
+                )
 
             summary.append(
                 {
@@ -104,6 +108,7 @@ def get_report_summary(
                         for t in objective.targets
                     ],
                     'days': days,
+                    'total': total,
                 }
             )
 
@@ -150,7 +155,7 @@ class ReportResource(ResourceHandler):
 
         aggregates = {
             indicator: sources.from_indicator(indicator).get_indicator_value_aggregates(
-                timerange, {resolution}
+                timerange, resolution
             )
             for indicator in product.indicators.all()
         }

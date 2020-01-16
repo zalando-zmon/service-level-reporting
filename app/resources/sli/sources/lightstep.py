@@ -157,27 +157,25 @@ class Lightstep(Source):
         self.metric = _Metric.from_str(metric)
 
     def get_indicator_value_aggregates(
-        self, timerange: TimeRange, resolutions: Set[Resolution]
+        self, timerange: TimeRange, resolution: Resolution
     ) -> Dict:
-        aggregates = dict.fromkeys(resolutions, [])
+        aggregates = {resolution: [], Resolution.TOTAL: None}
 
-        for resolution in resolutions:
-            indicator_values, _ = self.get_indicator_values(
-                timerange, resolution.seconds
+        indicator_values, _ = self.get_indicator_values(timerange, resolution.seconds)
+        for indicator_value in indicator_values:
+            indicator_value.timestamp = truncate_datetime(
+                indicator_value.timestamp, resolution.unit
             )
-            for indicator_value in indicator_values:
-                indicator_value.timestamp = truncate_datetime(
-                    indicator_value.timestamp, resolution.unit
-                )
-                aggregates[resolution].append(
-                    IndicatorValueAggregate.from_indicator_value(indicator_value)
-                )
+            aggregates[resolution].append(
+                IndicatorValueAggregate.from_indicator_value(indicator_value)
+            )
 
-        # from_dt, to_dt = timerange.to_datetimes()
-        # timerange_seconds = int((to_dt - from_dt).total_seconds())
-        # result[Aggregate.TOTAL] = self.get_indicator_values(
-        #     timerange, timerange_seconds
-        # )[0][0]
+        total_indicator_values, _ = self.get_indicator_values(
+            timerange, timerange.delta_seconds()
+        )
+        aggregates[Resolution.TOTAL] = IndicatorValueAggregate.from_indicator_value(
+            total_indicator_values[0]
+        )
 
         return aggregates
 

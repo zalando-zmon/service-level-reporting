@@ -18,6 +18,11 @@ class TimeRange:
     def to_datetimes(self) -> Tuple[datetime.datetime, datetime.datetime]:
         return NotImplementedError  # type: ignore
 
+    def delta_seconds(self):
+        from_dt, to_dt = self.to_datetimes()
+
+        return int((to_dt - from_dt).total_seconds())
+
 
 @dataclasses.dataclass
 class RelativeMinutesRange(TimeRange):
@@ -71,7 +76,7 @@ TimeRange.DEFAULT = DatetimeRange()
 class Resolution(enum.Enum):
     DAILY = (86400, 'day')
     WEEKLY = (604800, 'week')
-    TOTAL = None
+    TOTAL = (None, None)
 
     @property
     def seconds(self):
@@ -104,7 +109,7 @@ class IndicatorValueLike:
 
 @dataclasses.dataclass
 class PureIndicatorValue(IndicatorValueLike):
-    timestamp: datetime
+    timestamp: datetime.datetime
     value: Decimal
 
     def as_dict(self):
@@ -116,7 +121,7 @@ class IndicatorValueAggregate:
     timestamp: datetime.datetime
     aggregate: Union[Decimal, float]
     indicator_values: List[IndicatorValueLike] = dataclasses.field(
-        repr=False, default=()
+        repr=False, default_factory=list
     )
     aggregation: Optional[Aggregation] = None
     average: Optional[Decimal] = None
@@ -163,6 +168,7 @@ class IndicatorValueAggregate:
     def as_dict(self):
         dict_ = dataclasses.asdict(self)
         del dict_['indicator_values']
+        del dict_['timestamp']
 
         return dict_
 
@@ -186,7 +192,7 @@ class Source:
         self.indicator = indicator
 
     def get_indicator_value_aggregates(
-        self, timerange: TimeRange, resolutions: Set[Resolution]
+        self, timerange: TimeRange, resolution: Resolution,
     ) -> Dict:
         raise NotImplementedError
 
