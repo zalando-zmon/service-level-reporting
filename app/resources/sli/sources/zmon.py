@@ -1,25 +1,20 @@
 import datetime
 import fnmatch
+import itertools
 import math
 from typing import Dict, List, Optional, Set, Tuple
 
 import opentracing
 import requests
 import zign.api
+from datetime_truncate import truncate as truncate_datetime
 from opentracing_utils import extract_span_from_kwargs, trace
 
 from app.config import KAIROS_QUERY_LIMIT, KAIROSDB_URL, MAX_QUERY_TIME_SLICE
 from app.extensions import db
 
-from ..models import Indicator, IndicatorValue, insert_indicator_value
-from .base import (
-    Aggregate,
-    IndicatorValueAggregate,
-    Pagination,
-    Source,
-    SourceError,
-    TimeRange,
-)
+from .base import (IndicatorValueAggregate, IndicatorValueLike, Pagination,
+                   Resolution, Source, SourceError, TimeRange)
 
 _MIN_VAL = math.expm1(1e-10)
 _AGGREGATION_TYPES = ("average", "weighted", "sum", "min", "max", "minimum", "maximum")
@@ -30,6 +25,62 @@ def _key_matches(key, key_patterns):
         if fnmatch.fnmatch(key, pat):
             return True
     return False
+
+
+class IndicatorValue(db.Model, IndicatorValueLike):
+    __tablename__ = 'indicatorvalue'
+
+    timestamp = db.Column(db.DateTime(), nullable=False)
+    value = db.Column(db.Numeric(), nullable=False)
+
+    indicator_id = db.Column(
+        db.Integer(),
+        db.ForeignKey('indicator.id', ondelete='CASCADE'),
+        nullable=False,
+        index=True,
+    )
+
+    __table_args__ = (
+        db.PrimaryKeyConstraint(
+            'timestamp',
+            'indicator_id',
+            name='indicatorvalue_timestamp_indicator_id_pkey',
+        ),
+    )
+
+    def as_dict(self):
+        return {
+            'timestamp': self.timestamp,
+            'value': self.value,
+            'indicator_id': self.indicator_id,
+        }
+
+    def update_dict(self):
+        return {"value": self.value}
+
+    def __repr__(self):
+        return "<SLI value {} | {}: {}>".format(
+            self.indicator.name, self.timestamp, self.value
+        )
+
+
+# Source: http://stackoverflow.com/questions/41636169/how-to-use-postgresqls-insert-on-conflict-upsert-feature-with-flask-sqlal  # noqa
+def insert_indicator_value(session: db.Session, sli_value: IndicatorValue) -> None:
+    """
+    Upsert indicator value.
+
+    Note: Does not perform ``session.commit()``.
+    """
+    statement = (
+        pg_insert(IndicatorValue)
+        .values(**sli_value.as_dict())
+        .on_conflict_do_update(
+            constraint='indicatorvalue_timestamp_indicator_id_pkey',
+            set_=sli_value.update_dict(),
+        )
+    )
+
+    session.execute(statement)
 
 
 class ZMON(Source):
@@ -60,9 +111,19 @@ class ZMON(Source):
                 "SLI 'source' aggregation type *weighted* must have *weight_keys*",
             )
 
+    @classmethod
+    def delete_all_indicator_values(self, timerange: TimeRange) -> int:
+        from_dt, to_dt = timerange.to_datetimes()
+        count = IndicatorValue.query.filter(
+            IndicatorValue.timestamp >= from_dt, IndicatorValue.timestamp <= to_dt
+        ).delete()
+        db.session.commit()
+
+        return count
+
     def __init__(
         self,
-        indicator: Indicator,
+        indicator: "Indicator",
         check_id,
         keys,
         aggregation,
@@ -78,17 +139,13 @@ class ZMON(Source):
         self.exclude_keys = exclude_keys
         self.tags = tags or {}
 
-    def get_indicator_value_aggregates(
-        self, timerange: TimeRange, aggregates: Set[Aggregate]
-    ) -> Dict:
-        values = self.get_indicator_values(timerange)
-
     def get_indicator_values(
         self,
         timerange: TimeRange = TimeRange.DEFAULT,
+        resolution: Optional[int] = None,
         page: Optional[int] = None,
         per_page: Optional[int] = None,
-    ) -> Tuple[List[IndicatorValue], Optional[Pagination]]:
+    ) -> Tuple[List[IndicatorValueLike], Optional[Pagination]]:
         start_dt, end_dt = timerange.to_datetimes()
         query = IndicatorValue.query.filter(
             IndicatorValue.indicator_id == self.indicator.id,
@@ -104,6 +161,24 @@ class ZMON(Source):
             )
         else:
             return list(query.all()), None
+
+    def get_indicator_value_aggregates(
+        self, timerange: TimeRange, resolutions: Set[Resolution]
+    ) -> Dict:
+        values, _ = self.get_indicator_values(timerange)
+
+        return {
+            resolution: [
+                IndicatorValueAggregate.from_indicator_values(
+                    timestamp, self.indicator.aggregation, values
+                )
+                for timestamp, values in itertools.groupby(
+                    values,
+                    lambda value: truncate_datetime(value.timestamp, resolution.unit),
+                )
+            ]
+            for resolution in resolutions
+        }
 
     def _get_start_relative_for_update(self) -> int:
         now = datetime.datetime.utcnow()

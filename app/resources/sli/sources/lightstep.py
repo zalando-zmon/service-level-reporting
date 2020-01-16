@@ -9,13 +9,14 @@ import requests
 
 from app.config import LIGHTSTEP_API_KEY, LIGHTSTEP_RESOLUTION_SECONDS
 
-from ..models import Indicator, IndicatorValueLike, PureIndicatorValue
 from .base import (
-    Aggregate,
     DatetimeRange,
     IndicatorValueAggregate,
+    IndicatorValueLike,
     Pagination,
+    PureIndicatorValue,
     RelativeMinutesRange,
+    Resolution,
     Source,
     SourceError,
     TimeRange,
@@ -37,7 +38,7 @@ class _Latency(_MetricImpl):
     def to_request(self) -> Dict:
         return {"percentile": self.percentile}
 
-    def from_response(self, attributes: Dict) -> List[Decimal]:
+    def from_response(self, attributes: Dict, resolution: int) -> List[Decimal]:
         for latency_dict in attributes["latencies"]:
             if latency_dict["percentile"] == self.percentile:
                 return [Decimal(latency) for latency in latency_dict["latency-ms"]]
@@ -59,7 +60,7 @@ class _ErrorPercentage(_MetricImpl):
     def to_request(self) -> Dict:
         return {"include-ops-counts": 1, "include-error-counts": 1}
 
-    def from_response(self, attributes: Dict) -> List[Decimal]:
+    def from_response(self, attributes: Dict, resolution: int) -> List[Decimal]:
         return [
             Decimal(error_count) / Decimal(ops_count)
             for ops_count, error_count in zip(
@@ -75,7 +76,7 @@ class _RawCount(_MetricImpl):
     def to_request(self) -> Dict:
         return {f"include-{self.name}": 1}
 
-    def from_response(self, attributes: Dict) -> List[Decimal]:
+    def from_response(self, attributes: Dict, resolution: int) -> List[Decimal]:
         return [Decimal(count) for count in attributes[self.name]]
 
 
@@ -158,20 +159,20 @@ class Lightstep(Source):
                 f"Current value is {metric!r} whereas the valid choices are: {', '.join(_Metric.names())}. "
             )
 
-    def __init__(self, indicator: Indicator, stream_id: str, metric: str):
+    def __init__(self, indicator: "Indicator", stream_id: str, metric: str):
         self.indicator = indicator
         self.stream_id = stream_id
         self.metric = _Metric.from_str(metric)
 
     def get_indicator_value_aggregates(
-        self, timerange: TimeRange, aggregates: Set[Aggregate]
+        self, timerange: TimeRange, resolutions: Set[Resolution]
     ) -> Dict:
         result = {
-            aggregate: [
-                IndicatorValueAggregate.from_indicator_value(iv)
-                for iv in self.get_indicator_values(timerange, aggregate.value)[0]
+            resolution: [
+                IndicatorValueAggregate.from_indicator_value(value)
+                for value in self.get_indicator_values(timerange, resolution.seconds)[0]
             ]
-            for aggregate in aggregates
+            for resolution in resolutions
         }
 
         # from_dt, to_dt = timerange.to_datetimes()
@@ -212,6 +213,7 @@ class Lightstep(Source):
                 "Given Lightstep API key is probably wrong. "
                 "Please verify if the LIGHTSTEP_API_KEY environment variable contains a valid key."
             )
+
         response_dict = response.json()
         errors = response_dict.get("errors")
         if errors:

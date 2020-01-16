@@ -1,6 +1,5 @@
 import dataclasses
 from datetime import datetime
-from decimal import Decimal
 
 from sqlalchemy import false
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -49,80 +48,3 @@ class Indicator(db.Model):
 
     def __repr__(self):
         return '<SLI {} | {} | {}>'.format(self.product.name, self.name, self.source)
-
-
-class IndicatorValueLike:
-    timestamp: datetime
-    value: Decimal
-
-    def __init__(self, timestamp: datetime, value: Decimal, **kwargs):
-        self.timestamp = timestamp
-        self.value = value
-
-    def as_dict(self):
-        raise NotImplementedError
-
-
-@dataclasses.dataclass
-class PureIndicatorValue(IndicatorValueLike):
-    timestamp: datetime
-    value: Decimal
-
-    def as_dict(self):
-        return dataclasses.asdict(self)
-
-
-class IndicatorValue(db.Model, IndicatorValueLike):
-    __tablename__ = 'indicatorvalue'
-
-    timestamp = db.Column(db.DateTime(), nullable=False)
-    value = db.Column(db.Numeric(), nullable=False)
-
-    indicator_id = db.Column(
-        db.Integer(),
-        db.ForeignKey('indicator.id', ondelete='CASCADE'),
-        nullable=False,
-        index=True,
-    )
-
-    __table_args__ = (
-        db.PrimaryKeyConstraint(
-            'timestamp',
-            'indicator_id',
-            name='indicatorvalue_timestamp_indicator_id_pkey',
-        ),
-    )
-
-    def as_dict(self):
-        return {
-            'timestamp': self.timestamp,
-            'value': self.value,
-            'indicator_id': self.indicator_id,
-        }
-
-    def update_dict(self):
-        return {"value": self.value}
-
-    def __repr__(self):
-        return "<SLI value {} | {}: {}>".format(
-            self.indicator.name, self.timestamp, self.value
-        )
-
-
-# Source: http://stackoverflow.com/questions/41636169/how-to-use-postgresqls-insert-on-conflict-upsert-feature-with-flask-sqlal  # noqa
-def insert_indicator_value(session: db.Session, sli_value: IndicatorValue) -> None:
-    """
-    Upsert indicator value.
-
-    Note: Does not perform ``session.commit()``.
-    """
-    statement = (
-        pg_insert(IndicatorValue)
-        .values(**sli_value.as_dict())
-        .on_conflict_do_update(
-            constraint='indicatorvalue_timestamp_indicator_id_pkey',
-            set_=sli_value.update_dict(),
-        )
-    )
-
-    session.execute(statement)

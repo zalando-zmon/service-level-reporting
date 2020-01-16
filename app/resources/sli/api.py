@@ -18,9 +18,10 @@ from app.libs.resource import ResourceHandler
 from app.resources.product.api import ProductResource
 from app.resources.product.models import Product
 from app.resources.sli import sources
+from app.resources.sli.sources import IndicatorValueLike
 from app.utils import slugger
 
-from .models import Indicator, IndicatorValue
+from .models import Indicator
 
 
 class SLIResource(ResourceHandler):
@@ -69,7 +70,7 @@ class SLIResource(ResourceHandler):
             )
 
         try:
-            sources.validate_config(source_config)
+            sources.from_config(source_config).validate_config()
         except sources.SourceError as e:
             raise ProblemException(title="Invalid SLI source", detail=str(e))
 
@@ -255,7 +256,7 @@ class SLIQueryResource(ResourceHandler):
             sources.RelativeMinutesRange(start=start, end=end)
         )
 
-    def build_resource(self, obj: IndicatorValue, count=0, **kwargs) -> dict:
+    def build_resource(self, obj: IndicatorValueLike, count=0, **kwargs) -> dict:
         resource = super().build_resource(obj, **kwargs)
         resource.pop('uri', None)
 

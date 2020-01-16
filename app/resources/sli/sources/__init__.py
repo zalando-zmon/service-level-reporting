@@ -1,8 +1,14 @@
 from typing import Dict, Tuple, Type
 
-from ..models import Indicator
 from .base import Source  # noqa
-from .base import Aggregate, DatetimeRange, RelativeMinutesRange, SourceError, TimeRange
+from .base import (
+    DatetimeRange,
+    IndicatorValueLike,
+    RelativeMinutesRange,
+    Resolution,
+    SourceError,
+    TimeRange,
+)
 from .lightstep import Lightstep
 from .zmon import ZMON
 
@@ -11,33 +17,38 @@ __all__ = [
     "from_indicator",
     "DatetimeRange",
     "RelativeMinutesRange",
+    "IndicatorValueLike",
     "TimeRange",
-    "Aggregate",
+    "Resolution",
 ]
 
 _DEFAULT_SOURCE = "zmon"
 _SOURCES = {"zmon": ZMON, "lightstep": Lightstep}
 
 
-def _get_source_cls_from_config(config: Dict) -> Tuple[Type[Source], Dict]:
-    config = config.copy()
-    type_ = config.pop("type", _DEFAULT_SOURCE)
-
+def from_type(type_: str) -> Type[Source]:
     try:
-        return _SOURCES[type_], config
+        return _SOURCES[type_]
     except KeyError:
         raise SourceError(
             f"Given source type '{type_}' is not valid. Choose one from: {_SOURCES.keys()}"
         )
 
 
-def validate_config(config: Dict):
-    cls, config = _get_source_cls_from_config(config)
+def from_config(config: Dict) -> Tuple[Type[Source], Dict]:
+    config = config.copy()
+    type_ = config.pop("type", _DEFAULT_SOURCE)
 
-    return cls.validate_config(config)
+    return from_type(type_), config
 
 
-def from_indicator(indicator: Indicator) -> Source:
-    cls, config = _get_source_cls_from_config(indicator.source)
+def from_indicator(indicator: "Indicator") -> Source:
+    cls, config = from_config(indicator.source)
 
     return cls(indicator=indicator, **config)
+
+
+def validate_config(config: Dict):
+    cls, final_config = from_config(config)
+
+    return cls.validate_config(final_config)

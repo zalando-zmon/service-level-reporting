@@ -16,26 +16,10 @@ from opentracing_utils import (
 from app.libs.resource import ResourceHandler
 from app.resources.product.models import Product
 from app.resources.sli import sources
-from app.resources.sli.models import Indicator, IndicatorValue
+from app.resources.sli.models import Indicator
 from app.resources.slo.models import Objective
 
 REPORT_TYPES = ('weekly', 'monthly', 'quarterly')
-
-
-@trace()
-def truncate_values(
-    values: Iterator[IndicatorValue], unit='day'
-) -> Dict[str, List[IndicatorValue]]:
-    truncated = collections.defaultdict(list)
-
-    for v in values:
-        truncated[truncate(v.timestamp, unit)].append(v.value)
-
-    return truncated
-
-    # target_values_truncated = truncate_values(
-    #     ivs, parent_span=objective_summary_span
-    # )
 
 
 def get_report_summary(
@@ -75,7 +59,7 @@ def get_report_summary(
                 target_from = target.target_from or float('-inf')
                 target_to = target.target_to or float('inf')
                 for aggregate in iv_aggregates[target.indicator][
-                    sources.Aggregate.DAILY
+                    sources.Resolution.DAILY
                 ]:
                     days[aggregate.timestamp][
                         target.indicator.name
@@ -173,7 +157,7 @@ class ReportResource(ResourceHandler):
 
         iv_aggregates = {
             indicator: sources.from_indicator(indicator).get_indicator_value_aggregates(
-                sources.DatetimeRange(truncate(start)), {sources.Aggregate.DAILY}
+                sources.DatetimeRange(truncate(start)), {sources.Resolution.DAILY}
             )
             for indicator in product.indicators.all()
         }

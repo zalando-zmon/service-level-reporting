@@ -1,38 +1,54 @@
 #!/usr/bin/env python3
-import os
 import argparse
 import logging
+import os
 import time
-
-import gevent
-import flask
-import connexion
-
 from datetime import datetime
 
-from opentracing_utils import trace_flask, trace_requests, init_opentracing_tracer, trace_sqlalchemy
-trace_requests()  # noqa
-
-from app import SERVER
-from app.config import RUN_UPDATER, UPDATER_INTERVAL, APP_SESSION_SECRET, MAX_RETENTION_DAYS
-from app.config import CACHE_TYPE, CACHE_THRESHOLD, OPENTRACING_TRACER
-
-from app.libs.oauth import verify_oauth_with_session
-from app.utils import DecimalEncoder
-
-from app.extensions import db, migrate, cache, session, limiter, oauth
-from app.extensions import sqlalchemy_skip_span
-
-from app.libs.resolver import get_resource_handler, get_operation_name
-from app.resources.sli.updater import update_all_indicators
-from app.resources.sli.retention import cleanup_sli, apply_retention
-
-# Models
-from app.resources import ProductGroup, Product, Target, Objective, Indicator, IndicatorValue  # noqa
-from app.routes import ROUTES, process_request, rate_limit_exceeded, request_skip_span
-
+import connexion
 import connexion.decorators.security
 import connexion.operation
+import flask
+import gevent
+from opentracing_utils import (
+    init_opentracing_tracer,
+    trace_flask,
+    trace_requests,
+    trace_sqlalchemy,
+)
+
+from app import SERVER
+from app.config import (
+    APP_SESSION_SECRET,
+    CACHE_THRESHOLD,
+    CACHE_TYPE,
+    MAX_RETENTION_DAYS,
+    OPENTRACING_TRACER,
+    RUN_UPDATER,
+    UPDATER_INTERVAL,
+)
+from app.extensions import (
+    cache,
+    db,
+    limiter,
+    migrate,
+    oauth,
+    session,
+    sqlalchemy_skip_span,
+)
+from app.libs.oauth import verify_oauth_with_session
+from app.libs.resolver import get_operation_name, get_resource_handler
+
+# Models
+from app.resources import Indicator, Objective, Product, ProductGroup, Target  # noqa
+from app.resources.sli.retention import apply_retention, cleanup_sli
+from app.resources.sli.updater import update_all_indicators
+from app.routes import ROUTES, process_request, rate_limit_exceeded, request_skip_span
+from app.utils import DecimalEncoder
+
+trace_requests()  # noqa
+
+
 # MONKEYPATCH CONNEXION
 connexion.decorators.security.verify_oauth = verify_oauth_with_session
 connexion.operation.verify_oauth = verify_oauth_with_session
@@ -68,7 +84,9 @@ def register_extensions(app: flask.Flask) -> None:
 
     db.init_app(app)
     migrate.init_app(app, db)
-    cache.init_app(app, config={'CACHE_TYPE': CACHE_TYPE, 'CACHE_THRESHOLD': CACHE_THRESHOLD})
+    cache.init_app(
+        app, config={'CACHE_TYPE': CACHE_TYPE, 'CACHE_THRESHOLD': CACHE_THRESHOLD}
+    )
     limiter.init_app(app)
     session.init_app(app)
     oauth.init_app(app)
@@ -84,7 +102,10 @@ def register_middleware(app: flask.Flask) -> None:
 
 def register_api(connexion_app: connexion.App) -> None:
     # IMPORTANT: Add swagger api after *db* instance is ready!
-    connexion_app.add_api(SWAGGER_PATH, resolver=connexion.Resolver(function_resolver=get_resource_handler))
+    connexion_app.add_api(
+        SWAGGER_PATH,
+        resolver=connexion.Resolver(function_resolver=get_resource_handler),
+    )
 
 
 def register_routes(connexion_app: connexion.App) -> None:
@@ -112,7 +133,11 @@ def run_updater(app: flask.Flask, once=False):
                     logger.info('Completed running the updater once. Now terminating!')
                     return
 
-                logger.info('Completed running the updater. Sleeping for {} minutes!'.format(UPDATER_INTERVAL // 60))
+                logger.info(
+                    'Completed running the updater. Sleeping for {} minutes!'.format(
+                        UPDATER_INTERVAL // 60
+                    )
+                )
 
                 time.sleep(UPDATER_INTERVAL)
         except KeyboardInterrupt:
@@ -132,18 +157,40 @@ def run_cleanup(app: flask.Flask):
         logger.info('Applying retention done')
 
         duration = datetime.utcnow() - t_start
-        logger.info('Finished cleanup/retention in {} minutes'.format(duration.seconds / 60))
+        logger.info(
+            'Finished cleanup/retention in {} minutes'.format(duration.seconds / 60)
+        )
 
 
 def run():
     argp = argparse.ArgumentParser(description='Service level reports application')
-    argp.add_argument('--with-updater', dest='with_updater', action='store_true', help='Run server with updater!')
-    argp.add_argument('-u', '--updater-only', dest='updater', action='store_true', help='Run the updater only!')
-    argp.add_argument('-c', '--cleanup-only', dest='cleanup', action='store_true',
-                      help='Run the cleanup/retention only!')
     argp.add_argument(
-        '-o', '--once', dest='once', action='store_true',
-        help='Make sure the updater runs once and exits! Only works if --updater-only is used, ignored otherwise')
+        '--with-updater',
+        dest='with_updater',
+        action='store_true',
+        help='Run server with updater!',
+    )
+    argp.add_argument(
+        '-u',
+        '--updater-only',
+        dest='updater',
+        action='store_true',
+        help='Run the updater only!',
+    )
+    argp.add_argument(
+        '-c',
+        '--cleanup-only',
+        dest='cleanup',
+        action='store_true',
+        help='Run the cleanup/retention only!',
+    )
+    argp.add_argument(
+        '-o',
+        '--once',
+        dest='once',
+        action='store_true',
+        help='Make sure the updater runs once and exits! Only works if --updater-only is used, ignored otherwise',
+    )
 
     args = argp.parse_args()
 

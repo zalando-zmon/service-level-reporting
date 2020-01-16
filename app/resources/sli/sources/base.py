@@ -2,9 +2,7 @@ import dataclasses
 import datetime
 import enum
 from decimal import Decimal
-from typing import Dict, List, NamedTuple, Optional, Set, Tuple, cast
-
-from ..models import Indicator, IndicatorValueLike
+from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union, cast
 
 
 class SourceError(Exception):
@@ -70,10 +68,92 @@ class DatetimeRange(TimeRange):
 TimeRange.DEFAULT = DatetimeRange()
 
 
-class Aggregate(enum.Enum):
-    DAILY = 86400
-    WEEKLY = 604800
+class Resolution(enum.Enum):
+    DAILY = (86400, 'day')
+    WEEKLY = (604800, 'week')
     TOTAL = None
+
+    @property
+    def seconds(self):
+        return self.value[0]
+
+    @property
+    def unit(self):
+        return self.value[1]
+
+
+class Aggregation(enum.Enum):
+    AVERAGE = 'average'
+    COUNT = 'count'
+    MIN = MINIMUM = 'min'
+    MAX = MAXIMUM = 'max'
+    SUM = 'sum'
+
+
+class IndicatorValueLike:
+    timestamp: datetime.datetime
+    value: Decimal
+
+    def __init__(self, timestamp: datetime.datetime, value: Decimal, **kwargs):
+        self.timestamp = timestamp
+        self.value = value
+
+    def as_dict(self):
+        raise NotImplementedError
+
+
+@dataclasses.dataclass
+class PureIndicatorValue(IndicatorValueLike):
+    timestamp: datetime
+    value: Decimal
+
+    def as_dict(self):
+        return dataclasses.asdict(self)
+
+
+@dataclasses.dataclass
+class IndicatorValueAggregate:
+    timestamp: datetime.datetime
+    aggregate: Union[Decimal, float]
+    aggregation: Optional[Aggregation] = None
+    average: Optional[Decimal] = None
+    count: Optional[Decimal] = None
+    max: Optional[Decimal] = None
+    min: Optional[Decimal] = None
+    sum: Optional[Decimal] = None
+    indicator_values: Optional[List[IndicatorValueLike]] = None
+
+    @classmethod
+    def from_indicator_value(cls, indicator_value):
+        return cls(timestamp=indicator_value.timestamp, aggregate=indicator_value.value)
+
+    @classmethod
+    def from_indicator_values(
+        cls, timestamp: datetime.datetime, aggregation, indicator_values
+    ):
+        values: List[Decimal] = [
+            indicator_value.value for indicator_value in indicator_values
+        ]
+        sum_ = sum(values)
+        count = len(values)
+        summary = {
+            "sum": sum_,
+            "count": count,
+            "average": sum_ / count,
+            "max": max(values),
+            "min": min(values),
+        }
+
+        return cls(
+            timestamp=timestamp,
+            aggregation=aggregation,
+            aggregate=summary[aggregation],
+            indicator_values=indicator_values,
+            **summary,  # type: ignore
+        )
+
+    def as_dict(self):
+        return dataclasses.asdict(self)
 
 
 class Pagination(object):
@@ -82,45 +162,27 @@ class Pagination(object):
     next_num: int
 
 
-@dataclasses.dataclass
-class IndicatorValueAggregate:
-    timestamp: datetime.datetime
-    aggregate: Decimal
-    aggregation: Optional[Decimal] = None
-    avg: Optional[Decimal] = None
-    count: Optional[Decimal] = None
-    max: Optional[Decimal] = None
-    min: Optional[Decimal] = None
-    sum: Optional[Decimal] = None
-
-    @classmethod
-    def from_indicator_value(cls, indicator_value):
-        return cls(timestamp=indicator_value.timestamp, aggregate=indicator_value.value)
-
-    @classmethod
-    def from_indicator_values(cls, indicator_values):
-        pass
-
-    def as_dict(self):
-        return dataclasses.asdict(self)
-
-
 class Source:
     @classmethod
     def validate_config(cls, config: Dict):
         raise NotImplementedError
 
-    def __init__(self, indicator: Indicator, **kwargs):
+    @classmethod
+    def delete_all_indicator_values(cls, timerange: TimeRange) -> int:
+        raise NotImplementedError
+
+    def __init__(self, indicator: "Indicator", **kwargs):
         self.indicator = indicator
 
     def get_indicator_value_aggregates(
-        self, timerange: TimeRange, aggregates: Set[Aggregate]
+        self, timerange: TimeRange, resolutions: Set[Resolution]
     ) -> Dict:
         raise NotImplementedError
 
     def get_indicator_values(
         self,
         timerange: TimeRange = TimeRange.DEFAULT,
+        resolution: Optional[int] = None,
         page: Optional[int] = None,
         per_page: Optional[int] = None,
     ) -> Tuple[List[IndicatorValueLike], Optional[Pagination]]:
