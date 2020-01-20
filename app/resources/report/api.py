@@ -103,9 +103,12 @@ def get_report_summary(
                     days[timestamp_str][target.indicator.name] = aggregate_dict
 
                 total_aggregate = target_aggregates[sources.Resolution.TOTAL]
-                total_aggregate_dict = total_aggregate.as_dict()
-                total_aggregate_dict.update(get_target_data(target, total_aggregate))
-                total[target.indicator.name] = total_aggregate_dict
+                if total_aggregate:
+                    total_aggregate_dict = total_aggregate.as_dict()
+                    total_aggregate_dict.update(
+                        get_target_data(target, total_aggregate)
+                    )
+                    total[target.indicator.name] = total_aggregate_dict
 
                 targets.append(
                     {

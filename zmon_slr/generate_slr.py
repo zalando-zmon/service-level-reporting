@@ -128,16 +128,8 @@ def generate_weekly_report(client: Client, product: dict, output_dir: str) -> No
 
     product_group = report_data['product_group_slug']
 
-    for slo in report_data['slo']:
-        if slo['days']:
-            period_from = parse_report_timestamp(min(slo['days'].keys()))
-            period_to = parse_report_timestamp(max(slo['days'].keys()))
-            break
-    else:
-        raise RuntimeError(
-            'Can not determine "period_from" and "period_to" for the report. Aborting!'
-        )
-
+    period_from = parse_report_timestamp(report_data['timerange']['start'])
+    period_to = parse_report_timestamp(report_data['timerange']['end'])
     period_days = ceil(report_data['timerange']['delta_seconds'] / 86400)
 
     period_id = f"{period_from:%Y%m%d}-{period_to:%Y%m%d}"
@@ -160,7 +152,7 @@ def generate_weekly_report(client: Client, product: dict, output_dir: str) -> No
     }
 
     for slo in report_data['slo']:
-        no_data = set(slo["total"].keys())
+        no_data = set(target['sli_name'] for target in slo['targets'])
         unhealthy_days = set()
         data = []
         for timestamp, day_data in slo["days"].items():
