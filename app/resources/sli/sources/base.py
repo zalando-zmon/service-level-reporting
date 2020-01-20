@@ -132,9 +132,7 @@ class IndicatorValueAggregate:
 
     @classmethod
     def from_indicator_value(cls, indicator_value: IndicatorValueLike):
-        aggregate = cls(
-            indicator_value.timestamp, indicator_value.value, [indicator_value]
-        )
+        aggregate = cls(indicator_value.timestamp, indicator_value.value)
 
         return aggregate
 

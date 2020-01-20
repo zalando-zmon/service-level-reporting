@@ -7,8 +7,11 @@ from connexion import ProblemException
 from datetime_truncate import truncate as truncate_datetime
 from dateutil.relativedelta import relativedelta
 from opentracing.ext import tags as ot_tags
-from opentracing_utils import (extract_span_from_flask_request,
-                               extract_span_from_kwargs, trace)
+from opentracing_utils import (
+    extract_span_from_flask_request,
+    extract_span_from_kwargs,
+    trace,
+)
 
 from app.libs.resource import ResourceHandler
 from app.resources.product.models import Product
@@ -32,6 +35,25 @@ def get_report_params(report_type,) -> Tuple[sources.DatetimeRange, sources.Reso
         resolution = sources.Resolution.WEEKLY
 
     return sources.DatetimeRange(truncate_datetime(from_dt), to_dt), resolution
+
+
+def get_target_data(target, aggregate):
+    target_data = {"breaches": None}
+    target_from = target.target_from or float('-inf')
+    target_to = target.target_to or float('inf')
+
+    target_data["healthy"] = target_from <= aggregate.aggregate <= target_to
+
+    if aggregate.indicator_values:
+        target_data["breaches"] = sum(
+            1
+            for iv in aggregate.indicator_values
+            if iv.value > target_to or iv.value < target_from
+        )
+
+    target_data["unit"] = target.indicator.unit
+
+    return target_data
 
 
 def get_report_summary(
@@ -64,6 +86,7 @@ def get_report_summary(
 
         with objective_summary_span:
             days = collections.defaultdict(dict)
+            total = {}
             targets = []
 
             for target in objective.targets:
@@ -71,31 +94,24 @@ def get_report_summary(
                     {'target_id': target.id, 'indicator_id': target.indicator_id}
                 )
 
-                target_from = target.target_from or float('-inf')
-                target_to = target.target_to or float('inf')
                 target_aggregates = aggregates[target.indicator]
                 for aggregate in target_aggregates[resolution]:
                     timestamp_str = aggregate.timestamp.isoformat()
                     aggregate_dict = aggregate.as_dict()
-                    aggregate_dict['breaches'] = sum(
-                        1
-                        for iv in aggregate.indicator_values
-                        if target_from > iv.value > target_to
-                    )
+                    aggregate_dict.update(get_target_data(target, aggregate))
+
                     days[timestamp_str][target.indicator.name] = aggregate_dict
 
                 total_aggregate = target_aggregates[sources.Resolution.TOTAL]
                 total_aggregate_dict = total_aggregate.as_dict()
-                total_aggregate_dict['healthy'] = bool(
-                    target_from <= total_aggregate.aggregate <= target_to
-                )
+                total_aggregate_dict.update(get_target_data(target, total_aggregate))
+                total[target.indicator.name] = total_aggregate_dict
 
                 targets.append(
                     {
                         'from': target.target_from,
                         'to': target.target_to,
                         'sli_name': target.indicator.name,
-                        'sli_aggregate': total_aggregate_dict,
                         'unit': target.indicator.unit,
                         'aggregation': target.indicator.aggregation,
                     }
@@ -108,6 +124,7 @@ def get_report_summary(
                     'id': objective.id,
                     'targets': targets,
                     'days': days,
+                    'total': total,
                 }
             )
 
@@ -172,6 +189,11 @@ class ReportResource(ResourceHandler):
             'product_group_name': product.product_group.name,
             'product_group_slug': product.product_group.slug,
             'department': product.product_group.department,
+            'timerange': {
+                'start': timerange.start,
+                'end': timerange.end,
+                'delta_seconds': timerange.delta_seconds(),
+            },
             'slo': slo,
         }
 
