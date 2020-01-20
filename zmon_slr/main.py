@@ -19,6 +19,16 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 SLR_TOKEN = os.environ.get('SLR_TOKEN')
 
 AGG_TYPES = ('average', 'weighted', 'sum', 'min', 'max', 'minimum', 'maximum')
+LIGHTSTEP_METRICS = (
+    "operation_count",
+    "operation_rate",
+    "error_count",
+    "error_percentage",
+    "latency_p50",
+    "latency_p75",
+    "latency_p90",
+    "latency_p99"
+)
 
 
 def get_config_data(config_file=DEFAULT_CONFIG_FILE):
@@ -728,7 +738,7 @@ def validate_lightstep_source(config, source, act: Action, ignore_keys=False):
     if missing:
         act.error('Fields {} are missing in SLI source definition.'.format(missing))
     metric = source.get('metric', '')
-    if metric not in ["operation_count", "operation_rate", "error_count", "error_percentage", "latency_p50", "latency_p75", "latency_p90", "latency_p99"]:
+    if metric not in LIGHTSTEP_METRICS:
         act.error('"source.metric is invalid.'.format(missing))
     return None
 
