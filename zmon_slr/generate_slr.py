@@ -5,9 +5,7 @@ import logging
 import os
 import sys
 import time
-from collections import defaultdict
 from math import ceil
-from typing import DefaultDict, Tuple
 
 import jinja2
 
