@@ -9,17 +9,9 @@ from datetime_truncate import truncate as truncate_datetime
 
 from app.config import LIGHTSTEP_API_KEY, LIGHTSTEP_RESOLUTION_SECONDS
 
-from .base import (
-    DatetimeRange,
-    IndicatorValueAggregate,
-    IndicatorValueLike,
-    Pagination,
-    PureIndicatorValue,
-    Resolution,
-    Source,
-    SourceError,
-    TimeRange,
-)
+from .base import (DatetimeRange, IndicatorValueAggregate, IndicatorValueLike,
+                   Pagination, PureIndicatorValue, Resolution, Source,
+                   SourceError, TimeRange)
 
 
 class _MetricImpl:
@@ -107,7 +99,7 @@ class _Metric(enum.Enum):
         values = self.value.from_response(attributes, resolution)
 
         return [
-            (window["youngest-time"], value)
+            (window["oldest-time"], value)
             for window, value in zip(attributes["time-windows"], values)
         ]
 
@@ -136,6 +128,19 @@ def _paginate_timerange(
         pagination.next_num = page + 1
 
     return DatetimeRange(start_dt, end_dt), pagination
+
+
+def _adjust_timerange(timerange: TimeRange, resolution: int) -> TimeRange:
+    expected_datapoints = round(timerange.delta_seconds() / resolution)
+    end_dt_correction = (expected_datapoints * resolution) - timerange.delta_seconds()
+    if end_dt_correction < 0:
+        return timerange
+
+    start_dt, end_dt = timerange.to_datetimes()
+
+    return DatetimeRange(
+        start_dt, end_dt + datetime.timedelta(seconds=end_dt_correction)
+    )
 
 
 class Lightstep(Source):
@@ -197,6 +202,8 @@ class Lightstep(Source):
         per_page: Optional[int] = None,
     ) -> Tuple[List[IndicatorValueLike], Optional[Pagination]]:
         resolution = resolution or LIGHTSTEP_RESOLUTION_SECONDS
+
+        timerange = _adjust_timerange(timerange, resolution)
         timerange, pagination = _paginate_timerange(
             timerange, resolution, page, per_page
         )
