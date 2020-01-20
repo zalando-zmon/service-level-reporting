@@ -44,7 +44,7 @@ def from_config(config: Dict) -> Tuple[Type[Source], Dict]:
     return from_type(type_), config
 
 
-def from_indicator(indicator: "Indicator") -> Source:
+def from_indicator(indicator) -> Source:
     cls, config = from_config(indicator.source)
 
     return cls(indicator=indicator, **config)

@@ -2,7 +2,7 @@ import dataclasses
 import datetime
 import enum
 from decimal import Decimal
-from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union, cast
+from typing import Dict, List, Optional, Tuple, Union
 
 
 class SourceError(Exception):
@@ -124,7 +124,7 @@ class IndicatorValueAggregate:
         repr=False, default_factory=list
     )
     aggregation: Optional[Aggregation] = None
-    average: Optional[Decimal] = None
+    avg: Optional[Decimal] = None
     count: Optional[Decimal] = None
     max: Optional[Decimal] = None
     min: Optional[Decimal] = None
@@ -148,7 +148,7 @@ class IndicatorValueAggregate:
         summary = {
             "sum": sum_,
             "count": count,
-            "average": sum_ / count,
+            "avg": sum_ / count,
             "max": max(values),
             "min": min(values),
         }
@@ -186,7 +186,7 @@ class Source:
     def delete_all_indicator_values(cls, timerange: TimeRange) -> int:
         raise NotImplementedError
 
-    def __init__(self, indicator: "Indicator", **kwargs):
+    def __init__(self, indicator, **kwargs):
         self.indicator = indicator
 
     def get_indicator_value_aggregates(

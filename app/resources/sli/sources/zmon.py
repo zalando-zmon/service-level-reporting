@@ -2,7 +2,7 @@ import datetime
 import fnmatch
 import itertools
 import math
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import opentracing
 import requests
@@ -26,6 +26,16 @@ from .base import (
 
 _MIN_VAL = math.expm1(1e-10)
 _AGGREGATION_TYPES = ("average", "weighted", "sum", "min", "max", "minimum", "maximum")
+_AGGREGATION_TYPES_NORMALIZED = {
+    "average": "avg",
+    "weighted": "avg",
+    "minimum": "min",
+    "maximum": "max",
+    "avg": "avg",
+    "min": "min",
+    "max": "max",
+    "sum": "sum",
+}
 
 
 def _key_matches(key, key_patterns):
@@ -130,13 +140,7 @@ class ZMON(Source):
         return count
 
     def __init__(
-        self,
-        indicator: "Indicator",
-        check_id,
-        keys,
-        aggregation,
-        tags=None,
-        exclude_keys=(),
+        self, indicator, check_id, keys, aggregation, tags=None, exclude_keys=(),
     ):
         self.indicator = indicator
 
@@ -179,9 +183,12 @@ class ZMON(Source):
         if not indicator_values:
             return aggregates
 
+        normalized_aggregation = _AGGREGATION_TYPES_NORMALIZED[
+            self.indicator.aggregation
+        ]
         aggregates[resolution] = [
             IndicatorValueAggregate.from_indicator_values(
-                timestamp, list(grouped_values), self.indicator.aggregation,
+                timestamp, list(grouped_values), normalized_aggregation,
             )
             for timestamp, grouped_values in itertools.groupby(
                 indicator_values,
@@ -190,7 +197,7 @@ class ZMON(Source):
         ]
 
         aggregates[Resolution.TOTAL] = IndicatorValueAggregate.from_indicator_values(
-            indicator_values[0].timestamp, indicator_values, self.indicator.aggregation
+            indicator_values[0].timestamp, indicator_values, normalized_aggregation
         )
 
         return aggregates

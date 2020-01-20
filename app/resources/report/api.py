@@ -1,6 +1,6 @@
 import collections
 from datetime import datetime
-from typing import Dict, Iterator, List, Set, Tuple
+from typing import Dict, Iterator, List, Tuple
 
 import opentracing
 from connexion import ProblemException

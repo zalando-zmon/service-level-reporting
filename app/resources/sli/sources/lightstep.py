@@ -1,9 +1,8 @@
 import datetime
 import enum
 from decimal import Decimal
-from typing import Dict, Generator, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
-import datetime_truncate
 import dateutil.parser
 import requests
 from datetime_truncate import truncate as truncate_datetime
@@ -16,7 +15,6 @@ from .base import (
     IndicatorValueLike,
     Pagination,
     PureIndicatorValue,
-    RelativeMinutesRange,
     Resolution,
     Source,
     SourceError,
@@ -160,7 +158,7 @@ class Lightstep(Source):
                 f"Current value is {metric!r} whereas the valid choices are: {', '.join(_Metric.names())}. "
             )
 
-    def __init__(self, indicator: "Indicator", stream_id: str, metric: str):
+    def __init__(self, indicator, stream_id: str, metric: str):
         self.indicator = indicator
         self.stream_id = stream_id
         self.metric = _Metric.from_str(metric)
