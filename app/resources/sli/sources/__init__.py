@@ -46,6 +46,7 @@ def from_config(config: Dict) -> Tuple[Type[Source], Dict]:
 
 def from_indicator(indicator) -> Source:
     cls, config = from_config(indicator.source)
+    config = cls.sanitize_config(config)
 
     return cls(indicator=indicator, **config)
 

@@ -1,6 +1,7 @@
 import dataclasses
 import datetime
 import enum
+import inspect
 from decimal import Decimal
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -178,6 +179,21 @@ class Pagination(object):
 
 
 class Source:
+    @classmethod
+    def __init_subclass__(cls):
+        param_names = inspect.signature(cls.__init__).parameters.keys()
+        cls._ALLOWED_CONFIG_KEYS = param_names - {'self', 'indicator'}
+
+        return super().__init_subclass__()
+
+    @classmethod
+    def sanitize_config(cls, config: Dict) -> Dict:
+        return {
+            key: value
+            for key, value in config.items()
+            if key in cls._ALLOWED_CONFIG_KEYS
+        }
+
     @classmethod
     def validate_config(cls, config: Dict):
         raise NotImplementedError

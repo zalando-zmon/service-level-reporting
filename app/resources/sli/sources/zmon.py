@@ -14,15 +14,8 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.config import KAIROS_QUERY_LIMIT, KAIROSDB_URL, MAX_QUERY_TIME_SLICE
 from app.extensions import db
 
-from .base import (
-    IndicatorValueAggregate,
-    IndicatorValueLike,
-    Pagination,
-    Resolution,
-    Source,
-    SourceError,
-    TimeRange,
-)
+from .base import (IndicatorValueAggregate, IndicatorValueLike, Pagination,
+                   Resolution, Source, SourceError, TimeRange)
 
 _MIN_VAL = math.expm1(1e-10)
 _AGGREGATION_TYPES = ("average", "weighted", "sum", "min", "max", "minimum", "maximum")

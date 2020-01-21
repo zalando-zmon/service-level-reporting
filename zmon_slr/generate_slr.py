@@ -169,9 +169,7 @@ def generate_weekly_report(client: Client, product: dict, output_dir: str) -> No
                 sli_data["aggregate"] = format_aggregate_value(sli_data)
 
                 if sli_name == "requests":
-                    sli_data['total'] = int(
-                        sli_data['average'] * sli_data['count'] * 60
-                    )
+                    sli_data['total'] = int(sli_data['avg'] * sli_data['count'] * 60)
 
                 day_slis[sli_name] = sli_data
                 no_data.discard(sli_name)

@@ -7,11 +7,8 @@ from connexion import ProblemException
 from datetime_truncate import truncate as truncate_datetime
 from dateutil.relativedelta import relativedelta
 from opentracing.ext import tags as ot_tags
-from opentracing_utils import (
-    extract_span_from_flask_request,
-    extract_span_from_kwargs,
-    trace,
-)
+from opentracing_utils import (extract_span_from_flask_request,
+                               extract_span_from_kwargs, trace)
 
 from app.libs.resource import ResourceHandler
 from app.resources.product.models import Product
@@ -37,12 +34,13 @@ def get_report_params(report_type,) -> Tuple[sources.DatetimeRange, sources.Reso
     return sources.DatetimeRange(truncate_datetime(from_dt), to_dt), resolution
 
 
-def get_target_data(target, aggregate):
+def get_target_healthiness(target, aggregate, metric):
     target_data = {"breaches": None}
     target_from = target.target_from or float('-inf')
     target_to = target.target_to or float('inf')
 
-    target_data["healthy"] = target_from <= aggregate.aggregate <= target_to
+    metric_value = getattr(aggregate, metric, None) or aggregate.aggregate
+    target_data["healthy"] = target_from <= metric_value <= target_to
 
     if aggregate.indicator_values:
         target_data["breaches"] = sum(
@@ -98,7 +96,9 @@ def get_report_summary(
                 for aggregate in target_aggregates[resolution]:
                     timestamp_str = aggregate.timestamp.isoformat()
                     aggregate_dict = aggregate.as_dict()
-                    aggregate_dict.update(get_target_data(target, aggregate))
+                    aggregate_dict.update(
+                        get_target_healthiness(target, aggregate, "avg")
+                    )
 
                     days[timestamp_str][target.indicator.name] = aggregate_dict
 
@@ -106,7 +106,7 @@ def get_report_summary(
                 if total_aggregate:
                     total_aggregate_dict = total_aggregate.as_dict()
                     total_aggregate_dict.update(
-                        get_target_data(target, total_aggregate)
+                        get_target_healthiness(target, total_aggregate, "aggregate")
                     )
                     total[target.indicator.name] = total_aggregate_dict
 
