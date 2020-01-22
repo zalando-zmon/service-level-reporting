@@ -9,9 +9,17 @@ from datetime_truncate import truncate as truncate_datetime
 
 from app.config import LIGHTSTEP_API_KEY, LIGHTSTEP_RESOLUTION_SECONDS
 
-from .base import (DatetimeRange, IndicatorValueAggregate, IndicatorValueLike,
-                   Pagination, PureIndicatorValue, Resolution, Source,
-                   SourceError, TimeRange)
+from .base import (
+    DatetimeRange,
+    IndicatorValueAggregate,
+    IndicatorValueLike,
+    Pagination,
+    PureIndicatorValue,
+    Resolution,
+    Source,
+    SourceError,
+    TimeRange,
+)
 
 
 class _MetricImpl:
@@ -53,7 +61,7 @@ class _ErrorPercentage(_MetricImpl):
 
     def from_response(self, attributes: Dict, resolution: int) -> List[Decimal]:
         return [
-            Decimal(error_count) / Decimal(ops_count)
+            (Decimal(error_count) / Decimal(ops_count)) * 100
             for ops_count, error_count in zip(
                 attributes["ops-counts"], attributes["error-counts"]
             )

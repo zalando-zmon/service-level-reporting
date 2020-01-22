@@ -70,7 +70,7 @@ class SLIResource(ResourceHandler):
             )
 
         try:
-            sources.from_config(source_config).validate_config()
+            sources.validate_config(source_config)
         except sources.SourceError as e:
             raise ProblemException(title="Invalid SLI source", detail=str(e))
 

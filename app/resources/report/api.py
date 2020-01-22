@@ -7,8 +7,11 @@ from connexion import ProblemException
 from datetime_truncate import truncate as truncate_datetime
 from dateutil.relativedelta import relativedelta
 from opentracing.ext import tags as ot_tags
-from opentracing_utils import (extract_span_from_flask_request,
-                               extract_span_from_kwargs, trace)
+from opentracing_utils import (
+    extract_span_from_flask_request,
+    extract_span_from_kwargs,
+    trace,
+)
 
 from app.libs.resource import ResourceHandler
 from app.resources.product.models import Product
