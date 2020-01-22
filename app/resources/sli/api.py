@@ -98,6 +98,7 @@ class SLIResource(ResourceHandler):
     def save_object(self, obj: Indicator, **kwargs) -> Indicator:
         obj.slug = slugger(obj.name)
         self.before_object_update(obj)
+
         db.session.add(obj)
         db.session.commit()
 
