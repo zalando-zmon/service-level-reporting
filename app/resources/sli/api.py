@@ -76,8 +76,7 @@ class SLIResource(ResourceHandler):
 
     def before_object_update(self, obj: Indicator):
         aggregation = obj.source.get("aggregation", {}).get("type")
-        if aggregation:
-            obj.aggregation = aggregation
+        obj.aggregation = aggregation
 
     def new_object(self, sli: dict, **kwargs) -> Indicator:
         fields = self.get_object_fields(sli)
