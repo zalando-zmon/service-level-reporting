@@ -34,7 +34,7 @@ def apply_retention(app: Flask):
         try:
             t_start = datetime.utcnow()
             count = sources.from_type("zmon").delete_all_indicator_values(
-                sources.DatetimeRange(retention)
+                sources.DatetimeRange(end=retention)
             )
             duration = datetime.utcnow() - t_start
             logger.info(
