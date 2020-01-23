@@ -1,0 +1,13 @@
+{
+  "name": "Overall Latency",
+  "unit": "ms",
+  "source": {
+      "aggregation": {
+          "type": "maximum"
+      },
+      "check_id": 13165,
+      "keys": [
+          "rendering-engine_fashion-store_zalan_do.p99_ms"
+      ]
+  }
+}

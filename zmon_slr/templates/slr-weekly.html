@@ -105,6 +105,9 @@
                                 <li>
                                     Nonexistent tags (or their values) are used in the SLI definition.
                                 </li>
+                                <li>
+                                    Data was not collected yet for configured LightStep stream.
+                                </li>
                             </ul>
                         </p>
                         <p>
@@ -154,7 +157,7 @@
                                 {% endif %}
                             </td>
                             {% else %}
-                            <td></td>
+                            <td class="value not-enough-samples">-</td>
                             {% endif %}
                             {% else %}
                             <td><em>No data points</em></td>
@@ -174,12 +177,12 @@
                     <p class="chart">
                         <img src="{{ slo.chart }}" alt="Service Level Objective Chart" />
                     </p>
-                    {% if slo.breaches %}
+                    {% if slo.unhealthy_days %}
                     <div class="alert alert-danger">
-                        <p>During this period, the service failed to meet this SLO for <strong
-                                title="{{ slo.breaches }} minute(s)">{{ slo.breaches|human_time }}</strong>.
-                            The SLO was not met for <strong>{{ '%.2f'|format(slo.breaches/slo.count * 100) }} %</strong>
-                            of the observed time.</p>
+                        <p>
+                            During this period, the service failed to meet this SLO for {{ slo.unhealthy_days }} day(s),
+                            which is {{ slo.unhealthy_days_percentage }}% of the observed time.
+                        </p>
                     </div>
                     {% endif %}
                     {% endif %}

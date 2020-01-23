@@ -1,0 +1,16 @@
+{
+    "description": "",
+    "product_name": "rendering-engine",
+    "product_uri": "http://localhost:8080/api/products/1",
+    "slo_targets_uri": "http://localhost:8080/api/products/1/slo/1/targets",
+    "targets": [{
+      "sli_uri": "http://localhost:8080/api/products/1/sli/11",
+      "from": 0,
+      "to": 1000,
+      "metric": "p90"
+    }],
+    "title": "Overall Latency",
+    "updated": "2019-11-05T11:49:02.672088Z",
+    "uri": "http://localhost:8080/api/products/1/slo/1",
+    "username": "apena"
+}

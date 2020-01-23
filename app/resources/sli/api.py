@@ -1,30 +1,40 @@
-from typing import List, Tuple, Union
+from datetime import datetime
+from typing import List, Tuple, Union, cast
 from urllib.parse import urljoin
 
-from datetime import datetime, timedelta
-
-from flask_sqlalchemy import BaseQuery, Pagination
-
 from connexion import ProblemException, request
-
+from flask_sqlalchemy import BaseQuery, Pagination
 from opentracing.ext import tags as ot_tags
-from opentracing_utils import extract_span_from_flask_request, trace, extract_span_from_kwargs
+from opentracing_utils import (
+    extract_span_from_flask_request,
+    extract_span_from_kwargs,
+    trace,
+)
 
+from app.config import API_DEFAULT_PAGE_SIZE
 from app.extensions import db
-from app.libs.zmon import AGG_TYPES
-from app.libs.resource import ResourceHandler
 from app.libs.authorization import Authorization
+from app.libs.resource import ResourceHandler
+from app.resources.product.api import ProductResource
+from app.resources.product.models import Product
+from app.resources.sli import sources
+from app.resources.sli.sources import IndicatorValueLike
 from app.utils import slugger
 
-from app.resources.product.models import Product
-from app.resources.product.api import ProductResource
-
-from .models import Indicator, IndicatorValue
-from .updater import update_indicator_values
+from .models import Indicator
 
 
 class SLIResource(ResourceHandler):
-    model_fields = ('name', 'slug', 'source', 'unit', 'aggregation', 'created', 'updated', 'username')
+    model_fields = (
+        'name',
+        'slug',
+        'source',
+        'unit',
+        'aggregation',
+        'created',
+        'updated',
+        'username',
+    )
 
     @property
     def authorization(self):
@@ -48,34 +58,25 @@ class SLIResource(ResourceHandler):
         return filters
 
     def validate(self, sli: dict, **kwargs) -> None:
-        if not sli or not sli.get('name'):
-            raise ProblemException(title='Invalid SLI', detail="SLI 'name' must have a value!")
-
-        source = sli.get('source')
-        if not source:
-            raise ProblemException(title='Invalid SLI', detail="SLI 'source' must have a value!")
-
-        required = {'aggregation', 'check_id', 'keys'}
-        missing = set(required) - set(source.keys())
-        if missing:
-            raise ProblemException(title='Invalid SLI', detail="SLI 'source' has missing keys: {}!".format(missing))
-
-        if not source['keys']:
-            raise ProblemException(title='Invalid SLI', detail="SLI 'source' *keys* must have a value")
-
-        aggregation = source.get('aggregation', {})
-        if not aggregation:
-            raise ProblemException(title='Invalid SLI', detail="SLI 'source' *aggregation* must have a value")
-
-        agg_type = aggregation.get('type')
-        if not agg_type or agg_type not in AGG_TYPES:
+        if not sli or not sli.get("name"):
             raise ProblemException(
-                title='Invalid SLI',
-                detail="SLI 'source' aggregation type is invalid. Valid values are: {}".format(AGG_TYPES))
+                title="Invalid SLI", detail="SLI 'name' must have a value!"
+            )
 
-        if agg_type == 'weighted' and not aggregation.get('weight_keys'):
+        source_config = sli.get("source")
+        if not source_config:
             raise ProblemException(
-                title='Invalid SLI', detail="SLI 'source' aggregation type *weighted* must have *weight_keys*")
+                title="Invalid SLI", detail="SLI 'source' must have a value!"
+            )
+
+        try:
+            sources.validate_config(source_config)
+        except sources.SourceError as e:
+            raise ProblemException(title="Invalid SLI source", detail=str(e))
+
+    def before_object_update(self, obj: Indicator):
+        aggregation = obj.source.get("aggregation", {}).get("type")
+        obj.aggregation = aggregation
 
     def new_object(self, sli: dict, **kwargs) -> Indicator:
         fields = self.get_object_fields(sli)
@@ -96,7 +97,8 @@ class SLIResource(ResourceHandler):
 
     def save_object(self, obj: Indicator, **kwargs) -> Indicator:
         obj.slug = slugger(obj.name)
-        obj.aggregation = obj.source['aggregation']['type']
+        self.before_object_update(obj)
+
         db.session.add(obj)
         db.session.commit()
 
@@ -108,7 +110,7 @@ class SLIResource(ResourceHandler):
         for field, val in fields.items():
             setattr(obj, field, val)
 
-        obj.aggregation = obj.source['aggregation']['type']
+        self.before_object_update(obj)
 
         product_id = kwargs.get('product_id')
 
@@ -124,7 +126,10 @@ class SLIResource(ResourceHandler):
     def delete_object(self, obj: Indicator, **kwargs) -> None:
         if obj.targets.count():
             raise ProblemException(
-                status=403, title='Deleting SLI forbidden', detail='Some SLO targets reference this SLI.')
+                status=403,
+                title='Deleting SLI forbidden',
+                detail='Some SLO targets reference this SLI.',
+            )
         obj.name = '{}-{}'.format(obj.name, datetime.utcnow())
         obj.is_deleted = True
         db.session.commit()
@@ -138,7 +143,9 @@ class SLIResource(ResourceHandler):
         # Links
         base_uri = resource['uri'] + '/'
 
-        resource['product_uri'] = ProductResource.get_uri_from_id(obj.product_id, **kwargs)
+        resource['product_uri'] = ProductResource.get_uri_from_id(
+            obj.product_id, **kwargs
+        )
         resource['sli_values_uri'] = urljoin(base_uri, 'values')
         resource['sli_query_uri'] = urljoin(base_uri, 'query')
 
@@ -146,65 +153,59 @@ class SLIResource(ResourceHandler):
 
 
 class SLIValueResource(ResourceHandler):
-    model_fields = ('timestamp', 'value',)
-    skip_count = True
+    model_fields = ('timestamp', 'value')
 
-    def get_query(self, id: int, **kwargs) -> BaseQuery:
-        Indicator.query.filter_by(id=id, is_deleted=False).first_or_404()
-        return IndicatorValue.query.filter_by(indicator_id=id).order_by(IndicatorValue.timestamp)
+    @classmethod
+    def list(cls, **kwargs) -> dict:
+        indicator = Indicator.query.filter_by(
+            id=kwargs.get("id"), is_deleted=False
+        ).first_or_404()
 
-    def get_filter_kwargs(self, **kwargs) -> dict:
-        min_from = kwargs.get('from', 10080)
-        min_to = kwargs.get('to')
-
-        now = datetime.utcnow()
-        start = now - timedelta(minutes=min_from)
-        end = now if not min_to else now - timedelta(minutes=min_to)
-
-        if end < start:
+        timerange = sources.RelativeMinutesRange(
+            kwargs.get("from", 10080), kwargs.get("to")
+        )
+        start_dt, end_dt = timerange.to_datetimes()
+        if start_dt > end_dt:
             raise ProblemException(
-                status=400, title='Invalid time range', detail="Query filters 'from' should be greater than 'to'")
+                status=400,
+                title="Invalid time range",
+                detail="Query filters 'from' should be greater than 'to'",
+            )
 
-        return {
-            'start': start,
-            'end': end
-        }
+        if "from" in kwargs:
+            page, per_page = None, None
+        else:
+            per_page = int(kwargs.get("page_size", API_DEFAULT_PAGE_SIZE))
+            page = int(kwargs.get("page") or 1)
 
-    def get_filtered_query(self, query: BaseQuery, **kwargs) -> BaseQuery:
-        """Filter query using query parameters"""
-        end = kwargs.get('end')
-        start = kwargs.get('start')
-        return query.filter(IndicatorValue.timestamp >= start, IndicatorValue.timestamp < end)
+        source = sources.from_indicator(indicator)
+        indicator_values, metadata = source.get_indicator_values(
+            timerange, page=page, per_page=per_page,
+        )
+        resources = [
+            {k: v for k, v in iv.as_dict().items() if k in cls.model_fields}
+            for iv in indicator_values
+        ]
 
-    def get_limited_query(self, query: BaseQuery, **kwargs) -> Union[Pagination, BaseQuery]:
-        """Apply pagination limits on query"""
-        if 'from' in kwargs:
-            return query
-
-        return super().get_limited_query(query, **kwargs)
-
-    def get_objects(self, query: Union[Pagination, BaseQuery], **kwargs) -> List[IndicatorValue]:
-        if isinstance(query, Pagination):
-            return [obj for obj in query.items]
-
-        return [obj for obj in query.all()]
-
-    def build_resource(self, obj: IndicatorValue, **kwargs) -> dict:
-        resource = super().build_resource(obj, **kwargs)
-        resource.pop('uri', None)
-        return resource
+        return cls().build_list_response(
+            resources, cast(Pagination, metadata), len(resources)
+        )
 
 
 class SLIQueryResource(ResourceHandler):
     @classmethod
-    @trace(span_extractor=extract_span_from_flask_request, operation_name='indicator_query', pass_span=True,
-           tags={ot_tags.COMPONENT: 'flask'})
+    @trace(
+        span_extractor=extract_span_from_flask_request,
+        operation_name='indicator_query',
+        pass_span=True,
+        tags={ot_tags.COMPONENT: 'flask'},
+    )
     def create(cls, **kwargs) -> Tuple:
         resource = cls()
 
         resource.current_span = extract_span_from_kwargs(**kwargs)
 
-        obj_id = int(kwargs.get('id'))
+        obj_id = int(cast(str, kwargs.get('id')))
 
         # Get objects from DB
         obj = resource.get_object(obj_id, **kwargs)
@@ -228,10 +229,16 @@ class SLIQueryResource(ResourceHandler):
         end = duration.get('end', 0)
 
         if not duration or not start:
-            raise ProblemException(title='Invalid query duration', detail="Query 'start' must have a value!")
+            raise ProblemException(
+                title='Invalid query duration',
+                detail="Query 'start' must have a value!",
+            )
 
         if start < end:
-            raise ProblemException(title='Invalid query duration', detail="Query 'start' must be greater than 'end'")
+            raise ProblemException(
+                title='Invalid query duration',
+                detail="Query 'start' must be greater than 'end'",
+            )
 
     def get_object(self, obj_id: int, **kwargs) -> Indicator:
         return self.get_query(**kwargs).filter_by(id=obj_id).first_or_404()
@@ -245,9 +252,11 @@ class SLIQueryResource(ResourceHandler):
         self.current_span.log_kv({'query_start': start, 'query_end': end})
 
         # Query and insert IndicatorValue
-        return update_indicator_values(obj, start, end)
+        return sources.from_indicator(obj).update_indicator_values(
+            sources.RelativeMinutesRange(start=start, end=end)
+        )
 
-    def build_resource(self, obj: IndicatorValue, count=0, **kwargs) -> dict:
+    def build_resource(self, obj: IndicatorValueLike, count=0, **kwargs) -> dict:
         resource = super().build_resource(obj, **kwargs)
         resource.pop('uri', None)
 

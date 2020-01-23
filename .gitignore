@@ -12,5 +12,6 @@ client/build
 build/
 dist/
 .mypy_cache/
+.env
 .vscode/
 .coverage

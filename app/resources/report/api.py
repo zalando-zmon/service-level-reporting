@@ -1,100 +1,136 @@
 import collections
+from datetime import datetime
+from typing import Dict, Iterator, List, Tuple
 
 import opentracing
-
-from typing import Iterator, List, Dict
-
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
-from datetime_truncate import truncate
-
 from connexion import ProblemException
-
+from datetime_truncate import truncate as truncate_datetime
+from dateutil.relativedelta import relativedelta
 from opentracing.ext import tags as ot_tags
-from opentracing_utils import extract_span_from_flask_request, trace, extract_span_from_kwargs
+from opentracing_utils import (
+    extract_span_from_flask_request,
+    extract_span_from_kwargs,
+    trace,
+)
 
 from app.libs.resource import ResourceHandler
-
 from app.resources.product.models import Product
-from app.resources.sli.models import Indicator, IndicatorValue
+from app.resources.sli import sources
+from app.resources.sli.models import Indicator
 from app.resources.slo.models import Objective
-
 
 REPORT_TYPES = ('weekly', 'monthly', 'quarterly')
 
 
-@trace()
-def truncate_values(values: Iterator[IndicatorValue], unit='day') -> Dict[str, List[IndicatorValue]]:
-    truncated = collections.defaultdict(list)
+def get_report_params(report_type,) -> Tuple[sources.DatetimeRange, sources.Resolution]:
+    to_dt = datetime.utcnow()
+    if report_type == "weekly":
+        from_dt = to_dt - relativedelta(days=7)
+        resolution = sources.Resolution.DAILY
+    elif report_type == "monthly":
+        from_dt = to_dt - relativedelta(months=1)
+        resolution = sources.Resolution.WEEKLY
+    elif report_type == "quarterly":
+        from_dt = to_dt - relativedelta(months=3)
+        resolution = sources.Resolution.WEEKLY
 
-    for v in values:
-        truncated[truncate(v.timestamp, unit)].append(v.value)
-
-    return truncated
+    return sources.DatetimeRange(truncate_datetime(from_dt), to_dt), resolution
 
 
-def get_report_summary(objectives: Iterator[Objective], unit: str, start: datetime, end: datetime,
-                       current_span: opentracing.Span) -> List[dict]:
+def get_target_healthiness(target, aggregate, metric):
+    target_data = {"breaches": None}
+    target_from = target.target_from or float('-inf')
+    target_to = target.target_to or float('inf')
+
+    metric_value = getattr(aggregate, metric, None) or aggregate.aggregate
+    target_data["healthy"] = target_from <= metric_value <= target_to
+
+    if aggregate.indicator_values:
+        target_data["breaches"] = sum(
+            1
+            for iv in aggregate.indicator_values
+            if iv.value > target_to or iv.value < target_from
+        )
+
+    target_data["unit"] = target.indicator.unit
+
+    return target_data
+
+
+def get_report_summary(
+    objectives: Iterator[Objective],
+    aggregates: Dict[
+        Indicator, Dict[sources.Resolution, List[sources.IndicatorValueAggregate]]
+    ],
+    resolution: sources.Resolution,
+    current_span: opentracing.Span,
+) -> List[dict]:
     summary = []
-    start = truncate(start)
 
     for objective in objectives:
-        days = collections.defaultdict(dict)
-
         if not len(objective.targets):
             current_span.log_kv({'objective_skipped': True, 'objective': objective.id})
             continue
 
-        current_span.log_kv({'objective_target_count': len(objective.targets), 'objective_id': objective.id})
+        current_span.log_kv(
+            {
+                'objective_target_count': len(objective.targets),
+                'objective_id': objective.id,
+            }
+        )
 
         # Instrument objective summary!
         objective_summary_span = opentracing.tracer.start_span(
-            operation_name='report_objective_summary', child_of=current_span)
+            operation_name='report_objective_summary', child_of=current_span
+        )
         objective_summary_span.set_tag('objective_id', objective.id)
 
         with objective_summary_span:
+            days = collections.defaultdict(dict)
+            total = {}
+            targets = []
+
             for target in objective.targets:
-                objective_summary_span.log_kv({'target_id': target.id, 'indicator_id': target.indicator_id})
-                ivs = (
-                    IndicatorValue.query
-                    .filter(IndicatorValue.indicator_id == target.indicator_id,
-                            IndicatorValue.timestamp >= start,
-                            IndicatorValue.timestamp < end)
-                    .order_by(IndicatorValue.timestamp))
+                objective_summary_span.log_kv(
+                    {'target_id': target.id, 'indicator_id': target.indicator_id}
+                )
 
-                target_values_truncated = truncate_values(ivs, parent_span=objective_summary_span)
+                target_aggregates = aggregates[target.indicator]
+                for aggregate in target_aggregates[resolution]:
+                    timestamp_str = aggregate.timestamp.isoformat()
+                    aggregate_dict = aggregate.as_dict()
+                    aggregate_dict.update(
+                        get_target_healthiness(target, aggregate, "avg")
+                    )
 
-                for truncated_date, target_values in target_values_truncated.items():
-                    target_form = target.target_from or float('-inf')
-                    target_to = target.target_to or float('inf')
+                    days[timestamp_str][target.indicator.name] = aggregate_dict
 
-                    target_count = len(target_values)
-                    target_sum = sum(target_values)
-                    breaches = target_count - len([v for v in target_values if v >= target_form and v <= target_to])
+                total_aggregate = target_aggregates[sources.Resolution.TOTAL]
+                if total_aggregate:
+                    total_aggregate_dict = total_aggregate.as_dict()
+                    total_aggregate_dict.update(
+                        get_target_healthiness(target, total_aggregate, "aggregate")
+                    )
+                    total[target.indicator.name] = total_aggregate_dict
 
-                    days[truncated_date.isoformat()][target.indicator.name] = {
+                targets.append(
+                    {
+                        'from': target.target_from,
+                        'to': target.target_to,
+                        'sli_name': target.indicator.name,
+                        'unit': target.indicator.unit,
                         'aggregation': target.indicator.aggregation,
-                        'avg': target_sum / target_count,
-                        'breaches': breaches,
-                        'count': target_count,
-                        'max': max(target_values),
-                        'min': min(target_values),
-                        'sum': target_sum,
                     }
+                )
 
             summary.append(
                 {
                     'title': objective.title,
                     'description': objective.description,
                     'id': objective.id,
-                    'targets': [
-                        {
-                            'from': t.target_from, 'to': t.target_to, 'sli_name': t.indicator.name,
-                            'unit': t.indicator.unit, 'aggregation': t.indicator.aggregation
-                        }
-                        for t in objective.targets
-                    ],
-                    'days': days
+                    'targets': targets,
+                    'days': days,
+                    'total': total,
                 }
             )
 
@@ -103,41 +139,55 @@ def get_report_summary(objectives: Iterator[Objective], unit: str, start: dateti
 
 class ReportResource(ResourceHandler):
     @classmethod
-    @trace(span_extractor=extract_span_from_flask_request, operation_name='resource_handler', pass_span=True,
-           tags={ot_tags.COMPONENT: 'flask', 'is_report': True})
+    @trace(
+        span_extractor=extract_span_from_flask_request,
+        operation_name='resource_handler',
+        pass_span=True,
+        tags={ot_tags.COMPONENT: 'flask', 'is_report': True},
+    )
     def get(cls, **kwargs) -> dict:
         current_span = extract_span_from_kwargs(**kwargs)
 
         report_type = kwargs.get('report_type')
         if report_type not in REPORT_TYPES:
             raise ProblemException(
-                status=404, title='Resource not found',
-                detail='Report type ({}) is invalid. Supported types are: {}'.format(report_type, REPORT_TYPES))
+                status=404,
+                title='Resource not found',
+                detail='Report type ({}) is invalid. Supported types are: {}'.format(
+                    report_type, REPORT_TYPES
+                ),
+            )
 
         product_id = kwargs.get('product_id')
         product = Product.query.get_or_404(product_id)
 
-        objectives = product.objectives.all()
-
-        now = datetime.utcnow()
-        start = now - relativedelta(days=7)
-
-        if report_type != 'weekly':
-            months = 1 if report_type == 'monthly' else 3
-            start = now - relativedelta(months=months)
-
-        unit = 'day' if report_type == 'weekly' else 'week'
+        timerange, resolution = get_report_params(report_type)
 
         current_span.set_tag('report_type', report_type)
         current_span.set_tag('product_id', product_id)
         current_span.set_tag('product', product.name)
         current_span.set_tag('product_slug', product.slug)
         current_span.set_tag('product_group', product.product_group.name)
-        current_span.log_kv({'report_duration_start': start, 'report_duration_end': now})
+        current_span.log_kv(
+            {
+                'report_duration_start': timerange.start,
+                'report_duration_end': timerange.end,
+            }
+        )
 
-        slo = get_report_summary(objectives, unit, start, now, current_span)
+        aggregates = {
+            indicator: sources.from_indicator(indicator).get_indicator_value_aggregates(
+                timerange, resolution
+            )
+            for indicator in product.indicators.all()
+        }
+        objectives = product.objectives.all()
 
-        current_span.log_kv({'report_objective_count': len(slo), 'objective_count': len(objectives)})
+        slo = get_report_summary(objectives, aggregates, resolution, current_span)
+
+        current_span.log_kv(
+            {'report_objective_count': len(slo), 'objective_count': len(objectives)}
+        )
 
         return {
             'product_name': product.name,
@@ -145,6 +195,11 @@ class ReportResource(ResourceHandler):
             'product_group_name': product.product_group.name,
             'product_group_slug': product.product_group.slug,
             'department': product.product_group.department,
+            'timerange': {
+                'start': timerange.start,
+                'end': timerange.end,
+                'delta_seconds': timerange.delta_seconds(),
+            },
             'slo': slo,
         }
 
