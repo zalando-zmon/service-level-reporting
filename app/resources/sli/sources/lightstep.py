@@ -87,6 +87,7 @@ class _Metric(enum.Enum):
     LATENCY_P50 = _Latency("50")
     LATENCY_P75 = _Latency("75")
     LATENCY_P90 = _Latency("90")
+    LATENCY_P95 = _Latency("95")
     LATENCY_P99 = _Latency("99")
 
     @classmethod
