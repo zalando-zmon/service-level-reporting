@@ -18,6 +18,8 @@ SLR_URI = os.environ.get('SLR_URI')
 SLR_TOKEN = os.environ.get('SLR_TOKEN')
 S3_BUCKET = os.environ.get('SLR_S3_BUCKET')
 
+PERIOD_TO = os.environ.get('PERIOD_TO')
+
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler(sys.stdout))
@@ -36,7 +38,9 @@ def sync_reports(to_local=True):
         try:
             logger.info('Starting S3 sync from {} to {}'.format(src, dst))
 
-            res = subprocess.check_output(['aws', 's3', 'sync', src, dst], stderr=subprocess.STDOUT)
+            res = subprocess.check_output(
+                ['aws', 's3', 'sync', src, dst], stderr=subprocess.STDOUT
+            )
             for line in res.splitlines():
                 logger.debug(line)
 
@@ -56,7 +60,9 @@ def main():
     try:
         subprocess.check_output(['which', 'gnuplot'])
     except subprocess.CalledProcessError:
-        logger.error('Missing system dependency. Please install *gnuplot* system package!')
+        logger.error(
+            'Missing system dependency. Please install *gnuplot* system package!'
+        )
         sys.exit(1)
 
     successful_reports = []
@@ -85,17 +91,27 @@ def main():
                 # Make sure the product has the minimum req for generating a report
                 slos = client.slo_list(product)
                 if not slos:
-                    logger.info('Skipping generating report for product "{}". Reason: No SLO defined!'.format(name))
+                    logger.info(
+                        'Skipping generating report for product "{}". Reason: No SLO defined!'.format(
+                            name
+                        )
+                    )
                     continue
 
                 slis = client.sli_list(product)
                 if not slis:
-                    logger.info('Skipping generating report for product "{}". Reason: No SLI defined!'.format(name))
+                    logger.info(
+                        'Skipping generating report for product "{}". Reason: No SLI defined!'.format(
+                            name
+                        )
+                    )
                     continue
 
                 # Finally, generate the report
                 logger.info('Generating report for product: {}'.format(name))
-                generate_weekly_report(client, product, OUTPUT_DIR)
+                generate_weekly_report(
+                    client, product, OUTPUT_DIR, period_to_str=PERIOD_TO
+                )
                 logger.info('Finished generating report for product: {}'.format(name))
 
                 successful_reports.append(name)
@@ -107,7 +123,9 @@ def main():
                 logger.info('Report generation interrupted. Terminating ...')
                 return
             except Exception:
-                logger.exception('Failed to generate report for product: {}'.format(name))
+                logger.exception(
+                    'Failed to generate report for product: {}'.format(name)
+                )
     except KeyboardInterrupt:
         logger.info('Report generation interrupted. Terminating ...')
         return
@@ -117,9 +135,14 @@ def main():
 
     duration = datetime.now() - t_start
 
-    logger.info('Finished generating reports for products: {}'.format(successful_reports))
-    logger.info('Finished generating reports for {} products successfully in {} minutes'.format(
-        len(successful_reports), duration.seconds / 60))
+    logger.info(
+        'Finished generating reports for products: {}'.format(successful_reports)
+    )
+    logger.info(
+        'Finished generating reports for {} products successfully in {} minutes'.format(
+            len(successful_reports), duration.seconds / 60
+        )
+    )
 
     # Upload latest reports to s3
     sync_reports(to_local=False)

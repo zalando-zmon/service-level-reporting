@@ -1,8 +1,7 @@
-import requests
-
-from typing import List
-
+from typing import List, Optional
 from urllib.parse import urljoin
+
+import requests
 
 
 class SLRClientError(Exception):
@@ -15,7 +14,12 @@ class Client:
         self.token = token
 
         self.session = requests.Session()
-        self.session.headers.update({'Authorization': 'Bearer {}'.format(token), 'User-Agent': 'slr-cli/0.1-alpha'})
+        self.session.headers.update(
+            {
+                'Authorization': 'Bearer {}'.format(token),
+                'User-Agent': 'slr-cli/0.1-alpha',
+            }
+        )
 
         # Load root URIs
         resp = self.session.get(self.url)
@@ -26,7 +30,9 @@ class Client:
         self.PRODUCT_GROUPS = api['product_groups_uri']
         self.PRODUCTS = api['products_uri']
 
-    def product_list(self, name=None, product_group_name=None, limit=100, q=None) -> List[dict]:
+    def product_list(
+        self, name=None, product_group_name=None, limit=100, q=None
+    ) -> List[dict]:
         params = {} if not name else {'name': name}
 
         if q:
@@ -95,10 +101,7 @@ class Client:
         return res
 
     def product_group_create(self, name, department) -> dict:
-        data = {
-            'name': name,
-            'department': department or ''
-        }
+        data = {'name': name, 'department': department or ''}
 
         res = self.session.post(self.PRODUCT_GROUPS, json=data)
         res.raise_for_status()
@@ -132,10 +135,7 @@ class Client:
         return res
 
     def slo_create(self, product: dict, title: str, description: str) -> dict:
-        slo = {
-            'title': title,
-            'description': description
-        }
+        slo = {'title': title, 'description': description}
 
         res = self.session.post(product['product_slo_uri'], json=slo)
         res.raise_for_status()
@@ -170,12 +170,10 @@ class Client:
 
         return res
 
-    def target_create(self, slo: dict, sli_uri: str, target_from=0.0, target_to=0.0) -> dict:
-        target = {
-            'from': target_from,
-            'to': target_to,
-            'sli_uri': sli_uri
-        }
+    def target_create(
+        self, slo: dict, sli_uri: str, target_from=0.0, target_to=0.0
+    ) -> dict:
+        target = {'from': target_from, 'to': target_to, 'sli_uri': sli_uri}
 
         res = self.session.post(slo['slo_targets_uri'], json=target)
         res.raise_for_status()
@@ -213,11 +211,7 @@ class Client:
         return res
 
     def sli_create(self, product: dict, name: str, unit: str, source: dict) -> dict:
-        sli = {
-            'name': name,
-            'source': source,
-            'unit': unit
-        }
+        sli = {'name': name, 'source': source, 'unit': unit}
 
         res = self.session.post(product['product_sli_uri'], json=sli)
         res.raise_for_status()
@@ -257,8 +251,13 @@ class Client:
 
         return res.json()
 
-    def product_report(self, product: dict) -> dict:
-        resp = self.session.get(product['product_reports_weekly_uri'], timeout=180)
+    def product_report(self, product: dict, period_to: Optional[str] = None) -> dict:
+        params = {}
+        if period_to:
+            params['period_to'] = period_to
+        resp = self.session.get(
+            product['product_reports_weekly_uri'], params=params, timeout=180
+        )
 
         resp.raise_for_status()
 

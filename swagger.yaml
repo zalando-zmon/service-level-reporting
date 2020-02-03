@@ -1113,6 +1113,10 @@ paths:
           in: path
           required: true
           description: Report type [weekly, monthly, quarterly].
+        - name: period_to
+          type: string
+          in: query
+          description: Specify end of time period for the report (in ISO-8601 format)
       responses:
         200:
           description: Generated report

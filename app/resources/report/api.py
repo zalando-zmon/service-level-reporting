@@ -2,6 +2,7 @@ import collections
 from datetime import datetime
 from typing import Dict, Iterator, List, Tuple
 
+import dateutil.parser
 import opentracing
 from connexion import ProblemException
 from datetime_truncate import truncate as truncate_datetime
@@ -22,8 +23,9 @@ from app.resources.slo.models import Objective
 REPORT_TYPES = ('weekly', 'monthly', 'quarterly')
 
 
-def get_report_params(report_type,) -> Tuple[sources.DatetimeRange, sources.Resolution]:
-    to_dt = datetime.utcnow()
+def get_report_params(
+    report_type, to_dt=None,
+) -> Tuple[sources.DatetimeRange, sources.Resolution]:
     if report_type == "weekly":
         from_dt = to_dt - relativedelta(days=7)
         resolution = sources.Resolution.DAILY
@@ -161,7 +163,19 @@ class ReportResource(ResourceHandler):
         product_id = kwargs.get('product_id')
         product = Product.query.get_or_404(product_id)
 
-        timerange, resolution = get_report_params(report_type)
+        to_str = kwargs.get('period_to')
+        if to_str:
+            try:
+                to_dt = dateutil.parser.parse(to_str, ignoretz=True)
+            except:  # noqa
+                raise ProblemException(
+                    status=400,
+                    title='Invalid time range.',
+                    detail='Invalid format of "period_to" datetime.',
+                )
+        else:
+            to_dt = datetime.utcnow()
+        timerange, resolution = get_report_params(report_type, to_dt)
 
         current_span.set_tag('report_type', report_type)
         current_span.set_tag('product_id', product_id)
