@@ -6,6 +6,7 @@ import os
 import sys
 import time
 from math import ceil
+from typing import Optional
 
 import jinja2
 
@@ -123,8 +124,10 @@ def parse_report_timestamp(timestamp):
     return datetime.datetime.strptime(timestamp[:10], '%Y-%m-%d')
 
 
-def generate_weekly_report(client: Client, product: dict, output_dir: str) -> None:
-    report_data = call_and_retry(client.product_report, product)
+def generate_weekly_report(
+    client: Client, product: dict, output_dir: str, period_to_str: Optional[str] = None
+) -> None:
+    report_data = call_and_retry(client.product_report, product, period_to_str)
 
     product_group = report_data['product_group_slug']
 

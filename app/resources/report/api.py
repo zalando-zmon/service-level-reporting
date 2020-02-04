@@ -1,7 +1,8 @@
 import collections
 from datetime import datetime
-from typing import Dict, Iterator, List, Tuple
+from typing import Iterator, List, Tuple
 
+import dateutil.parser
 import opentracing
 from connexion import ProblemException
 from datetime_truncate import truncate as truncate_datetime
@@ -12,6 +13,7 @@ from opentracing_utils import (
     extract_span_from_kwargs,
     trace,
 )
+from sqlalchemy.orm import joinedload
 
 from app.libs.resource import ResourceHandler
 from app.resources.product.models import Product
@@ -22,8 +24,9 @@ from app.resources.slo.models import Objective
 REPORT_TYPES = ('weekly', 'monthly', 'quarterly')
 
 
-def get_report_params(report_type,) -> Tuple[sources.DatetimeRange, sources.Resolution]:
-    to_dt = datetime.utcnow()
+def get_report_params(
+    report_type, to_dt,
+) -> Tuple[sources.DatetimeRange, sources.Resolution]:
     if report_type == "weekly":
         from_dt = to_dt - relativedelta(days=7)
         resolution = sources.Resolution.DAILY
@@ -59,13 +62,12 @@ def get_target_healthiness(target, aggregate, metric):
 
 def get_report_summary(
     objectives: Iterator[Objective],
-    aggregates: Dict[
-        Indicator, Dict[sources.Resolution, List[sources.IndicatorValueAggregate]]
-    ],
+    timerange: sources.TimeRange,
     resolution: sources.Resolution,
     current_span: opentracing.Span,
 ) -> List[dict]:
     summary = []
+    aggregates = {}
 
     for objective in objectives:
         if not len(objective.targets):
@@ -95,6 +97,10 @@ def get_report_summary(
                     {'target_id': target.id, 'indicator_id': target.indicator_id}
                 )
 
+                if target.indicator not in aggregates:
+                    aggregates[target.indicator] = sources.from_indicator(
+                        target.indicator
+                    ).get_indicator_value_aggregates(timerange, resolution)
                 target_aggregates = aggregates[target.indicator]
                 for aggregate in target_aggregates[resolution]:
                     timestamp_str = aggregate.timestamp.isoformat()
@@ -161,7 +167,19 @@ class ReportResource(ResourceHandler):
         product_id = kwargs.get('product_id')
         product = Product.query.get_or_404(product_id)
 
-        timerange, resolution = get_report_params(report_type)
+        period_to = kwargs.get('period_to')
+        if period_to:
+            try:
+                to_dt = dateutil.parser.parse(period_to, ignoretz=True)
+            except:  # noqa
+                raise ProblemException(
+                    status=400,
+                    title='Invalid time range.',
+                    detail='Invalid format of "period_to" datetime.',
+                )
+        else:
+            to_dt = datetime.utcnow()
+        timerange, resolution = get_report_params(report_type, to_dt)
 
         current_span.set_tag('report_type', report_type)
         current_span.set_tag('product_id', product_id)
@@ -175,15 +193,9 @@ class ReportResource(ResourceHandler):
             }
         )
 
-        aggregates = {
-            indicator: sources.from_indicator(indicator).get_indicator_value_aggregates(
-                timerange, resolution
-            )
-            for indicator in product.indicators.all()
-        }
-        objectives = product.objectives.all()
+        objectives = product.objectives.options(joinedload(Objective.targets)).all()
 
-        slo = get_report_summary(objectives, aggregates, resolution, current_span)
+        slo = get_report_summary(objectives, timerange, resolution, current_span)
 
         current_span.log_kv(
             {'report_objective_count': len(slo), 'objective_count': len(objectives)}

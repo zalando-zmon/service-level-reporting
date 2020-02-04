@@ -4,7 +4,7 @@ import redis
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
-DEBUG = os.getenv('DEBUG', False)
+DEBUG = bool(os.getenv('DEBUG', False))
 SLR_LOCAL_ENV = os.environ.get('SLR_LOCAL_ENV')
 
 # APP
