@@ -13,12 +13,15 @@ from opentracing_utils import (
     extract_span_from_kwargs,
     trace,
 )
+from sqlalchemy.orm import joinedload
 
+from app.extensions import db
 from app.libs.resource import ResourceHandler
 from app.resources.product.models import Product
 from app.resources.sli import sources
 from app.resources.sli.models import Indicator
 from app.resources.slo.models import Objective
+from app.resources.target.models import Target
 
 REPORT_TYPES = ('weekly', 'monthly', 'quarterly')
 
@@ -195,7 +198,12 @@ class ReportResource(ResourceHandler):
             )
             for indicator in product.indicators.all()
         }
-        objectives = product.objectives.all()
+        objectives = (
+            db.session.query(Objective)
+            .options(joinedload(Objective.targets))
+            .filter(Objective.product_id == product.id)
+            .all()
+        )
 
         slo = get_report_summary(objectives, aggregates, resolution, current_span)
 

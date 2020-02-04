@@ -91,6 +91,8 @@ def register_extensions(app: flask.Flask) -> None:
     session.init_app(app)
     oauth.init_app(app)
 
+    app.config['SQLALCHEMY_ECHO'] = True
+
     trace_flask(app, operation_name=get_operation_name, skip_span=request_skip_span)
     trace_sqlalchemy(skip_span=sqlalchemy_skip_span)
 
