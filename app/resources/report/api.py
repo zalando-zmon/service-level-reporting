@@ -8,8 +8,11 @@ from connexion import ProblemException
 from datetime_truncate import truncate as truncate_datetime
 from dateutil.relativedelta import relativedelta
 from opentracing.ext import tags as ot_tags
-from opentracing_utils import (extract_span_from_flask_request,
-                               extract_span_from_kwargs, trace)
+from opentracing_utils import (
+    extract_span_from_flask_request,
+    extract_span_from_kwargs,
+    trace,
+)
 from sqlalchemy.orm import joinedload
 
 from app.libs.resource import ResourceHandler
@@ -22,7 +25,7 @@ REPORT_TYPES = ('weekly', 'monthly', 'quarterly')
 
 
 def get_report_params(
-    report_type, to_dt=None,
+    report_type, to_dt,
 ) -> Tuple[sources.DatetimeRange, sources.Resolution]:
     if report_type == "weekly":
         from_dt = to_dt - relativedelta(days=7)
@@ -164,10 +167,10 @@ class ReportResource(ResourceHandler):
         product_id = kwargs.get('product_id')
         product = Product.query.get_or_404(product_id)
 
-        to_str = kwargs.get('period_to')
-        if to_str:
+        period_to = kwargs.get('period_to')
+        if period_to:
             try:
-                to_dt = dateutil.parser.parse(to_str, ignoretz=True)
+                to_dt = dateutil.parser.parse(period_to, ignoretz=True)
             except:  # noqa
                 raise ProblemException(
                     status=400,
