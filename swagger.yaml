@@ -1119,7 +1119,7 @@ paths:
           description: |
             Specify the end of time period for the report (in ISO-8601 format).
             Given timezone is ignored and always replaced with UTC.
-          example: '2020-01-13T12:03:15Z'
+            Example: '2020-01-13T12:03:15Z'
       responses:
         200:
           description: Generated report
