@@ -1,6 +1,6 @@
 import collections
 from datetime import datetime
-from typing import Dict, Iterator, List, Tuple
+from typing import Iterator, List, Tuple
 
 import dateutil.parser
 import opentracing
@@ -8,20 +8,15 @@ from connexion import ProblemException
 from datetime_truncate import truncate as truncate_datetime
 from dateutil.relativedelta import relativedelta
 from opentracing.ext import tags as ot_tags
-from opentracing_utils import (
-    extract_span_from_flask_request,
-    extract_span_from_kwargs,
-    trace,
-)
+from opentracing_utils import (extract_span_from_flask_request,
+                               extract_span_from_kwargs, trace)
 from sqlalchemy.orm import joinedload
 
-from app.extensions import db
 from app.libs.resource import ResourceHandler
 from app.resources.product.models import Product
 from app.resources.sli import sources
 from app.resources.sli.models import Indicator
 from app.resources.slo.models import Objective
-from app.resources.target.models import Target
 
 REPORT_TYPES = ('weekly', 'monthly', 'quarterly')
 
@@ -64,13 +59,12 @@ def get_target_healthiness(target, aggregate, metric):
 
 def get_report_summary(
     objectives: Iterator[Objective],
-    aggregates: Dict[
-        Indicator, Dict[sources.Resolution, List[sources.IndicatorValueAggregate]]
-    ],
+    timerange: sources.TimeRange,
     resolution: sources.Resolution,
     current_span: opentracing.Span,
 ) -> List[dict]:
     summary = []
+    aggregates = {}
 
     for objective in objectives:
         if not len(objective.targets):
@@ -100,6 +94,10 @@ def get_report_summary(
                     {'target_id': target.id, 'indicator_id': target.indicator_id}
                 )
 
+                if target.indicator not in aggregates:
+                    aggregates[target.indicator] = sources.from_indicator(
+                        target.indicator
+                    ).get_indicator_value_aggregates(timerange, resolution)
                 target_aggregates = aggregates[target.indicator]
                 for aggregate in target_aggregates[resolution]:
                     timestamp_str = aggregate.timestamp.isoformat()
@@ -192,20 +190,9 @@ class ReportResource(ResourceHandler):
             }
         )
 
-        aggregates = {
-            indicator: sources.from_indicator(indicator).get_indicator_value_aggregates(
-                timerange, resolution
-            )
-            for indicator in product.indicators.all()
-        }
-        objectives = (
-            db.session.query(Objective)
-            .options(joinedload(Objective.targets))
-            .filter(Objective.product_id == product.id)
-            .all()
-        )
+        objectives = product.objectives.options(joinedload(Objective.targets)).all()
 
-        slo = get_report_summary(objectives, aggregates, resolution, current_span)
+        slo = get_report_summary(objectives, timerange, resolution, current_span)
 
         current_span.log_kv(
             {'report_objective_count': len(slo), 'objective_count': len(objectives)}

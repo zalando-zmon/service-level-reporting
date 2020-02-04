@@ -22,6 +22,7 @@ from app.config import (
     APP_SESSION_SECRET,
     CACHE_THRESHOLD,
     CACHE_TYPE,
+    DEBUG,
     MAX_RETENTION_DAYS,
     OPENTRACING_TRACER,
     RUN_UPDATER,
@@ -82,7 +83,9 @@ def create_app(*args, **kwargs):
 def register_extensions(app: flask.Flask) -> None:
     app.secret_key = APP_SESSION_SECRET
 
+    app.config['SQLALCHEMY_ECHO'] = DEBUG
     db.init_app(app)
+
     migrate.init_app(app, db)
     cache.init_app(
         app, config={'CACHE_TYPE': CACHE_TYPE, 'CACHE_THRESHOLD': CACHE_THRESHOLD}
@@ -90,8 +93,6 @@ def register_extensions(app: flask.Flask) -> None:
     limiter.init_app(app)
     session.init_app(app)
     oauth.init_app(app)
-
-    app.config['SQLALCHEMY_ECHO'] = True
 
     trace_flask(app, operation_name=get_operation_name, skip_span=request_skip_span)
     trace_sqlalchemy(skip_span=sqlalchemy_skip_span)
